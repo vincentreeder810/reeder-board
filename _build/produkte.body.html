@@ -3,10 +3,10 @@
   <div class="phero__inner">
     <div>
       <p class="eyebrow reveal">Eigene Produkte</p>
-      <h1 class="reveal">Software, an die wir <em class="serif">selbst glauben.</em></h1>
+      <h1 class="reveal">Produkte, an die wir <em class="serif">selbst glauben.</em></h1>
     </div>
     <div class="reveal" style="--d:.15s">
-      <p>Für Kommunikation, Bildung, Gründung und Alltag. Jedes Produkt lässt sich testen, lizenzieren und an Ihre Organisation anpassen.</p>
+      <p>Software für Kommunikation, Bildung, Gründung und Alltag – zum Testen, Lizenzieren und Anpassen. Dazu erste eigene Geräte als Konzeptstudien.</p>
       <ul class="ticks"><li>Live-Demo</li><li>Lizenz &amp; Anpassung</li><li>Datenschutz zuerst</li></ul>
     </div>
   </div>
@@ -14,10 +14,13 @@
 
 <nav class="pnav" data-sub aria-label="Produkte">
   <div class="pnav__inner">
-    <a href="#covered">Covered</a><a href="#businesscat">BusinessCat</a><a href="#lernpass">Lernpass</a><a href="#perspektive">Perspektive</a>
+    <div class="pswitch" role="tablist" aria-label="Bereich"><button type="button" role="tab" class="is-on" aria-selected="true" data-pb="software">Software</button><button type="button" role="tab" aria-selected="false" data-pb="hardware">Hardware</button></div>
+    <div class="pnav__links" data-pblinks="software"><a href="#covered">Covered</a><a href="#businesscat">BusinessCat</a><a href="#lernpass">Lernpass</a><a href="#perspektive">Perspektive</a></div>
+    <div class="pnav__links" data-pblinks="hardware" hidden><a href="#hw-terminal">Check-in-Terminal</a><a href="#hw-timer">Lern-Timer</a><a href="#hw-dock">Covered Dock</a><a href="#hw-sensor">Sensorbox</a></div>
   </div>
 </nav>
 
+<div data-pbereich="software" id="software">
 <section class="section products">
 
   <!-- Covered -->
@@ -186,6 +189,65 @@
     <div class="why__item reveal" style="--d:.16s"><i>Schritt 3</i><h3>Startklar</h3><p>Unser Team richtet ein, schult Ihre Mitarbeitenden und liefert laufende Updates.</p></div>
   </div>
 </section>
+
+</div>
+
+<!-- ============ HARDWARE-PRODUKTE (Platzhalter: Konzeptstudien, bis echte Produkte da sind) ============ -->
+<div data-pbereich="hardware" id="hardware" hidden>
+<section class="section section--paper gks">
+  <div class="shead">
+    <div><p class="eyebrow reveal">Hardware · Konzeptstudien</p><h2 class="h2 reveal">Geräte, die zu unserer <span class="hl">Software passen.</span></h2></div>
+    <p class="lead reveal">Diese vier Geräte sind Studien und noch nicht erhältlich. Sie zeigen, woran wir arbeiten. Sprechen Sie uns an, wenn eines davon für Sie interessant ist.</p>
+  </div>
+  <div class="gk__grid">
+    <article class="gk reveal" id="hw-terminal">
+      <div class="gk__bild"><svg viewBox="0 0 200 140" aria-hidden="true" fill="none" stroke="url(#rm)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="62" y="12" width="76" height="92" rx="10"/><rect x="74" y="26" width="52" height="34" rx="4"/><path d="M82 74h36M88 86h24"/><path d="M100 104v16M76 124h48"/></svg><span class="gk__studie">Konzeptstudie</span></div>
+      <div class="gk__text">
+        <p class="tag">Gesundheit · Empfang</p>
+        <h3 class="gk__name">Check-in-Terminal</h3>
+        <p class="gk__claim">Patienten melden sich selbst an.</p>
+        <p class="gk__lead">Ein Gerät für den Empfang: Wer einen Termin hat, meldet sich in Sekunden selbst an. Das Team sieht sofort, wer da ist.</p>
+        <ul class="checks"><li>Anmeldung per QR-Code aus der Terminbestätigung</li><li>Verbunden mit der Patientenverwaltung</li><li>Standfuß oder Wandmontage</li></ul>
+        <p style="margin:24px 0 0"><a href="termin.html?typ=hw_erstgespraech" class="link">Interesse melden <span>→</span></a></p>
+      </div>
+    </article>
+    <article class="gk reveal" id="hw-timer" style="--d:.08s">
+      <div class="gk__bild"><svg viewBox="0 0 200 140" aria-hidden="true" fill="none" stroke="url(#rm)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="100" cy="72" r="48"/><circle cx="100" cy="72" r="33" stroke-dasharray="6 9"/><path d="M100 72V50M100 72l15 10"/><path d="M100 12v10"/></svg><span class="gk__studie">Konzeptstudie</span></div>
+      <div class="gk__text">
+        <p class="tag">Bildung · Schreibtisch</p>
+        <h3 class="gk__name">Lern-Timer</h3>
+        <p class="gk__claim">Konzentriert lernen, ohne aufs Handy zu schauen.</p>
+        <p class="gk__lead">Ein Drehregler für die Lernzeit. Ein Lichtring zeigt, wie lange es noch dauert und wann Pause ist.</p>
+        <ul class="checks"><li>Drehen stellt die Lernzeit ein</li><li>Lichtring für Restzeit und Pausen</li><li>Überträgt Lernzeiten an Lernpass</li></ul>
+        <p style="margin:24px 0 0"><a href="termin.html?typ=hw_erstgespraech" class="link">Interesse melden <span>→</span></a></p>
+      </div>
+    </article>
+    <article class="gk reveal" id="hw-dock">
+      <div class="gk__bild"><svg viewBox="0 0 200 140" aria-hidden="true" fill="none" stroke="url(#rm)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="38" y="36" width="124" height="58" rx="14"/><circle cx="70" cy="65" r="13"/><path d="M96 56h46M96 66h32M96 76h40"/><path d="M58 94l-9 24h102l-9-24"/></svg><span class="gk__studie">Konzeptstudie</span></div>
+      <div class="gk__text">
+        <p class="tag">Büro · KI-Agenten</p>
+        <h3 class="gk__name">Covered Dock</h3>
+        <p class="gk__claim">Ihr KI-Team auf dem Schreibtisch.</p>
+        <p class="gk__lead">Ein kleines Tischgerät zu Covered: Es zeigt, woran die Agenten gerade arbeiten, und nimmt Aufträge per Sprache an.</p>
+        <ul class="checks"><li>Anzeige: was gerade erledigt wird</li><li>Taste für Sprachaufträge</li><li>Mikrofon mit echtem Schalter zum Abschalten</li></ul>
+        <p style="margin:24px 0 0"><a href="termin.html?typ=hw_erstgespraech" class="link">Interesse melden <span>→</span></a></p>
+      </div>
+    </article>
+    <article class="gk reveal" id="hw-sensor" style="--d:.08s">
+      <div class="gk__bild"><svg viewBox="0 0 200 140" aria-hidden="true" fill="none" stroke="url(#rm)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="48" y="36" width="104" height="76" rx="12"/><circle cx="76" cy="62" r="8"/><path d="M98 58h36M98 68h24"/><path d="M64 90h72"/><path d="M100 36V18M86 18h28"/></svg><span class="gk__studie">Konzeptstudie</span></div>
+      <div class="gk__text">
+        <p class="tag">Mittelstand · Lager &amp; Werkstatt</p>
+        <h3 class="gk__name">Sensorbox</h3>
+        <p class="gk__claim">Wissen, was im Lager passiert.</p>
+        <p class="gk__lead">Eine Box, die misst und meldet. Weicht ein Wert ab, steht es im Dashboard und Sie bekommen eine Nachricht.</p>
+        <ul class="checks"><li>Temperatur, Luftfeuchte und Türkontakt</li><li>Meldet Abweichungen ans Dashboard</li><li>Akku oder Netzteil, Montage ohne Elektriker</li></ul>
+        <p style="margin:24px 0 0"><a href="termin.html?typ=hw_erstgespraech" class="link">Interesse melden <span>→</span></a></p>
+      </div>
+    </article>
+  </div>
+  <a href="hardware.html" class="angebote-link reveal" style="margin-top:28px"><span>Eigene Produktidee? Wir entwickeln sie vom Konzept mit 3D-Modell bis zum Prototyp.</span><b>Hardware-Entwicklung ansehen →</b></a>
+</section>
+</div>
 
 <!-- ============ REFERENZEN + ZAHLEN ============ -->
 <section class="section dark" style="overflow:hidden;isolation:isolate">

@@ -4,7 +4,7 @@
 
 /* ---- Einstellungen: hier anpassen ---- */
 const CONFIG = {
-  email: "kontakt@reeder-software.de",   // Empfänger der Anfragen
+  email: "kontakt@reeder-tech.de",   // Empfänger der Anfragen
   endpoint: "",                           // Optional: Formular-Endpunkt (z. B. Formspree). Leer = E-Mail-Programm
   hours: { start: 9, end: 17 },           // Buchbare Zeiten Mo–Fr
   weeksAhead: 8,
@@ -18,7 +18,7 @@ const canHover = matchMedia("(hover: hover)").matches;
 /* ---------- Navigation ---------- */
 const nav = $("#nav");
 const page = document.body.dataset.page;
-$$("[data-nav]").forEach(a => a.classList.toggle("is-active", a.dataset.nav === page));
+$$("[data-nav]").forEach(a => a.classList.toggle("is-active", a.dataset.nav === page || (a.dataset.also || "").split(" ").includes(page)));
 function updateNav() {
   if (!nav) return;
   nav.classList.toggle("is-scrolled", scrollY > 20);
@@ -36,6 +36,11 @@ $("#burger")?.addEventListener("click", () => {
   const open = nav.classList.toggle("is-open");
   $("#burger").setAttribute("aria-expanded", open);
 });
+// Handy-Menü: nach dem Antippen eines Links schließen (wichtig bei Sprüngen innerhalb derselben Seite); immer nur eine Gruppe offen
+$$(".nav__mobile a").forEach(a => a.addEventListener("click", () => { nav.classList.remove("is-open"); $("#burger")?.setAttribute("aria-expanded", false); }));
+$$(".mnav").forEach(d => d.addEventListener("toggle", () => { if (d.open) $$(".mnav").forEach(x => { if (x !== d) x.open = false; }); }));
+// Aufklapper am Desktop: nach einem Klick auf einen Unterpunkt wieder schließen, auch wenn die Maus noch darüber steht
+$$(".nav__drop a").forEach(a => a.addEventListener("click", () => { const it = a.closest(".nav__item"); it.classList.add("is-zu"); a.blur(); it.addEventListener("mouseleave", () => it.classList.remove("is-zu"), { once: true }); }));
 
 /* Mobile CTA */
 const mcta = $("#mcta");
@@ -122,7 +127,8 @@ const subTargets = subLinks.map(a => document.getElementById(a.getAttribute("hre
 function updateSub() {
   if (!subTargets.length) return;
   let cur = subTargets[0].id;
-  subTargets.forEach(t => { if (t.getBoundingClientRect().top < innerHeight * .4) cur = t.id; });
+  const sichtbar = subTargets.filter(t => t.offsetParent !== null); if (!sichtbar.length) return; cur = sichtbar[0].id;
+  sichtbar.forEach(t => { if (t.getBoundingClientRect().top < innerHeight * .4) cur = t.id; });
   subLinks.forEach(a => a.classList.toggle("is-active", a.getAttribute("href") === "#" + cur));
 }
 
@@ -566,7 +572,7 @@ if (booker) {
     const e = new Date(s.getTime() + state.min * 60000);
     const z = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
     const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Reeder Software GmbH//Termin//DE", "BEGIN:VEVENT",
-      `UID:${Date.now()}@reeder-software.de`, `DTSTAMP:${z(new Date())}`, `DTSTART:${z(s)}`, `DTEND:${z(e)}`,
+      `UID:${Date.now()}@reeder-tech.de`, `DTSTAMP:${z(new Date())}`, `DTSTART:${z(s)}`, `DTEND:${z(e)}`,
       `SUMMARY:${state.typ}${state.product ? " " + state.product : ""} – Reeder Software`,
       "DESCRIPTION:Termin bei der Reeder Software GmbH. Details und Videolink stehen in Ihrer Bestätigungs-E-Mail.",
       "END:VEVENT", "END:VCALENDAR"].join("\r\n");
@@ -618,4 +624,56 @@ if (fab) {
     import("./produkt3d.js?v=" + (document.body.dataset.p3d || ""))   /* relativ zu dieser Datei (assets/js); Versionsnummer setzt build.py */.catch(() => els.forEach(e => e.classList.add("is-static")));
   }, { rootMargin: "700px 0px" });
   els.forEach(e => o.observe(e));
+})();
+
+
+/* ---------- Software-Seite: vier Bereiche, darunter die Leistung im Einzelnen ---------- */
+(function leistungen() {
+  const root = $(".lst"); if (!root) return;
+  root.classList.add("js");
+  const tabs = $$("[data-lst]", root), panels = $$("[data-lst-panel]", root);
+  function zeig(bereich, svc) {
+    tabs.forEach(t => { const an = t.dataset.lst === bereich; t.classList.toggle("is-on", an); t.setAttribute("aria-selected", an); });
+    panels.forEach(p => {
+      const an = p.dataset.lstPanel === bereich; p.classList.toggle("is-on", an); if (!an) return;
+      const ziel = svc || $(".lst__pick .is-on", p)?.dataset.svc || $(".lst__pick button", p).dataset.svc;
+      $$(".lst__pick button", p).forEach(b => b.classList.toggle("is-on", b.dataset.svc === ziel));
+      $$(".sblock", p).forEach(a => a.classList.toggle("is-on", a.id === ziel));
+    });
+  }
+  const hin = () => scrollTo({ top: $(".lst__tabs", root).getBoundingClientRect().top + scrollY - 96, behavior: reduced ? "auto" : "smooth" });
+  tabs.forEach(t => t.addEventListener("click", () => zeig(t.dataset.lst)));
+  root.addEventListener("click", e => { const b = e.target.closest("[data-svc]"); if (b) zeig(b.closest("[data-lst-panel]").dataset.lstPanel, b.dataset.svc); });
+  // Sprungziele wie leistungen.html#telefon öffnen den passenden Bereich
+  function ausAdresse() {
+    const id = decodeURIComponent(location.hash.slice(1)); if (!id) return;
+    const a = $$(".sblock", root).find(x => x.id === id); if (!a) return;
+    zeig(a.closest("[data-lst-panel]").dataset.lstPanel, id); requestAnimationFrame(hin);
+  }
+  addEventListener("hashchange", ausAdresse); ausAdresse();
+  // Links auf der Seite selbst (z. B. „Mehr erfahren“) funktionieren auch, wenn das Ziel schon in der Adresse steht
+  document.addEventListener("click", e => { const l = e.target.closest('a[href^="#"]'); if (l && l.getAttribute("href") === location.hash) { e.preventDefault(); ausAdresse(); } });
+})();
+
+/* ---------- Produktseite: Schalter Software | Hardware ---------- */
+(function produktBereich() {
+  const knoepfe = $$("[data-pb]"); if (!knoepfe.length) return;
+  const leiste = $(".pnav");
+  function setz(b) {
+    $$("[data-pbereich]").forEach(el => el.hidden = el.dataset.pbereich !== b);
+    $$("[data-pblinks]").forEach(el => el.hidden = el.dataset.pblinks !== b);
+    knoepfe.forEach(k => { const an = k.dataset.pb === b; k.classList.toggle("is-on", an); k.setAttribute("aria-selected", an); });
+    observeReveals(); onScroll();
+  }
+  const zurLeiste = () => scrollTo({ top: leiste.offsetTop - 50, behavior: reduced ? "auto" : "smooth" });
+  function ausAdresse() {
+    const id = decodeURIComponent(location.hash.slice(1)), el = id && document.getElementById(id), w = el && el.closest("[data-pbereich]");
+    if (!w) return false;
+    setz(w.dataset.pbereich);
+    requestAnimationFrame(() => el === w ? zurLeiste() : scrollTo({ top: el.getBoundingClientRect().top + scrollY - 110, behavior: reduced ? "auto" : "smooth" }));
+    return true;
+  }
+  knoepfe.forEach(k => k.addEventListener("click", () => { setz(k.dataset.pb); history.replaceState(null, "", "#" + k.dataset.pb); zurLeiste(); }));
+  addEventListener("hashchange", ausAdresse);
+  if (!ausAdresse()) setz("software");
 })();

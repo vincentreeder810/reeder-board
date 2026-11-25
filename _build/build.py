@@ -5,17 +5,36 @@ ASSET_V = {k: _hl.md5((_ROOT_FOR_V / p).read_bytes()).hexdigest()[:8] for k, p i
 
 SRC = pathlib.Path(__file__).parent
 OUT = pathlib.Path(sys.argv[1])
-DOMAIN = "https://www.reeder-software.de"
-EMAIL = "kontakt@reeder-software.de"
+DOMAIN = "https://www.reeder-tech.de"
+EMAIL = "kontakt@reeder-tech.de"
 
 MARK = '''<svg viewBox="16.5 9 72 72" aria-hidden="true"><defs><linearGradient id="rm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7cff"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><path d="M52 10C66 30 75 54 78 80H52Z" fill="url(#rm)"/><path d="M45 28C37 44 30 62 27 80H45Z" fill="currentColor"/></svg>'''
 
-# Menü bewusst kurz. Angebote, Projekte und Ablauf & FAQ bleiben über den Fuß und über Links auf den Seiten erreichbar.
-NAV = [("leistungen", "Software"), ("hardware", "Hardware"), ("produkte", "Produkte"), ("arbeitsweise", "So arbeiten wir")]
+# Menü: fünf Punkte oben, darunter klappen die Unterseiten und Abschnitte auf. Jede Seite ist mit höchstens zwei Klicks erreichbar.
+# (Schlüssel der Seite, Beschriftung, weitere Seiten, bei denen der Punkt als aktiv gilt, Unterpunkte)
+NAV = [
+    ("leistungen", "Software", "", [("leistungen.html", "Überblick"), ("leistungen.html#websites", "Websites & Web-Apps"), ("leistungen.html#apps", "Mobile Apps"),
+        ("leistungen.html#telefon", "KI-Telefonassistent"), ("leistungen.html#ki", "KI & Automatisierung"), ("leistungen.html#praxis", "Praxis- & Patientensysteme"),
+        ("leistungen.html#beratung", "Beratung & Konzept"), ("leistungen.html#anpassung", "Bestehende Software anpassen")]),
+    ("hardware", "Hardware", "", [("hardware.html", "Überblick"), ("hardware.html#schritte", "So läuft es ab"), ("produkte.html#hardware", "Hardware-Produkte")]),
+    ("produkte", "Produkte", "", [("produkte.html#software", "Software-Produkte"), ("produkte.html#hardware", "Hardware-Produkte")]),
+    ("modelle", "Preise", "", []),
+    ("arbeitsweise", "So arbeiten wir", "ablauf projekte", [("arbeitsweise.html", "Arbeitsweise & KI"), ("ablauf.html", "Ablauf & FAQ"), ("projekte.html", "Projekte")]),
+]
+CHEV = '<svg class="nav__chev" viewBox="0 0 10 6" width="9" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 
 def header():
-    links = "".join(f'<a href="{k}.html" data-nav="{k}">{html.escape(v)}</a>' for k, v in NAV)
-    mob = "".join(f'<a href="{k}.html" data-nav="{k}">{html.escape(v)}<small>0{i+1}</small></a>' for i, (k, v) in enumerate(NAV))
+    def oben(k, v, also, sub):
+        a = f'<a href="{k}.html" data-nav="{k}" data-also="{also}"' + (' aria-haspopup="true"' if sub else '') + f'>{html.escape(v)}{CHEV if sub else ""}</a>'
+        if not sub: return a
+        drop = "".join(f'<a href="{h}">{html.escape(t)}</a>' for h, t in sub)
+        return f'<div class="nav__item">{a}<div class="nav__drop"><div class="nav__dropin">{drop}</div></div></div>'
+    def mobil(i, k, v, also, sub):
+        if not sub: return f'<a href="{k}.html" data-nav="{k}" data-also="{also}">{html.escape(v)}<small>0{i+1}</small></a>'
+        inner = "".join(f'<a href="{h}">{html.escape(t)}</a>' for h, t in sub)
+        return f'<details class="mnav"><summary>{html.escape(v)}<small>0{i+1}</small></summary><div class="mnav__sub">{inner}</div></details>'
+    links = "".join(oben(*n) for n in NAV)
+    mob = "".join(mobil(i, *n) for i, n in enumerate(NAV))
     return f'''<a class="sr-only" href="#inhalt">Zum Inhalt springen</a>
 <header class="nav" id="nav">
   <div class="nav__inner">
@@ -78,7 +97,7 @@ PAGES = [
          desc="Websites, Apps, KI-Telefonassistenten und Praxissoftware – und physische Produkte vom technischen Konzept mit 3D-Modell bis zum Prototyp. Jetzt kostenloses Erstgespräch buchen.",
          fraunces=True, ld=lambda b: [ORG, {"@type": "WebSite", "@id": DOMAIN + "/#web", "url": DOMAIN + "/", "name": "Reeder Software & Hardware", "inLanguage": "de-DE", "publisher": {"@id": DOMAIN + "/#org"}}, faq_ld(b)]),
     dict(file="produkte.html", page="produkte", path="produkte.html",
-         title="Produkte: Perspektive, Lernpass, BusinessCat, Covered | Reeder Software",
+         title="Produkte: Software und Hardware von Reeder | Covered, BusinessCat, Lernpass, Perspektive",
          desc="Unsere eigenen Produkte: Perspektive (Verstehen & Rhetorik), Lernpass (Lernen mit KI), BusinessCat (Gründung mit KI) und Covered (KI-Agenten, die für Sie handeln). Demo buchen, lizenzieren, anpassen.",
          fraunces=True, ld=lambda b: [crumbs("Produkte", "produkte.html"), {"@type": "ItemList", "itemListElement": [
              {"@type": "ListItem", "position": i + 1, "item": {"@type": "SoftwareApplication", "name": n, "applicationCategory": c, "description": d, "operatingSystem": "Web, iOS, Android", "publisher": {"@id": DOMAIN + "/#org"}}} for i, (n, c, d) in enumerate(APPS)]}]),
