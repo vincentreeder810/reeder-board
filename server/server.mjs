@@ -574,6 +574,9 @@ async function adminApi(req, res, url) {
     const next = { host: clean(d.host, 160), port: Math.min(65535, Math.max(1, +d.port || 587)), user: clean(d.user, 160), pass: d.pass ? String(d.pass).slice(0, 300) : cur.pass || "" };
     if (!next.host) { setSetting("smtp", {}); await reloadSmtp(); return json(res, 200, { mailStatus: mailStatus() }); }
     setSetting("smtp", next); await reloadSmtp();
+    // Steht als Absender noch die Vorgabe, übernimmt das Board die Adresse des Postfachs – sonst lehnt der Mailserver den Versand ab („Sender address is not allowed“)
+    { const ml = getSetting("mail", DEFAULT_MAIL), alt = a => !a || /@reeder-software.de$/i.test(a);
+      if (isEmail(next.user) && (alt(ml.fromAddress) || alt(ml.notifyAddress))) setSetting("mail", { ...ml, fromAddress: alt(ml.fromAddress) ? next.user : ml.fromAddress, notifyAddress: alt(ml.notifyAddress) ? next.user : ml.notifyAddress }); }
     return json(res, 200, { mailStatus: mailStatus() });
   }
   if (p === "/settings/test-mail" && m === "POST") {

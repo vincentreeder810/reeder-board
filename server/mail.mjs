@@ -33,7 +33,7 @@ export async function testSmtp(to) {
   } catch (e) {
     const fehler = String(e.message || e);
     try { db.prepare("INSERT INTO outbox(to_addr, subject, body, status, error) VALUES(?, ?, ?, ?, ?)").run(to, "Testmail", "", "fehlgeschlagen", fehler); } catch {}
-    return { ok: false, error: /timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND/i.test(fehler) ? `Der Mailserver ist nicht erreichbar (${fehler}). Bitte Server und Port prüfen.` : /auth|535|credentials/i.test(fehler) ? `Der Mailserver lehnt die Anmeldung ab (${fehler}). Bitte Benutzer und Passwort prüfen.` : fehler };
+    return { ok: false, error: /sender address|not allowed|550/i.test(fehler) ? `Der Mailserver lehnt die Absenderadresse ab. Unter „Absender“ muss dieselbe Adresse stehen wie beim Benutzer des Postfachs. Bitte dort eintragen und speichern. (${fehler})` : /timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND/i.test(fehler) ? `Der Mailserver ist nicht erreichbar (${fehler}). Bitte Server und Port prüfen.` : /auth|535|credentials/i.test(fehler) ? `Der Mailserver lehnt die Anmeldung ab (${fehler}). Bitte Benutzer und Passwort prüfen.` : fehler };
   }
 }
 
