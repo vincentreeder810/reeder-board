@@ -141,6 +141,7 @@
       <div class="uidlg__btns">
         ${e.tentative ? `<button class="btn btn--danger btn--sm" data-a="cancel">Absagen</button><button class="btn btn--grad btn--sm" data-a="confirm">✓ Bestätigen &amp; Einladung senden</button>` : ""}
         ${e.video_url && en > new Date() ? `<a class="btn btn--ghost btn--sm" href="${esc(e.video_url)}" target="_blank" rel="noopener">Video beitreten</a>` : ""}
+        ${e.kind === "termin" && en > new Date() && ME.owner ? `<button class="btn btn--danger btn--sm" data-a="tabsage">Absagen</button><button class="btn btn--ghost btn--sm" data-a="tverschieben">Verschieben</button>` : ""}
         ${e.kind === "termin" ? `<button class="btn btn--grad btn--sm" data-a="edit">${en < new Date() && !e.summary ? "Zusammenfassung eintragen" : "Bearbeiten"}</button>` : ""}
       </div></div>`;
     document.body.appendChild(m);
@@ -155,6 +156,19 @@
       const a = ev.target.closest("[data-a]")?.dataset.a; if (!a) return;
       try {
         if (a === "edit") { m.remove(); return window.KUNDEN.editAppt(e.id, e.client.id); }
+        // Bestätigten Termin absagen oder verschieben – der Kontakt bekommt jeweils sofort eine E-Mail
+        const mailHinweis = r => r.ohneAdresse ? " Für den Kontakt ist keine E-Mail-Adresse hinterlegt – bitte selbst Bescheid geben." : r.mailed ? " Der Kontakt ist per E-Mail informiert." : " Die E-Mail liegt im Postausgang (Versand nicht eingerichtet oder fehlgeschlagen).";
+        if (a === "tabsage") {
+          const grund = await UI.prompt("Termin absagen", { text: "Der Termin wird aus dem Kalender entfernt. Der Kontakt bekommt eine E-Mail mit dem Link, um einen neuen Termin zu wählen.", label: "Kurzer Grund für den Kunden (optional)", value: "", multiline: true, ok: "Absagen und Mail senden" });
+          if (grund === null) return;
+          const r = await api(`/appointments/${e.id}/absagen`, { method: "POST", body: { grund } }); toast("Termin abgesagt." + mailHinweis(r));
+        }
+        if (a === "tverschieben") {
+          const z = n => String(n).padStart(2, "0"), jetzt = `${s.getFullYear()}-${z(s.getMonth() + 1)}-${z(s.getDate())}T${z(s.getHours())}:${z(s.getMinutes())}`;
+          const wert = await UI.prompt("Termin verschieben", { text: "Der Kontakt bekommt eine E-Mail mit dem neuen Termin und einem Kalendereintrag.", label: "Neuer Tag und neue Uhrzeit", type: "datetime-local", value: jetzt, ok: "Verschieben und Mail senden" });
+          if (!wert) return;
+          const r = await api(`/appointments/${e.id}/verschieben`, { method: "POST", body: { start: new Date(wert).toISOString() } }); toast("Termin verschoben." + mailHinweis(r));
+        }
         if (a === "confirm") { const r = await api(`/bookings/${e.id}`, { method: "PATCH", body: { status: "bestaetigt", notify: true } }); toast(r.mailed ? "Bestätigt – Einladung mit Video-Link ist raus." : "Bestätigt – Einladung liegt im Postausgang."); }
         if (a === "cancel") { if (!(await UI.confirm("Der Kontakt wird per E-Mail informiert und kann einen neuen Termin wählen.", { title: "Termin absagen?", ok: "Absagen", danger: true }))) return; await api(`/bookings/${e.id}`, { method: "PATCH", body: { status: "abgesagt", notify: true } }); toast("Abgesagt"); }
         m.remove(); load(); window.updateBadges?.();

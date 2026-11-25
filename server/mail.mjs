@@ -12,7 +12,8 @@ export async function reloadSmtp() {
   try {
     const nodemailer = (await import("nodemailer")).default;
     const port = Number(cfg.port || 587);
-    transporter = nodemailer.createTransport({ host: cfg.host, port, secure: port === 465, auth: { user: cfg.user, pass: cfg.pass } });
+    // Zeitgrenzen: Antwortet der Mailserver nicht, gibt es nach wenigen Sekunden eine klare Fehlermeldung statt einer hängenden Anfrage
+    transporter = nodemailer.createTransport({ host: cfg.host, port, secure: port === 465, auth: { user: cfg.user, pass: cfg.pass }, connectionTimeout: 12000, greetingTimeout: 12000, socketTimeout: 20000 });
     smtpReady = true;
   } catch (e) { console.warn("E-Mail: Paket 'nodemailer' fehlt – bitte einmal 'npm install' ausführen. Mails werden nur gespeichert."); }
   return smtpReady;
@@ -25,9 +26,15 @@ export async function testSmtp(to) {
   try {
     await transporter.verify();
     const cfg = getSetting("mail", DEFAULT_MAIL);
-    await transporter.sendMail({ from: `"${cfg.fromName}" <${cfg.fromAddress}>`, to, subject: "Testmail aus dem Admin-Board", text: "Der E-Mail-Versand Ihres Admin-Boards funktioniert. 🎉" });
+    const betreff = "Ihr Mailversand ist eingerichtet", text = `Hallo,\n\ndiese Nachricht bestätigt, dass Ihr Board E-Mails über das Postfach ${cfg.fromAddress} verschicken kann.\n\nSie müssen nichts weiter tun.\n\nViele Grüße\n${cfg.fromName}`;
+    await transporter.sendMail({ from: `"${cfg.fromName}" <${cfg.fromAddress}>`, to, subject: betreff, text });
+    db.prepare("INSERT INTO outbox(to_addr, subject, body, status) VALUES(?, ?, ?, ?)").run(to, betreff, text, "versendet");
     return { ok: true };
-  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+  } catch (e) {
+    const fehler = String(e.message || e);
+    try { db.prepare("INSERT INTO outbox(to_addr, subject, body, status, error) VALUES(?, ?, ?, ?, ?)").run(to, "Testmail", "", "fehlgeschlagen", fehler); } catch {}
+    return { ok: false, error: /timeout|ETIMEDOUT|ECONNREFUSED|ENOTFOUND/i.test(fehler) ? `Der Mailserver ist nicht erreichbar (${fehler}). Bitte Server und Port prüfen.` : /auth|535|credentials/i.test(fehler) ? `Der Mailserver lehnt die Anmeldung ab (${fehler}). Bitte Benutzer und Passwort prüfen.` : fehler };
+  }
 }
 
 export async function sendMail({ to, subject, text, attachments }) {

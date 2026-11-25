@@ -477,7 +477,32 @@ async function adminApi(req, res, url) {
     const rows = st ? db.prepare("SELECT * FROM bookings WHERE status = ? ORDER BY start DESC").all(st) : db.prepare("SELECT * FROM bookings ORDER BY start DESC LIMIT 500").all();
     return json(res, 200, rows.map(b => ({ ...b, typeLabel: typeLabel(b.type) })));
   }
-  let mm = p.match(/^\/bookings\/(\d+)$/);
+  // Bestätigten Termin absagen oder verschieben: Der Kontakt bekommt sofort eine eigene E-Mail mit dem Weg zu einem neuen Termin
+  let mm = p.match(/^\/appointments\/(\d+)\/(absagen|verschieben)$/);
+  if (mm && m === "POST") {
+    if (!isOwner(user)) return json(res, 403, { error: "Nur für Inhaber." });
+    const a = db.prepare("SELECT a.*, c.email, c.name cname, c.company FROM appointments a JOIN clients c ON c.id = a.client_id WHERE a.id = ?").get(+mm[1]);
+    if (!a) return json(res, 404, { error: "Termin nicht gefunden" });
+    const d = await readJson(req), alt = formatDe(a.start), anrede = a.cname || a.company || "", mitMail = d.notify !== false && !!a.email;
+    if (mm[2] === "absagen") {
+      if (a.booking_id) db.prepare("UPDATE bookings SET status = 'abgesagt', updated_at = datetime('now') WHERE id = ?").run(a.booking_id);
+      db.prepare("DELETE FROM appointments WHERE id = ?").run(a.id);
+      const grund = clean(d.grund, 600);
+      const mailed = mitMail ? await sendMail({ to: a.email, subject: `Ihr Termin am ${alt}`,
+        text: `Hallo ${anrede},\n\nleider können wir den Termin „${a.title}“ am ${alt} nicht wahrnehmen.${grund ? "\n\n" + grund : ""}\n\nBitte wählen Sie einen neuen Termin unter ${SITE_URL}/termin.html – oder antworten Sie einfach auf diese E-Mail.${sig()}` }) : null;
+      return json(res, 200, { ok: true, mailed, ohneAdresse: !a.email });
+    }
+    const zeit = new Date(String(d.start || "")), neu = Number.isFinite(zeit.getTime()) ? zeit.toISOString() : null;
+    if (!neu || Date.parse(neu) <= Date.now()) return json(res, 400, { error: "Bitte einen Zeitpunkt in der Zukunft wählen." });
+    db.prepare("UPDATE appointments SET start = ? WHERE id = ?").run(neu, a.id);
+    if (a.booking_id) db.prepare("UPDATE bookings SET start = ?, updated_at = datetime('now') WHERE id = ?").run(neu, a.booking_id);
+    const wann = formatDe(neu), ics = icsCalendar([icsFor({ id: a.id, start: neu, minutes: a.minutes || 30, name: anrede, email: a.email || "", status: "bestaetigt", video_url: a.video_url }, { title: `${a.title} – Reeder` })]);
+    const mailed = mitMail ? await sendMail({ to: a.email, subject: `Neuer Termin: ${wann}`,
+      text: `Hallo ${anrede},\n\nwir müssen den Termin „${a.title}“ verlegen.\n\nBisher: ${alt}\nNeu: ${wann}${a.minutes ? ` (${a.minutes} Minuten)` : ""}\n${a.video_url ? `\nDer Link zum Videogespräch bleibt gleich:\n${a.video_url}\n` : ""}\nDen neuen Termin für Ihren Kalender finden Sie im Anhang. Passt er Ihnen nicht, wählen Sie einfach einen anderen unter ${SITE_URL}/termin.html – oder antworten Sie auf diese E-Mail.${sig()}`,
+      attachments: [{ filename: "termin-reeder.ics", content: ics, contentType: "text/calendar" }] }) : null;
+    return json(res, 200, { ok: true, mailed, start: neu, ohneAdresse: !a.email });
+  }
+  mm = p.match(/^\/bookings\/(\d+)$/);
   if (mm && m === "PATCH") {
     const d = await readJson(req), b = db.prepare("SELECT * FROM bookings WHERE id = ?").get(+mm[1]);
     if (!b) return json(res, 404, { error: "Nicht gefunden" });
