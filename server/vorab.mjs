@@ -451,5 +451,24 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
     return null;
   }
 
+  /** Nachholen: Fragebögen, die beantwortet sind, aber noch keinen Entwurf haben – etwa weil der KI-Schlüssel beim Absenden
+   *  noch fehlte oder der Server mitten im Bauen neu gestartet wurde. Läuft kurz nach dem Start und danach alle 15 Minuten. */
+  let holtNach = false;
+  async function nachholen() {
+    if (holtNach || !(assistantStatus().key || MOCK())) return;
+    holtNach = true;
+    try {
+      const offen = db.prepare("SELECT * FROM vorab WHERE answers IS NOT NULL AND prototype_id IS NULL AND status IN ('beantwortet','baut') ORDER BY id LIMIT 5").all();
+      for (const v of offen) {
+        let art = ""; try { art = JSON.parse(v.answers).kind; } catch {}
+        if (!["website", "webapp", "app"].includes(art)) continue;
+        console.log(`Vorab-Entwurf wird nachgeholt (Fragebogen ${v.id})`);
+        await build(v);
+      }
+    } finally { holtNach = false; }
+  }
+  setTimeout(() => nachholen().catch(e => console.warn("Vorab nachholen:", e.message)), 20000).unref?.();
+  setInterval(() => nachholen().catch(e => console.warn("Vorab nachholen:", e.message)), 15 * 60000).unref?.();
+
   return { invite, publicRoute, admin, build };
 }
