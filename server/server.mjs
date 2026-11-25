@@ -54,6 +54,19 @@ if (!db.prepare("SELECT COUNT(*) n FROM users").get().n) {
   }
   db.prepare("INSERT INTO users(email, name, pw_hash) VALUES(?, ?, ?)").run(email.toLowerCase(), "Admin", hashPw(pw));
 }
+// Server im Internet: Startete er einmal ohne ADMIN_EMAIL / ADMIN_PASSWORD, gibt es nur den Platzhalter-Zugang mit einem
+// Zufallspasswort, das niemand kennt. Sobald beide Angaben gesetzt sind, wird genau dieser Platzhalter zum echten Zugang.
+{
+  const e = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase(), pw = String(process.env.ADMIN_PASSWORD || "");
+  if (e && pw.length >= 10 && db.prepare("SELECT COUNT(*) n FROM users").get().n === 1) {
+    const platz = db.prepare("SELECT id FROM users WHERE email = 'admin@reeder-software.de' AND name = 'Admin'").get();
+    if (platz && e !== "admin@reeder-software.de") {
+      db.prepare("UPDATE users SET email = ?, pw_hash = ? WHERE id = ?").run(e, hashPw(pw), platz.id);
+      db.prepare("DELETE FROM sessions WHERE user_id = ?").run(platz.id);
+      console.log("Admin-Zugang aus ADMIN_EMAIL / ADMIN_PASSWORD übernommen.");
+    }
+  }
+}
 
 /* ================= Helfer ================= */
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json",
