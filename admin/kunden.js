@@ -94,7 +94,7 @@
     const c = current, lead = c.stage !== "mandant", ap = activeProjects(c);
     if (lead && ["chat", "anmerkungen", "dokumente"].includes(tab)) tab = "ueberblick";
     const back = lead && c.stage !== "archiv" ? ["#anfragen", "Vertrieb"] : ["#kunden", "Alle Kunden"];
-    const more = !ME.owner ? [] : lead ? [{ v: "makeClient", l: "Nur Portalzugang freischalten" }, c.stage !== "archiv" ? { v: "archive", l: "Archivieren" } : { v: "unarchive", l: "Reaktivieren" }]
+    const more = !ME.owner ? [] : lead ? [{ v: "invite", l: "Neuen Zugangslink (Passwort neu setzen)" }, { v: "makeClient", l: "Nur Portalzugang freischalten" }, c.stage !== "archiv" ? { v: "archive", l: "Archivieren" } : { v: "unarchive", l: "Reaktivieren" }]
       : [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, { v: "billing", l: "Rechnungsadresse" }, { v: "invite", l: c.status === "aktiv" ? "Neuen Zugangslink senden" : "Einladungslink senden" }, { v: "toggle", l: c.active ? "Portalzugang sperren" : "Portalzugang aktivieren", danger: c.active }, { v: "archive", l: "Archivieren" }];
     const facts = lead ? [["Status", STAGE[c.stage][0]], ["Kontakt kam über", quelle(c) || "–"], ["Erster Kontakt", day(c.created_at)], ["Nächster Termin", c.next ? dayShort(c.next.start) : "–"]]
       : [["Kunde seit", day(c.created_at)], ["Aktive Projekte", String(ap.length)], ...(ME.owner ? [["Offen (netto)", c.open_net ? moneyR(c.open_net) : "–"]] : []), ["Nächster Termin", c.next ? dayShort(c.next.start) : "–"], ["Kundenportal", c.active ? (STATUS_LABEL[c.status] || c.status) : "gesperrt"]];
