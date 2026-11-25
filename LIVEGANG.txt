@@ -1,0 +1,67 @@
+LIVEGANG – Reeder Website, Kundenportal und Board
+=================================================
+Stand: 13.11.2026. Nichts davon ist bisher passiert – das Board läuft nur lokal.
+Die Checkliste im Board (Einstellungen > Livegang) zeigt jederzeit, was noch fehlt.
+
+
+1. VORHER IM LOKALEN BOARD ERLEDIGEN
+------------------------------------
+- Einstellungen > Unternehmen: alle Pflichtangaben (Anschrift, Geschäftsführer, Handelsregister,
+  Steuernummer/USt-IdNr., Bank/IBAN). Ohne diese Angaben verweigert das Board Rechnungen.
+- Einstellungen > E-Mail: SMTP-Zugang des Postfachs eintragen (z. B. hallo@reeder-software.de)
+  und eine Testmail schicken.
+- Einstellungen > Mein Zugang: Zwei-Faktor-Anmeldung für jeden Inhaber einschalten,
+  Notfallcodes sicher ablegen.
+- Einstellungen > Vertrag & AVV: Texte anwaltlich prüfen lassen und die geprüfte Fassung eintragen.
+- Impressum und Datenschutzerklärung prüfen lassen (inkl. Kundenportal, Terminbuchung,
+  E-Mail-Anbieter, Hosting-Anbieter als Auftragsverarbeiter).
+- Steuerberater: Testexport (Finanzen > Auswertung & Export) schicken, Kontenrahmen bestätigen lassen.
+- KI-Assistent: den Test-API-Schluessel in der Konsole von Anthropic widerrufen (er stand im Chatverlauf), einen neuen erzeugen
+  und nur in der Server-Umgebung (Render > Environment) als ANTHROPIC_API_KEY eintragen. Anthropic-AVV/DPA abschliessen.
+- Testdaten aus dem echten Board entfernen (das Demo-Board unter data-demo bleibt getrennt
+  und wird NICHT hochgeladen).
+
+
+2. SERVER (vorbereitet für Render)
+----------------------------------
+Die Datei render.yaml im Projektordner beschreibt den Dienst. Wichtig:
+- Ein Web-Service (Node 24), Start mit "npm start".
+- Eine PERSISTENTE DISK (z. B. 1 GB) unter /var/data. Ohne Disk sind Datenbank, Dokumente und
+  Sicherungen nach jedem Neustart weg!
+- Umgebungsvariablen (in Render unter "Environment", NICHT in Git):
+    DATA_DIR=/var/data
+    SITE_URL=https://www.reeder-software.de      (eigene Domain, mit https)
+    ADMIN_EMAIL / ADMIN_PASSWORD                  (nur für den allerersten Start, danach entfernen)
+- Nur EINE Instanz betreiben (SQLite-Datenbank liegt auf der Disk).
+- Pruefstrecke (Baustein H6) braucht auf dem Server einen Browser (Chromium). Bei Render: Docker-Dienst mit
+  installiertem chromium oder die Pruefstrecke weiter lokal laufen lassen; Pfad per BROWSER_PATH (z. B. /usr/bin/chromium).
+- Kosten: Web-Service + Disk sind kostenpflichtig (Starter-Tarif); vorher im Render-Preismodell prüfen.
+
+Umzug der lokalen Daten (falls gewünscht):
+- Lokal: Einstellungen > Livegang > "Komplettsicherung herunterladen" (ZIP).
+- Auf dem Server den Inhalt des ZIP in /var/data entpacken (reeder.db + Ordner), Dienst neu starten.
+
+Domain:
+- In Render die eigene Domain hinzufügen, beim Domain-Anbieter den angezeigten DNS-Eintrag setzen.
+- Render stellt das HTTPS-Zertifikat automatisch aus. Danach SITE_URL auf https://… setzen –
+  erst dann gelten sichere Cookies und HSTS.
+
+
+3. NACH DEM START PRÜFEN
+------------------------
+- https://…/admin anmelden (mit Zwei-Faktor), Einstellungen > Betrieb: alle Punkte grün?
+- Testbuchung über die Website, Testanfrage, Test-Kunde einladen und im Portal anmelden.
+- "Passwort vergessen" einmal durchspielen (kommt die Mail an?).
+- Erste nächtliche Datensicherung abwarten (Einstellungen > Betrieb).
+- Wöchentlich die Komplettsicherung herunterladen und extern ablegen (z. B. verschlüsselt im
+  Firmen-Cloudspeicher). Die Sicherungen auf dem Server schützen nicht vor dem Verlust des Servers.
+
+
+4. WAS DAS BOARD SCHON MITBRINGT
+--------------------------------
+- Passwörter mit scrypt gespeichert, Sitzungen als HttpOnly/SameSite-Cookies (bei https zusätzlich Secure).
+- Anmeldesperre nach 10 Fehlversuchen (15 Minuten), Anmeldeprotokoll, Zwei-Faktor (TOTP) mit Notfallcodes.
+- "Passwort vergessen" ohne Auskunft, ob ein Konto existiert; Links 1 Stunde gültig, einmal verwendbar.
+- Sicherheits-Header (nosniff, Frame-Schutz, Referrer-Policy, Permissions-Policy, HSTS bei https).
+- Entwickler sehen nur zugewiesene Projekte und keine Beträge; Rechnungen GoBD-gesperrt.
+- Tägliche Datensicherung (14 Tage), Systemstatus, Erreichbarkeitsprüfung für Kundensysteme.

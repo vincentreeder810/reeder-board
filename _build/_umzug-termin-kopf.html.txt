@@ -1,0 +1,13 @@
+<section class="phero dark" style="padding-bottom:70px">
+  <div class="grid-bg" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div><div class="phero__glow" aria-hidden="true"></div>
+  <div class="phero__inner">
+    <div>
+      <p class="eyebrow reveal">Termin buchen</p>
+      <h1 class="reveal">Lassen Sie uns <em class="serif">sprechen.</em></h1>
+    </div>
+    <div class="reveal" style="--d:.15s">
+      <p>Wählen Sie, worum es gehen soll, und suchen Sie sich direkt einen freien Termin aus. Die Bestätigung bekommen Sie sofort per E-Mail.</p>
+      <ul class="ticks"><li>Erstgespräch kostenlos</li><li>Software und Hardware</li><li>Sofort bestätigt</li></ul>
+    </div>
+  </div>
+</section>

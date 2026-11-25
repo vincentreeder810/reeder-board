@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ihr Vorhaben · Reeder Software &amp; Hardware</title>
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<!--
+  Onboarding für Software- und Hardware-Anfragen. Der Link kommt per E-Mail nach der Terminbuchung:
+  /portal/onboarding.html#<Token>
+  Fragen, Antwortmöglichkeiten und Budgetstufen stehen in server/onboarding.mjs (FRAGEN) – hier wird nur gezeichnet.
+-->
+<style>
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_400Regular.ttf") format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_600SemiBold.ttf") format("truetype");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_700Bold.ttf") format("truetype");font-weight:700 900;font-display:swap}
+:root{--ink:#0a0a0c;--ink2:#424245;--muted:#86868b;--paper:#f5f5f7;--line:rgba(0,0,0,.08);--violet:#8b5cf6;--grad:linear-gradient(100deg,#4f7cff 0%,#8b5cf6 52%,#ec4899 100%);--ease:cubic-bezier(.22,1,.36,1)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;line-height:1.5;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;padding:0}
+input,textarea{font:inherit;color:inherit}
+[hidden]{display:none!important}
+
+/* Rahmen */
+.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.top__in{max-width:980px;margin:auto;display:flex;align-items:center;gap:18px;padding:13px 22px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.brand svg{width:26px;height:26px}.brand span{font-weight:400;color:var(--muted)}
+.bar{flex:1;height:4px;border-radius:2px;background:var(--paper);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:2px;background:var(--grad);transition:width .7s var(--ease)}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+main{flex:1;display:grid;place-items:center;padding:clamp(24px,5vw,64px) 22px 120px}
+.wrap{width:min(760px,100%)}
+
+/* Ein Bildschirm je Frage */
+.screen{animation:in .7s var(--ease) both}
+.screen.back{animation-name:inback}
+@keyframes in{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes inback{from{opacity:0;transform:translateY(-26px)}to{opacity:1;transform:none}}
+.kicker{margin:0 0 14px;font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content;max-width:100%}
+h1{margin:0;font-size:clamp(30px,5.2vw,52px);line-height:1.06;letter-spacing:-.045em;font-weight:700}
+.hint{margin:14px 0 0;color:var(--muted);font-size:17px}
+.fields{display:grid;gap:26px;margin-top:clamp(26px,4vw,40px)}
+.field__label{display:block;margin-bottom:10px;font-size:15px;font-weight:600;color:var(--ink2)}
+input[type=text],input[type=password],textarea{width:100%;padding:16px 18px;border-radius:16px;border:1.5px solid transparent;background:var(--paper);font-size:17px;outline:none;transition:border-color .25s,background .25s,box-shadow .25s}
+textarea{resize:vertical;min-height:132px;line-height:1.5}
+.konto{display:grid;gap:18px;margin-top:28px;max-width:520px}
+.konto__mail{padding:14px 18px;border-radius:16px;background:var(--paper);font-size:16px}
+.konto__mail span{color:var(--muted)}
+.konto label{display:grid;gap:8px;font-size:15px;font-weight:600;color:var(--ink2)}
+.konto label small{font-weight:400;color:var(--muted)}
+.konto .einw{grid-template-columns:22px 1fr;align-items:start;font-weight:400;font-size:14.5px;color:var(--ink2)}
+.konto .einw input{width:19px;height:19px;margin:2px 0 0;accent-color:var(--violet)}
+.konto .einw a{color:var(--violet)}
+.konto__alt{margin:0;font-size:14px;color:var(--muted)}.konto__alt a{color:var(--violet)}
+input[type=password]:focus,input[type=text]:focus,textarea:focus{border-color:var(--violet);background:#fff;box-shadow:0 14px 34px -22px rgba(139,92,246,.7)}
+::placeholder{color:#a1a1a6}
+
+/* Antworten zum Antippen */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.opt{position:relative;display:flex;align-items:center;gap:14px;min-height:64px;padding:14px 46px 14px 18px;border-radius:18px;background:var(--paper);text-align:left;font-size:16.5px;font-weight:600;letter-spacing:-.01em;transition:transform .35s var(--ease),background .3s,box-shadow .35s var(--ease);animation:pop .6s var(--ease) both;animation-delay:calc(var(--i)*.045s + .12s)}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.opt:hover{transform:translateY(-2px)}
+.opt:active{transform:scale(.98)}
+.opt::after{content:"";position:absolute;right:16px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #c7c7cc;transition:box-shadow .3s,background .3s,transform .4s var(--ease)}
+.opt--multi::after{border-radius:7px}
+.opt.on{background:#fff;box-shadow:0 0 0 2px var(--violet),0 22px 44px -28px rgba(139,92,246,.8)}
+.opt.on::after{background:var(--violet) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat;box-shadow:none;transform:scale(1.08)}
+.opt.voll{opacity:.4;pointer-events:none}
+.opt svg{width:30px;height:30px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--ink2);transition:color .3s}
+.opt.on svg{color:var(--violet)}
+/* Symbole bewegen sich, sobald sie gewählt sind */
+.opt.on .a-dreh{animation:dreh 3.2s linear infinite;transform-origin:center;transform-box:fill-box}
+.opt.on .a-puls{animation:puls 1.3s var(--ease) infinite;transform-origin:center;transform-box:fill-box}
+.opt.on .a-fluss{stroke-dasharray:5 5;animation:fluss 1s linear infinite}
+@keyframes dreh{to{transform:rotate(360deg)}}
+@keyframes puls{50%{transform:scale(1.18);opacity:.6}}
+@keyframes fluss{to{stroke-dashoffset:-20}}
+
+/* Schaubild: Größe */
+.schau{margin-top:clamp(24px,4vw,38px);border-radius:26px;background:radial-gradient(120% 100% at 50% 0%,#1c1f2b 0%,#0c0c12 60%,#060608 100%);height:clamp(190px,30vw,260px);position:relative;overflow:hidden;color:#fff}
+.schau svg{position:absolute;inset:0;width:100%;height:100%}
+.schau__text{position:absolute;left:22px;top:18px;font-size:13px;color:rgba(255,255,255,.55);letter-spacing:.02em}
+.g-ref{opacity:0;transition:opacity .6s var(--ease)}
+.g-ding{transition:transform .9s var(--ease);transform-origin:center bottom;transform-box:fill-box}
+.schau[data-g="hand"] .g-hand,.schau[data-g="tisch"] .g-tisch,.schau[data-g="moebel"] .g-mensch,.schau[data-g="gross"] .g-mensch{opacity:1}
+.schau[data-g="hand"] .g-ding{transform:scale(.22)}
+.schau[data-g="tisch"] .g-ding{transform:scale(.42)}
+.schau[data-g="moebel"] .g-ding{transform:scale(.82)}
+.schau[data-g="gross"] .g-ding{transform:scale(1.5)}
+.schau:not([data-g]) .g-ding{transform:scale(.5);opacity:.35}
+/* Schaubild: Geräte */
+.d-geraet{opacity:.22;transition:opacity .5s var(--ease),transform .7s var(--ease);transform-box:fill-box;transform-origin:center bottom}
+.d-geraet.on{opacity:1;transform:translateY(-6px)}
+.d-inhalt{opacity:0;transition:opacity .6s .2s}
+.d-geraet.on .d-inhalt{opacity:1}
+
+/* Datei */
+.datei{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.datei__knopf{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 22px;border-radius:999px;background:var(--paper);font-weight:600;transition:background .2s}
+.datei__knopf:hover{background:#ececf0}
+.datei__liste{display:flex;gap:8px;flex-wrap:wrap;font-size:14px}
+.datei__liste span{padding:6px 12px;border-radius:999px;background:#e8f8ef;color:#137a3e;font-weight:600}
+
+/* Fuß mit Weiter/Zurück */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:15;background:linear-gradient(to top,#fff 62%,rgba(255,255,255,0));padding:26px 22px 22px}
+.nav__in{max-width:760px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:12px;height:56px;padding:0 10px 0 26px;border-radius:999px;background:var(--ink);color:#fff;font-weight:600;font-size:16.5px;transition:transform .3s var(--ease),box-shadow .3s,opacity .2s}
+.btn:hover{box-shadow:0 14px 30px -14px rgba(0,0,0,.6)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.35;cursor:default;box-shadow:none}
+.btn .arr{width:38px;height:38px;border-radius:50%;background:var(--grad);display:grid;place-items:center;transition:transform .4s var(--ease)}
+.btn:hover:not(:disabled) .arr{transform:translateX(3px)}
+.btn--leise{background:none;color:var(--muted);padding:0 14px;font-weight:500}
+.btn--leise:hover{box-shadow:none;color:var(--ink)}
+.err{margin:0;color:#c4314b;font-size:14.5px}
+
+/* Start und Ende */
+.lead{margin:18px 0 0;font-size:clamp(17px,2.2vw,20px);color:var(--ink2);max-width:600px}
+.ticks{list-style:none;margin:26px 0 0;padding:0;display:flex;gap:10px 22px;flex-wrap:wrap;font-size:15px;color:var(--ink2)}
+.ticks li::before{content:"✓";margin-right:8px;color:var(--violet);font-weight:700}
+.haken{width:84px;height:84px;margin-bottom:26px}
+.haken circle{fill:none;stroke:url(#vg);stroke-width:4;stroke-dasharray:240;stroke-dashoffset:240;animation:zieh 1s var(--ease) .1s forwards}
+.haken path{fill:none;stroke:url(#vg);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:zieh .6s var(--ease) .8s forwards}
+@keyframes zieh{to{stroke-dashoffset:0}}
+@media (max-width:560px){.opts{grid-template-columns:1fr}.count{display:none}.btn{height:52px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top__in">
+  <div class="brand"><svg viewBox="16.5 9 72 72" aria-hidden="true"><defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7cff"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><path d="M52 10C66 30 75 54 78 80H52Z" fill="url(#vg)"/><path d="M45 28C37 44 30 62 27 80H45Z" fill="currentColor"/></svg>Reeder <span>Software &amp; Hardware</span></div>
+  <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+  <span class="count" id="count"></span>
+</div></header>
+
+<main><div class="wrap" id="wrap" aria-live="polite"></div></main>
+
+<footer class="nav" id="nav" hidden><div class="nav__in">
+  <button class="btn btn--leise" id="back">Zurück</button>
+  <p class="err" id="err" hidden></p>
+  <button class="btn" id="next"><span id="nextText">Weiter</span><span class="arr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+</div></footer>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const token = location.hash.slice(1), wrap = $("#wrap");
+  const api = (pfad, body) => fetch(`/api/onboarding/${token}${pfad}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined)
+    .then(async r => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Das hat nicht geklappt."); return d; });
+
+  /* Kleine Symbole für die Antworten bei „Was steckt drin?“ und den Geräten */
+  const ICON = {
+    mechanik: `<svg viewBox="0 0 32 32"><g class="a-dreh"><circle cx="16" cy="16" r="5"/><path d="M16 4v4M16 24v4M4 16h4M24 16h4M7.5 7.5l2.8 2.8M21.7 21.7l2.8 2.8M24.5 7.5l-2.8 2.8M10.3 21.7l-2.8 2.8"/></g></svg>`,
+    elektronik: `<svg viewBox="0 0 32 32"><rect x="9" y="9" width="14" height="14" rx="2.5"/><rect class="a-puls" x="13" y="13" width="6" height="6" rx="1"/><path d="M13 4v5M19 4v5M13 23v5M19 23v5M4 13h5M4 19h5M23 13h5M23 19h5"/></svg>`,
+    motor: `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><g class="a-dreh"><path d="M16 16V8M16 16l6.5 4M16 16l-6.5 4"/></g></svg>`,
+    medien: `<svg viewBox="0 0 32 32"><path class="a-fluss" d="M4 11c3-3 5 3 8 0s5 3 8 0 5 3 8 0M4 17c3-3 5 3 8 0s5 3 8 0 5 3 8 0M4 23c3-3 5 3 8 0s5 3 8 0 5 3 8 0"/></svg>`,
+    strom: `<svg viewBox="0 0 32 32"><path class="a-puls" d="M18 4 8 18h7l-1 10 10-14h-7z"/></svg>`,
+    app: `<svg viewBox="0 0 32 32"><rect x="10" y="4" width="12" height="24" rx="3"/><path class="a-puls" d="M14 13h4M14 17h4"/></svg>`,
+    unklar: `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path class="a-puls" d="M12.8 12.5a3.4 3.4 0 1 1 4.6 3.2c-.9.4-1.4 1-1.4 1.9v.8M16 22.4v.2"/></svg>`,
+    computer: `<svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="16" rx="2.5"/><path d="M11 27h10M16 22v5"/></svg>`,
+    tablet: `<svg viewBox="0 0 32 32"><rect x="7" y="4" width="18" height="24" rx="3"/><path d="M15 24h2"/></svg>`,
+    handy: `<svg viewBox="0 0 32 32"><rect x="10" y="4" width="12" height="24" rx="3"/><path d="M15 24h2"/></svg>`,
+  };
+  const SCHAU = {
+    groesse: `<div class="schau" id="schau"><span class="schau__text">Zum Vergleich</span><svg viewBox="0 0 600 240" preserveAspectRatio="xMidYMax meet" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M30 214h540" stroke="rgba(255,255,255,.18)"/>
+        <g class="g-ref g-hand"><path d="M150 214v-34c0-10 8-16 16-16h26c10 0 16 8 16 18v32M166 164v-30a7 7 0 0 1 14 0v26M180 160v-36a7 7 0 0 1 14 0v38M194 162v-28a7 7 0 0 1 14 0v48M150 186l-16-18a7 7 0 0 1 11-9l5 6"/></g>
+        <g class="g-ref g-tisch"><path d="M96 150h170M110 150v64M252 150v64"/></g>
+        <g class="g-ref g-mensch"><circle cx="150" cy="62" r="15"/><path d="M150 77v70M150 96l-26 34M150 96l26 34M150 147l-20 67M150 147l20 67"/></g>
+        <rect class="g-ding" x="330" y="94" width="160" height="120" rx="16" fill="url(#vg)" stroke="none"/>
+      </svg></div>`,
+    geraete: `<div class="schau" id="schau"><span class="schau__text">So sieht man es</span><svg viewBox="0 0 600 240" preserveAspectRatio="xMidYMax meet" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M30 214h540" stroke="rgba(255,255,255,.18)"/>
+        <g class="d-geraet" data-d="computer"><rect x="60" y="64" width="220" height="130" rx="10"/><path d="M130 214h80M170 194v20"/><g class="d-inhalt" stroke="none"><rect x="76" y="80" width="188" height="16" rx="5" fill="rgba(255,255,255,.22)"/><rect x="76" y="106" width="88" height="72" rx="8" fill="url(#vg)"/><rect x="176" y="106" width="88" height="32" rx="8" fill="rgba(255,255,255,.18)"/><rect x="176" y="146" width="88" height="32" rx="8" fill="rgba(255,255,255,.18)"/></g></g>
+        <g class="d-geraet" data-d="tablet"><rect x="322" y="88" width="104" height="126" rx="12"/><g class="d-inhalt" stroke="none"><rect x="334" y="102" width="80" height="12" rx="4" fill="rgba(255,255,255,.22)"/><rect x="334" y="122" width="80" height="44" rx="8" fill="url(#vg)"/><rect x="334" y="174" width="80" height="24" rx="6" fill="rgba(255,255,255,.18)"/></g></g>
+        <g class="d-geraet" data-d="handy"><rect x="468" y="112" width="62" height="102" rx="12"/><g class="d-inhalt" stroke="none"><rect x="478" y="126" width="42" height="34" rx="7" fill="url(#vg)"/><rect x="478" y="168" width="42" height="12" rx="4" fill="rgba(255,255,255,.2)"/><rect x="478" y="186" width="42" height="12" rx="4" fill="rgba(255,255,255,.2)"/></g></g>
+      </svg></div>`,
+  };
+
+  let info = null, antworten = {}, dateien = [], schirme = [], pos = -1, zurueck = false;
+  const wert = (b, id) => antworten[b]?.[id];
+  const sichtbar = s => !s.wenn || s.wenn.ist.includes(wert(s.bereich, s.wenn.feld));
+  const liste = () => schirme.filter(sichtbar);
+
+  function zeigen(html, { nav = true, weiter = "Weiter" } = {}) {
+    wrap.innerHTML = `<section class="screen ${zurueck ? "back" : ""}">${html}</section>`;
+    $("#nav").hidden = !nav; $("#nextText").textContent = weiter; $("#err").hidden = true;
+    scrollTo({ top: 0 });
+  }
+  function fortschritt() {
+    const l = liste(), n = Math.max(0, pos);
+    $("#bar").style.width = pos < 0 ? "0%" : `${Math.round((n + 1) / (l.length + 1) * 100)}%`;
+    $("#count").textContent = pos >= 0 && pos < l.length ? `${n + 1} von ${l.length}` : "";
+  }
+
+  function feldHtml(s, f) {
+    const w = wert(s.bereich, f.id), label = f.label ? `<span class="field__label">${esc(f.label)}</span>` : "";
+    if (f.art === "wahl" || f.art === "mehr") {
+      const gewaehlt = f.art === "mehr" ? (Array.isArray(w) ? w : []) : [w];
+      return `<div class="field">${label}<div class="opts" data-feld="${f.id}" data-art="${f.art}" ${f.max ? `data-max="${f.max}"` : ""}>${f.optionen.map(([v, l], i) =>
+        `<button type="button" class="opt ${f.art === "mehr" ? "opt--multi" : ""} ${gewaehlt.includes(v) ? "on" : ""}" style="--i:${i}" data-v="${esc(v)}" aria-pressed="${gewaehlt.includes(v)}">${ICON[v] && (s.schau === "inhalt" || s.schau === "geraete") ? ICON[v] : ""}<span>${esc(l)}</span></button>`).join("")}</div></div>`;
+    }
+    if (f.art === "datei") {
+      const eigene = dateien.filter(d => d.bereich === s.bereich);
+      return `<div class="field">${label}<div class="datei"><label class="datei__knopf"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg><span>Datei auswählen</span><input type="file" hidden accept=".png,.jpg,.jpeg,.webp,.pdf" data-datei></label><div class="datei__liste">${eigene.map(d => `<span>✓ ${esc(d.name)}</span>`).join("")}</div></div></div>`;
+    }
+    return `<label class="field">${label}${f.art === "lang" ? `<textarea data-feld="${f.id}" placeholder="${esc(f.platz || "")}">${esc(w || "")}</textarea>` : `<input type="text" data-feld="${f.id}" value="${esc(w || "")}" placeholder="${esc(f.platz || "")}">`}</label>`;
+  }
+
+  function schaubild(s) {
+    const el = $("#schau"); if (!el) return;
+    if (s.schau === "groesse") { const g = wert(s.bereich, "groesse"); if (g) el.dataset.g = g; else delete el.dataset.g; }
+    if (s.schau === "geraete") { const g = wert(s.bereich, "geraete") || []; $$(".d-geraet", el).forEach(x => x.classList.toggle("on", g.includes(x.dataset.d))); }
+  }
+
+  function schirm() {
+    const l = liste();
+    if (pos >= l.length) return abschicken();
+    const s = l[pos], mehrere = info.bereiche.length > 1;
+    zeigen(`${mehrere ? `<p class="kicker">${esc(s.bereichName)}</p>` : ""}<h1>${esc(s.frage)}</h1>${s.hilfe ? `<p class="hint">${esc(s.hilfe)}</p>` : ""}
+      ${SCHAU[s.schau] || ""}<div class="fields">${s.felder.map(f => feldHtml(s, f)).join("")}</div>`, { weiter: pos === l.length - 1 ? "Abschicken" : "Weiter" });
+    schaubild(s); fortschritt();
+    const erstes = $("textarea, input[type=text]", wrap); if (erstes && !s.felder.some(f => f.art === "wahl" || f.art === "mehr")) erstes.focus({ preventScroll: true });
+  }
+
+  /* Eingaben in den Zustand übernehmen */
+  wrap.addEventListener("click", e => {
+    const o = e.target.closest(".opt"); if (!o) return;
+    const box = o.parentElement, s = liste()[pos], id = box.dataset.feld, a = (antworten[s.bereich] ||= {});
+    if (box.dataset.art === "wahl") { a[id] = a[id] === o.dataset.v ? "" : o.dataset.v; $$(".opt", box).forEach(x => { x.classList.toggle("on", x.dataset.v === a[id]); x.setAttribute("aria-pressed", x.dataset.v === a[id]); }); }
+    else {
+      const set = new Set(Array.isArray(a[id]) ? a[id] : []), max = +box.dataset.max || 99;
+      if (set.has(o.dataset.v)) set.delete(o.dataset.v); else if (set.size < max) set.add(o.dataset.v);
+      a[id] = [...set];
+      $$(".opt", box).forEach(x => { const an = set.has(x.dataset.v); x.classList.toggle("on", an); x.setAttribute("aria-pressed", an); x.classList.toggle("voll", !an && set.size >= max); });
+    }
+    schaubild(s); $("#err").hidden = true;
+  });
+  wrap.addEventListener("input", e => { const f = e.target.dataset?.feld; if (!f) return; const s = liste()[pos]; (antworten[s.bereich] ||= {})[f] = e.target.value; $("#err").hidden = true; });
+  wrap.addEventListener("change", async e => {
+    if (!e.target.matches("[data-datei]") || !e.target.files[0]) return;
+    const file = e.target.files[0], s = liste()[pos], knopf = e.target.closest(".datei__knopf").querySelector("span");
+    if (file.size > 10 * 1024 * 1024) return fehler("Die Datei darf höchstens 10 MB groß sein.");
+    knopf.textContent = "Lädt hoch …";
+    try {
+      const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = no; r.readAsDataURL(file); });
+      const d = await api("/datei", { name: file.name, data, bereich: s.bereich });
+      dateien.push({ bereich: s.bereich, name: d.name }); schirm();
+    } catch (x) { knopf.textContent = "Datei auswählen"; fehler(x.message); }
+  });
+  const fehler = t => { const e = $("#err"); e.textContent = t; e.hidden = false; };
+
+  function pruefen(s) {
+    for (const f of s.felder) if (f.pflicht && !String(wert(s.bereich, f.id) || "").trim()) return f.art === "wahl" ? "Bitte wählen Sie eine Antwort." : "Bitte schreiben Sie kurz etwas dazu.";
+    return null;
+  }
+  const speichern = fertig => api("", { antworten, fertig });
+
+  $("#next").addEventListener("click", () => {
+    if (info && info.konto && !info.angemeldet) return kontoSenden();
+    if (pos < 0) { pos = 0; zurueck = false; return schirm(); }
+    const s = liste()[pos], f = pruefen(s); if (f) return fehler(f);
+    speichern(false).catch(() => {});   // Zwischenstand; ein Fehler hier hält niemanden auf
+    pos++; zurueck = false; schirm();
+  });
+  $("#back").addEventListener("click", () => { zurueck = true; if (pos <= 0) { pos = -1; return start(); } pos--; schirm(); });
+  addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && e.target.tagName !== "TEXTAREA" && !$("#nav").hidden) { e.preventDefault(); $("#next").click(); } });
+
+  async function abschicken() {
+    $("#next").disabled = true;
+    try { await speichern(true); danke(); }
+    catch (x) { pos = liste().length - 1; schirm(); fehler(x.message); }
+    finally { $("#next").disabled = false; }
+  }
+  function danke() {
+    pos = liste().length; fortschritt(); $("#bar").style.width = "100%";
+    zeigen(`<svg class="haken" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="38"/><path d="M26 43l11 11 21-24"/></svg>
+      <h1>Vielen Dank${info.name ? ", " + esc(info.name.split(" ")[0]) : ""}.</h1>
+      <p class="lead">Ihre Antworten sind bei uns angekommen. Wir bereiten uns damit auf unser Gespräch${info.termin ? ` am ${new Date(info.termin).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}` : ""} vor.</p>
+      <p class="hint"><button class="btn btn--leise" id="nochmal" style="padding:0;height:auto">Antworten noch einmal ansehen oder ändern</button></p>`, { nav: false });
+    $("#nochmal").addEventListener("click", () => { pos = 0; zurueck = true; schirm(); });
+  }
+  /* Konto anlegen oder anmelden, bevor die Fragen beginnen */
+  function konto() {
+    pos = -1; fortschritt();
+    const neu = info.konto === "neu";
+    zeigen(`<p class="kicker">${neu ? "Ihr persönlicher Bereich" : "Willkommen zurück"}</p>
+      <h1>${info.name ? `Hallo ${esc(info.name.split(" ")[0])}, ` : ""}${neu ? "zuerst kurz Ihr Zugang." : "bitte kurz anmelden."}</h1>
+      <p class="lead">${neu ? "Legen Sie ein Passwort fest. Damit sind Ihre Antworten sicher gespeichert, und Sie finden dort später Termine, Unterlagen und unser Angebot." : "Für diese E-Mail-Adresse gibt es schon ein Konto."}</p>
+      <div class="konto">
+        <div class="konto__mail">✉︎ <b>${esc(info.email)}</b> <span>(aus Ihrer Buchung)</span></div>
+        <label>Passwort${neu ? " <small>mindestens 10 Zeichen</small>" : ""}<input type="password" id="pw1" autocomplete="${neu ? "new-password" : "current-password"}"></label>
+        ${neu ? `<label>Passwort wiederholen<input type="password" id="pw2" autocomplete="new-password"></label>
+          <label class="einw"><input type="checkbox" id="pc"><span>Ich habe die <a href="/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen. Meine Angaben werden zur Vorbereitung unseres Gesprächs verwendet.</span></label>`
+          : `<p class="konto__alt">Passwort vergessen? <a href="/portal/">Hier zurücksetzen</a></p>`}
+      </div>`, { weiter: neu ? "Konto anlegen & loslegen" : "Anmelden & weiter" });
+    $("#back").style.visibility = "hidden"; $("#pw1").focus();
+  }
+  async function kontoSenden() {
+    const neu = info.konto === "neu", pw = $("#pw1").value;
+    if (neu && pw.length < 10) return fehler("Das Passwort braucht mindestens 10 Zeichen.");
+    if (neu && pw !== $("#pw2").value) return fehler("Die beiden Passwörter stimmen nicht überein.");
+    if (neu && !$("#pc").checked) return fehler("Bitte bestätigen Sie die Datenschutzhinweise.");
+    $("#next").disabled = true;
+    try {
+      const r = await fetch(`/api/onboarding/${token}/${neu ? "konto" : "anmelden"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, consent: neu ? true : undefined }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 409) { info.konto = "vorhanden"; return konto(); }
+      if (!r.ok) return fehler(d.error || "Das hat nicht geklappt.");
+      info.angemeldet = true; zurueck = false;
+      if (info.status === "ausgefuellt") danke(); else start();
+    } catch { fehler("Keine Verbindung – bitte erneut versuchen."); }
+    finally { $("#next").disabled = false; }
+  }
+  function start() {
+    fortschritt();
+    const teile = info.bereiche.map(b => b.name).join(" und ");
+    zeigen(`<p class="kicker">${esc(teile)}</p><h1>${info.name ? `Hallo ${esc(info.name.split(" ")[0])}, ` : ""}erzählen Sie uns von Ihrem Vorhaben.</h1>
+      <p class="lead">Ein paar Fragen, damit wir uns gut auf unser Gespräch vorbereiten können. Das meiste tippen Sie einfach an.</p>
+      <ul class="ticks"><li>etwa fünf Minuten</li><li>nichts ist Pflicht, was Sie nicht wissen</li><li>jederzeit unterbrechen und später weitermachen</li></ul>`, { weiter: "Los geht's" });
+    $("#back").style.visibility = "hidden";
+  }
+  new MutationObserver(() => { $("#back").style.visibility = pos < 0 ? "hidden" : ""; }).observe(wrap, { childList: true });
+
+  (async () => {
+    if (!/^[a-f0-9]{48}$/.test(token)) return zeigen(`<h1>Dieser Link ist nicht vollständig.</h1><p class="lead">Bitte öffnen Sie den Link aus unserer E-Mail noch einmal.</p>`, { nav: false });
+    try {
+      info = await api("");
+      antworten = info.antworten || {}; dateien = info.dateien || [];
+      schirme = info.bereiche.flatMap(b => b.fragen.map(f => ({ ...f, bereich: b.id, bereichName: b.name })));
+      if (info.konto && !info.angemeldet) konto(); else if (info.status === "ausgefuellt") danke(); else start();
+    } catch (x) { zeigen(`<h1>Das hat leider nicht geklappt.</h1><p class="lead">${esc(x.message)}</p>`, { nav: false }); }
+  })();
+})();
+</script>
+</body>
+</html>

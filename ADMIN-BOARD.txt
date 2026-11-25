@@ -1,0 +1,488 @@
+Admin-Board der Reeder Software GmbH (Phase 1)
+==============================================
+
+Starten (im Ordner "Website R S GmbH"):
+
+    npm start
+
+Dann im Browser:
+    Website:      http://localhost:5510
+    Admin-Board:  http://localhost:5510/admin
+
+Anmeldung
+- Ihre ersten Zugangsdaten stehen in der Datei .env (ADMIN_EMAIL / ADMIN_PASSWORD).
+- Bitte nach der ersten Anmeldung unter "Einstellungen" ein eigenes Passwort setzen.
+
+Was das Board kann
+- Übersicht: neue Anfragen und die nächsten Termine.
+- Termine: Anfragen bestätigen, absagen oder als erledigt markieren – auf Wunsch mit
+  automatischer E-Mail an den Kunden (bei Bestätigung inkl. Kalendereintrag im Anhang).
+  Neue Anfragen blockieren den Zeitraum sofort, damit niemand doppelt bucht.
+- Projektanfragen: Status (neu, in Bearbeitung, Angebot, gewonnen …) und interne Notizen.
+- Verfügbarkeit: Arbeitszeiten je Wochentag, Dauer und Puffer je Termintyp, Vorlauf,
+  wie weit im Voraus gebucht werden kann, Urlaub und Sperrtage. Die Website zeigt
+  Änderungen sofort an.
+- Einstellungen: Absender der E-Mails, Kalender-Abo-Adresse für Outlook/Google/iPhone,
+  Passwort ändern, Postausgang aller E-Mails.
+
+E-Mail-Versand einschalten
+- In der Datei .env die SMTP-Angaben Ihres Postfachs eintragen (siehe .env.example):
+  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS – und den Server neu starten.
+- Bis dahin werden alle E-Mails nur im Postausgang gespeichert.
+
+Daten
+- Alles liegt lokal in data/reeder.db. Für eine Sicherung den Ordner "data" kopieren.
+- .env und data/ niemals veröffentlichen (der Server gibt sie auch nicht heraus).
+
+Ohne Server
+- Öffnet man die HTML-Dateien direkt, funktioniert die Website im Vorschau-Modus
+  (Beispielzeiten, Anfragen per E-Mail-Programm).
+
+KUNDENPORTAL (Chat & Prototypen)
+--------------------------------
+Kundenadresse:  http://localhost:5510/portal/   (später: https://www.reeder-software.de/portal/)
+
+1. Admin-Board → "Kunden & Chat" → "Neuer Kunde": Firma, Ansprechpartner, E-Mail.
+   Der Kunde bekommt einen Einladungslink (14 Tage gültig) und legt damit selbst sein Passwort fest.
+   Solange der E-Mail-Versand nicht eingerichtet ist: Link kopieren und selbst verschicken.
+2. Chat: Nachrichten erscheinen nach wenigen Sekunden auf beiden Seiten. Bei neuen Nachrichten
+   geht höchstens alle 30 Minuten eine Benachrichtigungs-Mail raus (an den Kunden bzw. an Sie).
+3. Prototypen: beim Kunden → Reiter "Prototypen" → HTML-Datei, Ordner oder ZIP hineinziehen.
+   Die Startseite wird automatisch erkannt (index.html). Optional im Chat ankündigen.
+   Der Kunde klickt sich im Browser durch – Ansicht Desktop / Tablet / Smartphone.
+   Prototypen laufen abgeschottet: Eingaben werden nicht gespeichert, kein Zugriff auf Logins.
+   "Link" kopiert eine direkte Adresse – jeder mit diesem Link kann den Prototyp ansehen.
+   Deaktivieren macht den Link sofort ungültig; Löschen entfernt die Dateien.
+4. "Zugang sperren" meldet den Kunden sofort ab. "Neuer Zugangslink" hilft bei vergessenem Passwort.
+
+Gespeichert wird alles lokal: data/reeder.db und data/prototypes/.
+
+PROJEKTRÄUME (Projekte, Termine, Finanzen, Dokumente, Anmerkungen)
+------------------------------------------------------------------
+Beim Kunden gibt es die Reiter: Chat · Projekte · Anmerkungen · Termine · Dokumente.
+
+Projekte: Titel, Art, Modell, Phase (Erstgespräch → Konzept → Prototyp → Umsetzung → Launch → Betreuung),
+  Kostenvoranschlag netto (brutto wird mit der USt. automatisch berechnet), vereinbarte Konditionen,
+  Zahlungsplan (Positionen netto, Fälligkeit, Haken "bezahlt"). Alles davon sieht der Kunde sofort.
+  Jede Änderung (Phase, Zahlung eingegangen, neues Dokument, neue Version …) landet im Verlauf.
+Prototypen: im Projekt hochladen. "Neue Version" legt V2, V3 … an – ältere Versionen bleiben abrufbar.
+  Unter "Was hat sich geändert?" kurz notieren, was neu ist.
+Anmerkungen: Kunden zeichnen im Prototyp mit Stift/Textmarker oder setzen einen Kommentar-Punkt.
+  Reiter "Anmerkungen" = Liste zum Abarbeiten. "Zur Stelle →" öffnet genau die Seite, Breite und Position.
+  Mit "✓ Erledigt" abhaken. Sie können im Viewer auch selbst anmerken.
+Termine: mit Zusammenfassung und nächsten Schritten (sieht der Kunde). Buchungen über die Website
+  mit derselben E-Mail-Adresse erscheinen dort zum Übernehmen.
+Dokumente: Angebote, Rechnungen, Verträge (PDF, Bilder, Office) mit Betrag und Datum hochladen.
+
+Passwort vergessen/ändern: Einstellungen → Passwort ändern, oder neues Passwort in .env eintragen
+  und "npm run passwort" ausführen.
+
+AUTOMATIK: KUNDE WIRD INFORMIERT
+--------------------------------
+Jeder Meilenstein (Projekt gestartet, Angebot übersendet, Rechnung gestellt, Zahlungseingang bestätigt,
+Termin vereinbart, Zusammenfassung hinterlegt, Prototyp/Version veröffentlicht, Phasenwechsel)
+1. steht sofort im Portal des Kunden (Verlauf + Übersicht),
+2. löst eine E-Mail aus. Änderungen innerhalb von 90 Sekunden werden zu EINER Mail gebündelt.
+Ohne Mail speichern: Haken "Kunden per E-Mail informieren" entfernen.
+Der Kunde kann diese Mails im Portal unter Konto abschalten.
+
+Rechnung hochladen: Dokumente → Hochladen → Art "Rechnung", Projekt wählen → "Zu welcher Zahlung gehört
+die Rechnung?" (die nächste offene Position ist vorausgewählt, Betrag wird übernommen).
+Die Zahlung springt beim Kunden auf "Rechnung gestellt" mit Link zur PDF.
+Geld eingegangen: im Projekt beim Zahlungsplan Status "bezahlt" wählen → Speichern.
+
+TERMINANFRAGEN VON BESTANDSKUNDEN
+---------------------------------
+Im Portal unter Termine (und im Projekt / bei "Ihr Ansprechpartner") gibt es "Termin anfragen".
+Terminarten nur für Kunden: Projekt-Abstimmung, Feedback zum Prototyp, Kurze Rückfrage, Schulung & Einweisung
+(Dauer/Puffer/aktiv unter Verfügbarkeit, markiert mit "nur Kundenportal"; auf der Website nicht buchbar).
+Der Kunde wählt bis zu 3 Wunschtermine aus Ihren freien Zeiten oder "flexibel" + Nachricht.
+Sie bekommen eine Mail, die Anfrage steht im Chat und beim Kunden im Reiter "Termine" (Badge 📅).
+"Annehmen" bei einem Wunschtermin → Termin im Kalender (blockiert die Zeit, Kalender-Abo), im Portal,
+im Verlauf, Bestätigung im Chat + Mail. "Andere Zeit …" bestätigt eine eigene Zeit, "Ablehnen" schickt
+Ihre Antwort in den Chat.
+
+ANMELDUNG FÜR ALLE
+------------------
+Eine Adresse für alle: http://localhost:5510/login (später https://www.reeder-software.de/login),
+auf der Website unten im Footer "Login". Team-Zugänge landen automatisch im Admin-Board,
+Kunden im Kundenportal. Auch das Formular unter /admin leitet Kunden ins Portal weiter.
+
+BOARD FÜR INHABER UND ENTWICKLER (Phase 1)
+------------------------------------------
+Navigation: Cockpit · Posteingang · Kunden · Projekte · Termine · Vertrieb · Team · Einstellungen
+- Cockpit: "Heute zu tun", Termine, Projekte nach Phase; als Inhaber zusätzlich offene Forderungen und Eingänge.
+- Posteingang: alle ungelesenen Chats, Terminanfragen, offenen Anmerkungen, Website-Buchungen und
+  Projektanfragen an einem Ort – ein Klick führt direkt hin.
+- Projekte: Board nach Phase über alle Kunden; Klick öffnet das Projekt.
+- Team: Personen einladen (Rolle Inhaber oder Entwickler), Projekte zuweisen, sperren.
+  Entwickler sehen NUR zugewiesene Projekte – ohne Beträge, Zahlungen, Rechnungen, Verträge,
+  ohne Vertrieb, Team und Einstellungen. Das prüft der Server, nicht nur die Oberfläche.
+  Zuweisen geht auch direkt im Projekt (Feld "Team").
+- Einstellungen: Unternehmensdaten (für Rechnungen), E-Mail-Postfach (SMTP) direkt im Board inkl.
+  Testmail, Absender, Postausgang, Kalender-Abo, eigenes Passwort.
+
+FINANZEN (Phase 2, nur Inhaber)
+-------------------------------
+Board → Finanzen: Übersicht · Rechnungen · Angebote · Belege · Auswertung & Export
+Einmalig vorher: Einstellungen → Unternehmen (Anschrift, Steuernummer/USt-IdNr., IBAN, Zahlungsziel,
+Versteuerung Soll/Ist, DATEV-Berater-/Mandantennummer) und beim Kunden "Rechnungsadresse".
+- Rechnung: "Neue Rechnung" oder im Projekt beim Zahlungsplan "+ RE". Entwürfe sind frei änderbar,
+  "Vorschau (PDF)" zeigt das Ergebnis. "Festschreiben & senden": fortlaufende Nummer RE-JJJJ-00001,
+  PDF nach § 14 UStG, Mail mit PDF an den Kunden, PDF im Kundenportal, Zahlungsposition "Rechnung gestellt".
+  Danach unveränderlich (GoBD) – Korrektur nur per "Stornieren" (Stornorechnung ST-JJJJ-…).
+- Zahlung eingegangen → Rechnung und Zahlungsplan "bezahlt", Kunde wird informiert.
+- Überfällig: Board schlägt Zahlungserinnerung → 1./2./3. Mahnung vor (14/28/42 Tage), Versand per Klick.
+- Angebote: AN-JJJJ-…, angenommen/abgelehnt, "In Rechnung übernehmen".
+- Belege: PDF/Foto/E-Rechnung hochladen, Kategorie (mit SKR04-Konto), Steuer (19/7/0 %, Reverse Charge § 13b).
+  Nach Monatsende "Monat abschließen" → Belege festgeschrieben.
+- Auswertung: Umsatz, Ausgaben, Umsatzsteuer-Zahllast je Monat/Quartal/Jahr, Protokoll aller Vorgänge.
+  "ZIP herunterladen" = Paket für den Steuerberater (Rechnungsbuch, Belege, USt, DATEV-Buchungsstapel, PDFs).
+  Kontenzuordnung und DATEV-Stapel einmal mit dem Steuerberater abstimmen.
+Dateien: data/finance/ (PDFs, Belege – werden nie überschrieben).
+
+KUNDENPROZESS: ANFRAGE → INTERESSENT → MANDANT
+----------------------------------------------
+1. Jede Website-Buchung und Projektanfrage legt automatisch einen Kontakt an (Status "Anfrage", ohne Portal).
+2. Posteingang: direkt in der Zeile bestätigen / ablehnen / antworten / Erstgespräch vereinbaren.
+   Bestätigen schickt die Einladung mit Video-Link (Jitsi, ohne Konto) + Kalenderdatei; Status → "Interessent".
+   Fester Video-Raum (Teams/Zoom/Meet) statt Jitsi: Einstellungen → Termine & Video.
+3. Kunden → Kontakt → "Termin vereinbaren": freie Zeit wählen, Einladung geht automatisch raus.
+4. Nach dem Gespräch "Zum Mandanten machen" → Portal-Einladung; dann Projekt, Angebot, Rechnung.
+   Überblick zeigt den kompletten Verlauf und den nächsten sinnvollen Schritt.
+Kunden-Liste: Filter Alle / Anfragen / Interessenten / Mandanten / Archiv + Suche. Entwickler sehen nur Mandanten.
+Projekte: Liste mit Filter nach Phase, Suche, Sortierung ("Braucht Aufmerksamkeit", "Nächster Termin" …).
+
+
+DEMO-BOARD (Simulation)
+-----------------------
+npm run demo  ->  http://localhost:5520/admin  (Anmeldung mit Ihrem normalen Inhaber-Zugang)
+Eigene Datenbank in data-demo/ - Ihre echten Daten in data/ bleiben unberuehrt. E-Mails sind dort abgeschaltet.
+3 Entwickler (lena.hartmann / jonas.becker / mehmet.yilmaz @example.com), Passwort siehe .env (DEMO_ENTWICKLER_PASSWORT).
+Zuruecksetzen: Ordner data-demo loeschen.
+
+
+KUNDEN, PROJEKTE, VERTRIEB (neu geordnet)
+-----------------------------------------
+- Kunden: nur Ihre Mandanten als Tabelle (Projekte, Team, naechster Termin, offener Betrag). Klick = Kundenakte mit Reitern Ueberblick, Nachrichten, Projekte, Termine, Dokumente, Rechnungen.
+- Projekte: oben die Auslastung je Person (Klick filtert), Filter nach Phase, Person, Art, Modell. Klick auf ein Projekt = eigene Projektseite (Phase per Klick setzen, Team, Auftrag & Zahlungen, Prototypen mit offenen Anmerkungen, Termine, Dokumente, Verlauf).
+- Zuweisen: im Dialog sieht man pro Person aktive Projekte, Kunden, Auftragsvolumen und Auslastung in Prozent (Umsetzung zaehlt mehr als Betreuung).
+- Vertrieb: Anfragen -> Interessenten -> Gewonnen, jede Karte mit dem naechsten Schritt.
+
+
+KALENDER, VERTRIEB, POSTEINGANG (Stand 12.11.2026)
+--------------------------------------------------
+- Termine = Kalender mit Woche, Monat und Liste (Liste: kommende Termine chronologisch oben, Vergangene darunter). Klick in eine freie Stelle der Woche = neuer Termin zu dieser Uhrzeit. Unbestaetigte Website-Buchungen sind gestreift und lassen sich per Klick bestaetigen. Arbeitszeiten ueber den Knopf "Arbeitszeiten".
+- Posteingang = nur Kommunikation mit bestehenden Kunden (Nachrichten, ihre Terminanfragen, Anmerkungen).
+- Vertrieb = einziger Ort fuer neue Kontakte: 1 Neu -> 2 Gespraech geplant -> 3 Gespraech gefuehrt -> "Auftrag starten" (Kunde + Projekt + Auftragswert + Team in einem Schritt).
+
+
+AUTOMATIK (Baustein A, 12.11.2026)
+----------------------------------
+- Das Board prueft jede Minute: Terminerinnerungen an Kunden (24 Std. und 1 Std. vorher), Nachfass-Mail bei Projektanfragen ohne Termin, Vorschlaege im Cockpit (unbestaetigte Website-Termine, Angebote ohne Antwort, Mahnstufen, fehlende Zusammenfassungen, ruhende Projekte), Wochenbericht montags 7 Uhr an alle Inhaber.
+- Jede E-Mail geht nur einmal raus und steht im Protokoll (Einstellungen > Automatik) sowie im Verlauf des Kunden.
+- Alles einzeln ab- und einstellbar unter Einstellungen > Automatik. Abschalten fuer Tests: AUTOMATION_DISABLED=1.
+
+ANGEBOT -> VERTRAG -> RECHNUNG (Baustein B, 13.11.2026)
+-------------------------------------------------------
+- Angebot erstellen (Finanzen oder Kundenakte > Neues Angebot): unten "Zahlungsplan & Vertrag" mit Raten in Prozent und "faellig bei Auftrag / ab Phase ...", optional Haken AVV. Der Plan muss 100 % ergeben.
+- Nach dem Festschreiben sieht der Kunde das Angebot im Portal (Banner in der Uebersicht und im Projekt unter "Angebot & Zahlungen") und kann es verbindlich annehmen: Name, optional Funktion, Haken fuer Berechtigung, Vertragsbedingungen und ggf. AVV. Fehlt die Rechnungsanschrift, fragt das Portal sie gleich mit ab. Ablehnen mit Begruendung ist ebenfalls moeglich.
+- Bei Annahme passiert automatisch: Kunde wird Mandant, Projekt wird angelegt bzw. aktualisiert (Auftragswert, Konditionen, Phase Konzept), Zahlungsplan wird uebernommen, Auftragsbestaetigung als PDF (mit Nachweis: Name, Zeitpunkt, IP, Fassung und Pruefsummen der Bedingungen) liegt beim Kunden unter Dokumente und geht per Mail raus, Danke-Nachricht im Chat, Mail an die Inhaber.
+- Die Automatik legt jede Rate als Rechnungsentwurf an, sobald sie faellig ist (bei Auftrag sofort, sonst wenn das Projekt die Phase erreicht). Im Cockpit erscheint "Rechnung freigeben" -> "Freigeben & senden" schreibt fest und schickt die Rechnung mit PDF. Ausserdem: "Neuer Auftrag - Team zuweisen" und "Angebot abgelehnt" zum Nachfragen.
+- Zusage per Telefon/E-Mail: im Angebot "Zusage ausserhalb des Portals" -> gleicher Ablauf, der Nachweis vermerkt den Weg.
+- Einstellungen > Vertrag & AVV: Standard-Zahlungsplan, Vertragsbedingungen, AVV. Jede Textaenderung wird als neue Fassung gespeichert; angenommene Angebote behalten ihre Fassung. Der Annahme-Nachweis ist in der Datenbank unveraenderlich.
+- WICHTIG: Die Vertragstexte sind ein Entwurf und muessen vor dem ersten echten Auftrag anwaltlich geprueft werden.
+- Demo: Malerbetrieb Sommer hat ein offenes Angebot AN-2026-00005 "Sommer Planer - Vollversion" zum Ausprobieren (Login des Testkunden in .env: DEMO_MVP_KUNDE_*).
+
+SOFTWARE & VERTRAEGE (Baustein C, 13.11.2026)
+---------------------------------------------
+- Neuer Bereich "Software & Vertraege" im Board mit drei Reitern: Uebersicht, Vertraege, Produkte.
+- Uebersicht (nur Inhaber): MRR (wiederkehrender Umsatz netto pro Monat), ARR, Anzahl Vertraege/Kunden, Verlauf der letzten 12 Monate, Aufteilung nach Art und Produkt, Kuendigungsfristen der naechsten 60 Tage, gekuendigte Vertraege, Signature-Kaufoptionen mit angerechnetem Betrag.
+- Vertraege: laufende Vertraege (IT-Betreuung, Signature-Lizenz, Produkt-Lizenz, Hosting, Wartung, KI-Telefonassistent ...) mit Monatsbetrag, Abrechnungsintervall, Mindestlaufzeit, Verlaengerung, Kuendigungsfrist. Anlegen ueber "Neuer Vertrag", in der Kundenakte oder auf der Projektseite unter "Mehr > Laufenden Vertrag anlegen".
+- Reeder Signature: Kaufpreis, Anrechnung in Prozent (Standard 50 %) und "schon gezahlt vor dem Board" fuer Altvertraege. Angerechnet wird der Anteil aller bezahlten Rechnungen des Vertrags; Kaufoption ab Ende der Mindestlaufzeit.
+- Abrechnung: Zum Termin "naechste Rechnung" legt die Automatik einen Rechnungsentwurf fuer den Leistungszeitraum an; im Cockpit "Freigeben & senden". Kuendigung erfassen berechnet das fruehestmoegliche Ende; bis dahin wird weiter abgerechnet, danach endet der Vertrag automatisch.
+- Cockpit-Hinweise: Kuendigungsfrist endet bald (Gespraech fuehren), gekuendigter Vertrag laeuft aus, Signature-Kaufoption beginnt. Einstellbar unter Einstellungen > Automatik. Der Wochenbericht enthaelt den MRR.
+- Produkte: eigene Produkte (Status, Fortschritt, Version, naechster Meilenstein, Verantwortliche) und Leistungen/Pakete mit Listenpreis. Entwickler sehen die Produkte ohne Betraege, aber keine Vertraege.
+- Kundenportal: Kunden mit Vertraegen sehen den Menuepunkt "Vertraege" mit Betrag, Laufzeit, Kuendigungsfrist und bei Signature dem angerechneten Betrag und Restkaufpreis.
+- Demo: 8 Produkte/Leistungen und 12 Beispielvertraege (MRR 2.615 EUR) sind im Demo-Board angelegt. Im echten Board ist nichts angelegt.
+
+AUFGABEN & ZEITERFASSUNG - MEIN ARBEITSPLATZ (Baustein D, 13.11.2026)
+---------------------------------------------------------------------
+- "Mein Arbeitsplatz" (neuer Menuepunkt, fuer Entwickler die Startseite): Stoppuhr, eigene Aufgaben nach Faelligkeit (ueberfaellig / heute / diese Woche / spaeter), Stunden der Woche, eigene Projekte mit offenen Aufgaben und Kunden-Anmerkungen, Termine der naechsten 7 Tage, eigene Zeiteintraege der letzten 14 Tage.
+- Inhaber sehen dort zusaetzlich "Team diese Woche" (Stunden je Person, offene und ueberfaellige Aufgaben, wer gerade an was arbeitet), Aufgaben ohne Zustaendigkeit und "Auswertung & CSV-Export" der Zeiten.
+- Stoppuhr: Projekt waehlen oder bei einer Aufgabe auf ▶ klicken -> laeuft; "Stoppen & speichern" legt den Zeiteintrag an. Eine laufende Stoppuhr zeigt einen gruenen Punkt im Menue. Laeuft sie ueber 12 Std., wird auf 12 Std. begrenzt und markiert.
+- Zeit nachtragen: Dauer als 1:30, 1,5 oder 45 (Minuten).
+- Projektseite: Karte "Aufgaben" (schnell anlegen mit Enter, abhaken, Details mit Zustaendigkeit, Prioritaet, Faelligkeit, Schaetzung) und Karte "Zeit" (erfasst gesamt, Schaetzung; fuer Inhaber Stunden je Person und - ab Phase Launch - der effektive Stundensatz).
+- Kunden-Anmerkung -> "→ Aufgabe": wird die Aufgabe erledigt, ist auch die Anmerkung erledigt (der Kunde sieht den Haken im Portal).
+- Termin mit "Naechsten Schritten" -> "→ Aufgaben": jede Zeile wird eine Aufgabe (nichts doppelt).
+- Sichtbarkeit: Entwickler sehen ihre eigenen Zeiten und die Projektsumme, Inhaber alles. Ueberfaellige Aufgaben erscheinen im Cockpit bei der zustaendigen Person (Einstellungen > Automatik). Der Wochenbericht zeigt erfasste Stunden und erledigte Aufgaben je Person.
+- Demo: 64 Beispielaufgaben, 3 Wochen Zeiten fuer Lena, Jonas und Mehmet; bei Jonas laeuft gerade die Stoppuhr.
+
+KENNZAHLEN (Baustein E, 13.11.2026)
+-----------------------------------
+- Neuer Menuepunkt "Kennzahlen" (nur Inhaber). Zeitraum oben waehlbar: dieser Monat / dieses Quartal / dieses Jahr. Verglichen wird immer mit dem gleich langen Abschnitt der Vorperiode (z. B. 1.-13. Oktober gegen 1.-13. November).
+- "Worauf achten": automatisch abgeleitete Hinweise mit Stufe (Kritisch / Achtung / Hinweis / Gut), jeweils mit Klick zur passenden Stelle: ueberfaellige Rechnungen, Rechnungen zur Freigabe, Ueberlastung oder freie Kapazitaet im Team, Projekte mit Risiko, Klumpenrisiko (ein Kunde > 35 % vom Umsatz), niedrige Gewinnquote, weniger Anfragen, wachsender Umsatz/MRR.
+- Geld: Umsatz netto, Zahlungseingang, Ergebnis (Umsatz - Ausgaben), offene und ueberfaellige Forderungen, MRR/ARR, Auftragsbestand; Umsatz & Ausgaben der letzten 12 Monate; erwartete Eingaenge in 30/60/90 Tagen.
+- Vertrieb: neue Anfragen, gefuehrte Erstgespraeche, neue Auftraege, offene Angebote, Gewinnquote (12 Monate), Anteil Anfrage -> Kunde und Dauer bis zum Projekt; Anfragen pro Monat; MRR-Verlauf.
+- Projekte & Team: aktive Projekte nach Phase, erfasste Stunden, Umsatz je Stunde, erledigte Aufgaben; Auslastung je Person (Soll 8 Std. je Arbeitstag, gerechnet ab Beginn der Zeiterfassung); Projekte mit Risiko (Schaetzung um mehr als 20 % ueberschritten, mehrere ueberfaellige Aufgaben, viele offene Kunden-Anmerkungen, kein Team, 14 Tage ohne Bewegung).
+- Kunden: wichtigste Kunden der letzten 12 Monate (Rechnungen + Vertraege aufs Jahr), Kundenstamm.
+- Hinweis: "Neue Auftraege" zaehlt Projekte mit Auftragswert, die im Zeitraum angelegt wurden. Die Diagramme zeigen beim Darueberfahren die genauen Werte.
+
+SUPPORT & BETRIEB (Baustein F, 13.11.2026)
+------------------------------------------
+- Kundenportal > "Support": Kunden melden Fehler, Fragen oder Aenderungswuensche, waehlen das Projekt und die Dringlichkeit (Normal / Hoch / Kritisch - System steht) und sehen dabei die zugesagte Antwortzeit. Verlauf, Antworten, "Problem geloest", wieder oeffnen.
+- Board > "Support" (Menuepunkt mit Zahl ungelesener Kundenantworten): Liste nach Status und Zustaendigkeit, mit Frist-Anzeige ("Antwort in 3 Std." / "2 Std. ueber der Frist"). In der Anfrage: antworten (geht per Mail an den Kunden), interne Notiz (Kunde sieht sie nicht), "Senden & auf Kunde warten", "Senden & geloest", Status/Dringlichkeit/Zustaendig/Projekt aendern, "→ Aufgabe", Zeit erfassen, Stoppuhr.
+- Zustaendig ist automatisch, wer im Projekt arbeitet. Neue Anfragen gehen per Mail an Inhaber und Zustaendige; Entwickler sehen nur Anfragen ihrer Projekte.
+- Reaktionszeiten (Einstellungen > Betrieb): Standard Kritisch 4 Std. rund um die Uhr, Hoch 1 Werktag, Normal 2 Werktage (Geschaeftszeit Mo-Fr 9-17 Uhr). Cockpit-Hinweis, wenn die Frist knapp oder ueberschritten ist. "Wartet auf Kunde" -> nach 4 Tagen freundliche Erinnerung an den Kunden; "Geloest" -> nach 7 Tagen automatisch geschlossen.
+- Kennzahlen und Wochenbericht zeigen offene Anfragen, Durchschnitt bis zur ersten Antwort und eingehaltene Fristen.
+- Einstellungen > Betrieb: Systemstatus (Datensicherung, E-Mail, Automatik, Kundensysteme), Datensicherung (jede Nacht nach 2 Uhr bzw. beim Start, 14 Stueck vorgehalten, Download, "Jetzt sichern"; gesichert wird die Datenbank in data/backups - Dokumente/Belege/Prototypen liegen als Dateien im Datenordner und muessen beim Server-Umzug zusaetzlich gesichert werden), Erreichbarkeit von Kundensystemen (Adresse eintragen, Pruefung alle 5 Minuten, bei Ausfall Cockpit-Hinweis + Mail, bei Wiederherstellung Entwarnung, Verfuegbarkeit der letzten 30 Tage).
+- Demo: 6 Beispiel-Anfragen (u. a. eine ueberfaellige, eine kritische) und zwei lokale Ueberwachungen (eine absichtlich offline).
+
+SICHERHEIT & LIVEGANG (Baustein G, 13.11.2026)
+----------------------------------------------
+- "Passwort vergessen?" auf der Anmeldeseite von Board und Portal: Link per E-Mail, eine Stunde gueltig, nur einmal verwendbar. Die Antwort verraet nicht, ob es die Adresse gibt. Nach dem Neusetzen werden alle Sitzungen dieses Zugangs beendet.
+- Zwei-Faktor-Anmeldung fuers Team (Einstellungen > Mein Zugang): Schluessel in einer Authenticator-App eintragen, Code bestaetigen, 8 Notfallcodes sichern. Danach fragt die Anmeldung zusaetzlich den 6-stelligen Code ab (auch wenn man sich ueber die Portal-Seite anmeldet). Dort auch die letzten eigenen Anmeldungen.
+- Anmeldeprotokoll: jede erfolgreiche und fehlgeschlagene Anmeldung (Team und Kunden) mit IP; nach 10 Fehlversuchen 15 Minuten Sperre.
+- Sicherheits-Header auf allen Seiten (Frame-Schutz, nosniff, Referrer-, Permissions-Policy; HSTS automatisch, sobald SITE_URL mit https beginnt).
+- Einstellungen > Livegang (nur Inhaber): Checkliste mit 8 automatischen Pruefungen (Unternehmensdaten, E-Mail, https, Zwei-Faktor aller Inhaber, Datensicherung, Vertragstexte, Impressum/Datenschutz ohne Platzhalter, keine @example.com-Kontakte) und 7 Punkten zum Selbst-Bestaetigen (anwaltliche Pruefung, Steuerberater, Server mit Disk, Domain/https, externe Sicherung, Testdaten entfernt). Dazu Anmeldeprotokoll und "Komplettsicherung herunterladen" (Datenbank + alle Dateien als ZIP).
+- LIVEGANG.txt: Schritt-fuer-Schritt-Anleitung fuer den spaeteren Umzug auf einen Server. render.yaml ist vorbereitet (Frankfurt, persistente Disk, DATA_DIR) - es wurde NICHTS hochgeladen. .gitignore schliesst .env, data/ und data-demo/ aus.
+
+TAEGLICHER STAND (Baustein H1, 14.11.2026)
+------------------------------------------
+- Projektseite > Prototypen & Anmerkungen > "Taeglicher Stand": Inhaber verknuepft den Ordner der fertigen Website (z. B. C:\Projekte\cafe-mueller\dist). Das Board zeigt jederzeit, was sich seit der letzten Version geaendert hat ("Seite ueberarbeitet: Startseite · Neue Seite: Speisekarte"), mit Dateiliste.
+- "Neuen Stand hochladen": legt die naechste Version an, mit automatischer Aenderungsliste oder eigenem Text fuer den Kunden; auf Wunsch Chat-Nachricht + Neuigkeiten-Mail. Ist nichts geaendert, entsteht keine Version. Hat das Projekt genau einen Prototyp, wird der Stand dessen naechste Version, sonst ein eigener Strang.
+- Nie hochgeladen werden versteckte Dateien (.env, .git …), node_modules und Dateitypen ausserhalb der Website (nur HTML, CSS, JS, Bilder, Schriften, Medien, PDF). Hoechstens 600 Dateien / 60 MB. Ordner des Boards selbst sind gesperrt.
+- Claude Code verbinden (Mehr > "Claude Code verbinden", nur Inhaber): erzeugt einen Stand-Schluessel nur fuer dieses Projekt (wird einmal angezeigt, gespeichert nur als Pruefsumme). Im Projektordner die Datei .reeder-stand.json anlegen (in .gitignore!), dann:
+    node "<Board-Ordner>\server\stand-cli.mjs"                      neuen Stand hochladen
+    node "<Board-Ordner>\server\stand-cli.mjs" --pruefen            nur anzeigen, was sich geaendert hat
+    node "<Board-Ordner>\server\stand-cli.mjs" --text "…"           mit eigenem Text fuer den Kunden
+    --still = Kunde nicht benachrichtigen
+  Der Dialog liefert auch einen fertigen Absatz fuer die CLAUDE.md des Kundenprojekts. Schluessel widerrufen/erneuern ueber "Mehr". Funktioniert spaeter genauso mit dem Server (url in .reeder-stand.json anpassen).
+- Entwickler des Projekts duerfen Staende hochladen, aber keinen Ordner festlegen und keine Schluessel erzeugen.
+
+SEIT IHREM LETZTEN BESUCH (Baustein H2, 14.11.2026)
+---------------------------------------------------
+- Das Portal merkt sich je Kunde und Prototyp, welche Version er zuletzt geoeffnet hat (egal ob ueber Uebersicht, Projekt oder Chat).
+- Gibt es seitdem neue Versionen, zeigt die Portal-Uebersicht oben eine Karte: "Seit Ihrem letzten Besuch · Mittwoch, 11. November – „Website“ ist jetzt bei Version 4 · Sie kannten Version 2", mit Zahlen (neue Versionen, Seiten ueberarbeitet, neue Seiten, umgesetzte Anmerkungen des Kunden) und "Neuen Stand ansehen".
+- "Was hat sich geaendert?": jede neue Version mit Text und Datum, die betroffenen Seiten als Knoepfe (oeffnen den aktuellen Stand direkt auf dieser Seite), entfernte Seiten, und die erledigten Anmerkungen des Kunden mit unserer Antwort und "Zur Stelle".
+- Die Karte verschwindet, sobald der Kunde den neuesten Stand geoeffnet hat. Im Projekt sind neue Versionen mit "neu" markiert.
+- Board, Projektseite: unter jedem Prototyp steht, ob der Kunde ihn schon gesehen hat ("Kunde kennt Version 2 · zuletzt geoeffnet …" bzw. "✓ Kunde hat den aktuellen Stand gesehen").
+- Alle Zahlen sind echt gezaehlt. Pruef-Zahlen ("1.940 Pruefungen") kommen erst mit der Pruefstrecke (H6) dazu.
+
+ELEMENT ERKENNEN & LIVE-VORSCHAU (Baustein H3, 14.11.2026)
+----------------------------------------------------------
+- Setzt der Kunde (oder das Team) im Viewer einen Kommentar-Punkt oder zeichnet etwas ein, erkennt das Board, welches Element darunter liegt: "UEBERSCHRIFT „Mein Café“ · 56 px · fett" (Arten: Ueberschrift, Text, Link, Knopf, Bild, Bereich). Liegt es daneben: "Nicht dieses Element".
+- "Direkt anpassen": Regler fuer Schriftgroesse, Normal/Fett, Ausrichtung, Textfarbe (aus den Farben, die auf der Seite vorkommen), Abstand darueber/darunter; bei Knoepfen und Bereichen zusaetzlich Hintergrund, Ecken, Innenabstand; bei reinen Textelementen "Text" zum Umformulieren. Die Seite zeigt jede Einstellung sofort - nur beim Betrachter, nichts wird am Prototyp gespeichert. Verwerfen stellt das Original wieder her.
+- Gespeichert wird ein genauer Aenderungswunsch (Element + Werte vorher/nachher). Ohne eigenen Text wird der Kommentar automatisch formuliert: "Überschrift „Mein Café“: Schriftgröße 56 px → 40 px, Schrift fett → normal".
+- Jede Anmerkung mit Wunsch hat im Popup "Gewünschte Änderung" (vorher durchgestrichen → nachher, Farbmuster) und "Vorschau zeigen" - fuers Team ideal, um den Wunsch genau zu sehen. Im Board erscheint der Wunsch auch in den Anmerkungslisten.
+- Funktioniert ohne KI und ohne Kosten. Grundlage fuer den KI-Assistenten (H4) und die Auftragsliste fuer Claude Code (H5).
+
+KI-ASSISTENT IM PORTAL (Baustein H4, 14.11.2026)
+------------------------------------------------
+- Einrichten: in .env die Zeile ANTHROPIC_API_KEY=<Schluessel aus console.anthropic.com> eintragen, Server neu starten. Ohne Schluessel laeuft alles wie bisher.
+- Ablauf fuer den Kunden: markieren (Punkt, grober Kringel, Pfeil oder nur Text) und schreiben, was ihn stoert -> "Speichern" -> rechts unten antwortet der Assistent nach wenigen Sekunden:
+  * Stufe 1 (kleines Modell, Claude Haiku 5.5): Welches Element ist gemeint? Nutzt die Seitenuebersicht aus dem Prototyp, die Markierung und den Text. Ist es unklar, fragt er mit Knoepfen nach ("Meinen Sie die Ueberschrift oder den Text darunter?").
+  * Stufe 2 (Standard Claude Opus 5.5): stuft ein (klein / mittel / gross), antwortet in Sie-Form und bietet bei kleinen Wuenschen bis zu drei Varianten an. "Ansehen" zeigt die Variante sofort auf der Seite, "Diese nehmen" speichert den genauen Aenderungswunsch an der Anmerkung (wie bei H3) und bestaetigt: "Sie sehen sie morgen frueh / am Montagmorgen im neuen Stand".
+  * Mittel: geht ans Team. Gross (Funktionen, Preise, Daten, Umfang): keine Zusage, Aufgabe "Grosser Kundenwunsch - persoenlich melden" fuer den Inhaber mit Frist morgen.
+  * Der Kunde kann frei weiterschreiben (bis 8 Nachrichten) oder "Lieber mit einem Menschen sprechen" (-> Chat). Immer sichtbar: "Sie schreiben mit einem KI-Assistenten".
+- Der Assistent aendert nie selbst etwas, nennt keine Preise und keine anderen Termine.
+- Board: Anmerkungen zeigen die Einstufung (Klein / Mittel / Gross) und eine Zusammenfassung fuers Team; im Viewer "Gespraech mit dem Assistenten" zum Nachlesen.
+- Einstellungen > KI-Assistent (nur Inhaber): an/aus, Modelle je Stufe, Monatsgrenze in Dollar (Standard 30 - darueber pausiert er), Annahmeschluss (Standard 18 Uhr), Ansprechpartner und Zusage fuer grosse Wuensche, Verbrauch und Kosten des Monats je Modell, Zahl der Gespraeche.
+- Datenschutz: Anmerkungstext, Seitenuebersicht und Projektname gehen an Anthropic (Auftragsverarbeiter). Vor dem Einsatz mit echten Kunden: Anthropic-AVV/DPA abschliessen, Datenschutzerklaerung ergaenzen (steht im Konzept und in der Livegang-Pruefung).
+- Testmodus ohne KI fuer automatische Tests: ASSISTANT_MOCK=1 (nie im Echtbetrieb).
+- Echttest 14.11.2026 (Testschluessel): Pin auf Ueberschrift "zu gross" -> 3 Varianten (44 / 36 / 40 px normal); grober Kringel "Satz freundlicher" -> 3 Umformulierungen; Punkt ins Leere "Orange vom Knopf dunkler" -> Knopf richtig erkannt, 3 Farbvarianten aus der Seitenpalette; "Online-Shop einbauen" -> gross, Aufgabe fuer Vincent. Antwortzeit 6-9 Sekunden, Kosten im Schnitt 1,6 Cent je Antwort (Opus) + 0,02 Cent je Erkennung (Haiku).
+
+AUFTRAG & MORGENFREIGABE (Baustein H5, 14.11.2026)
+--------------------------------------------------
+- Projektseite > "Auftrag & Freigabe": alle geklaerten Kundenwuensche (Anmerkungen mit genauem Aenderungswunsch aus H3/H4, nicht "gross") stehen als "bereit". Frei formulierte oder mittlere Wuensche stehen darunter und koennen bewusst mitgenommen werden.
+- Ein Auftrag buendelt die Wuensche eines Projekts. Er entsteht automatisch zum Annahmeschluss (Einstellungen > KI-Assistent, Standard 18 Uhr; nur Projekte mit Ordner oder Claude-Code-Schluessel), per Knopf "Auftrag jetzt erstellen" oder wenn Claude Code ihn abholt.
+- Claude Code im Projektordner:
+    node "<Board-Ordner>\server\stand-cli.mjs" --auftrag                 -> schreibt REEDER-AUFTRAG.md (Seite, Element, Selektor, Werte vorher -> nachher, neuer Text, Kundenkommentar, Regeln)
+    node "<Board-Ordner>\server\stand-cli.mjs" --kandidat 12 --text "…"  -> laedt den umgesetzten Stand als KANDIDAT hoch
+  Der Absatz fuer die CLAUDE.md (Mehr > Claude Code verbinden) erklaert Claude Code beides.
+- Ohne Claude Code: "Auftrag fuer Claude Code anzeigen" (zum Kopieren) und "Kandidat aus Ordner hochladen".
+- Kandidat = neue Version, die der Kunde NICHT sieht (nicht im Portal, nicht in "Seit Ihrem letzten Besuch"). Cockpit-Hinweis "Neuer Stand zur Freigabe".
+- Morgens auf der Projektseite: jede Aenderung mit "Ansehen" (oeffnet den Kandidaten auf der richtigen Seite), "Kandidat ansehen", "Aktuell beim Kunden" zum Vergleichen.
+  * "Freigeben & Kunde informieren": Version geht live, Chat-Nachricht + Neuigkeiten-Mail, abgehakte Anmerkungen werden erledigt ("Umgesetzt in Version N"), nicht abgehakte kommen zurueck in die Liste.
+  * "Zurueckweisen …" mit Begruendung: Kandidat wird geloescht, Auftrag bleibt offen, Claude Code kann einen neuen Kandidaten hochladen. Der Kunde merkt nichts.
+  * "Auftrag abbrechen": Wuensche zurueck in die Liste.
+- Solange ein Kandidat wartet, ist direktes Veroeffentlichen gesperrt (damit nichts Ungeprueftes beim Kunden landet).
+
+PRUEFSTRECKE (Baustein H6, 14.11.2026)
+--------------------------------------
+- Laeuft automatisch nach jedem neuen Stand und jedem Kandidaten (abschaltbar), oder per "Jetzt pruefen" auf der Projektseite. Benutzt den installierten Edge/Chrome im Hintergrund – kein Zusatzprogramm (anderer Pfad: BROWSER_PATH in .env).
+- Schicht A, feste Pruefungen (kostenlos): jede Seite auf Desktop, Tablet und Handy. Geprueft werden u. a. Skriptfehler, fehlende Dateien, Links ins Leere, Bilder (laedt / Alternativtext / zu gross), Seitentitel, Sprache, Mobil-Einstellung, Hauptueberschrift, Ueberschriften-Reihenfolge, Beschriftung von Links/Knoepfen/Feldern, Kontrast jedes Textes, kleine Schrift und schwer zu treffende Links auf dem Handy, Seite breiter als der Bildschirm, Platzhaltertexte, Telefon-/E-Mail-Links, Impressum- und Datenschutz-Link auf jeder Seite, unverschluesselte Einbindungen, Ladezeit und Seitengewicht. Jede Einzelpruefung wird gezaehlt (kleine Seite mit 2 Unterseiten: ca. 250 je Lauf). Dazu Bildschirmfotos jeder Seite und jedes Geraets.
+- Schicht B, KI-Pruefer (kostet, Standard 20 $ je Projekt und Monat): sechs Personen (aeltere Stammkundin, eilige Person, Erstbesucher, Sehschwaeche, Korrekturleser, Pflichtangaben DE) sehen sich die Bildschirmfotos von Handy und Desktop an. Ein zweites, guenstiges Modell bestaetigt nur belegte Funde. Bekannte Funde werden mitgegeben, damit nichts doppelt kommt. Stopp, wenn das Budget erreicht ist oder 12 Durchgaenge in Folge nichts Neues finden. Echttest Cafe-Seite: 24 Durchgaenge, 25 Funde, 28 Cent.
+- Funde: Kritisch / Hoch / Mittel / Hinweis, mit Seite, Geraeten, Version. Taucht ein Fund im naechsten Lauf nicht mehr auf, ist er "behoben" (mit Versionsnummer). "→ Aufgabe" legt eine Aufgabe an, "Ignorieren" blendet ihn aus.
+- Die Freigabe-Karte (H5) zeigt das Pruefergebnis des Kandidaten. Das Kundenportal zeigt in "Seit Ihrem letzten Besuch" die echten Zahlen: automatische Pruefungen und behobene Schwachstellen.
+- Einstellungen > KI-Assistent > Pruefstrecke: automatisch an/aus, Modelle, Budget je Projekt, Stopp-Regel. Bildschirmfotos: je Projekt die letzten 6 Laeufe.
+
+PRUEFBERICHT (Baustein H7, 14.11.2026)
+--------------------------------------
+- Projektseite > Pruefstrecke: "Pruefbericht (PDF)" zeigt den aktuellen Bericht (Team), "Bericht an Kunden geben" (nur Inhaber) legt ihn als Dokument "Pruefbericht" beim Kunden ab – mit Neuigkeit im Portal und in der Neuigkeiten-Mail.
+- Inhalt: Kennzahlen (automatische Pruefungen, gefundene und behobene Schwachstellen, Seiten-Ansichten, offene Punkte mit Schwere hoch/kritisch), Zeitraum und Zahl der Prueflaeufe, was geprueft wurde (7 Bereiche), KI-Pruefer, Tabelle "Gefunden und behoben" (mit Version gefunden → behoben), "Noch offen", "Geprueft und bewusst belassen" (ignorierte Funde), Bildschirmfotos der geprueften Version (Desktop und Smartphone), Hinweis zu den Grenzen automatischer Pruefungen.
+- Alle Zahlen kommen 1:1 aus der Pruefstrecke – nichts geschaetzt. Ohne abgeschlossene Prueflaeufe gibt es keinen Bericht.
+
+WEBSITE-TEXTE ZUR ARBEITSWEISE (Baustein H8, 14.11.2026)
+--------------------------------------------------------
+- Arbeitsweise: neuer Abschnitt 06 "Jeden Morgen ein neuer Stand. Geprueft und freigegeben." (Anker #taeglich) mit drei Karten (Ihr Team / Ihr Assistent / Pruefstrecke) und Ablauf Onboarding → jeden Tag neuer Stand → Abstimmung zur Halbzeit → Pruefbericht zur Uebergabe. Kopfbereich: "Jeden Tag ein neuer Stand", "Jede Version geprueft".
+- FAQ erweitert: "Kann ich das mit ChatGPT nicht auch selbst?" (Verantwortung, Pruefstrecke, Betrieb, Ihre Zeit), neu "Spreche ich im Kundenportal mit einer KI?" und "Was steht im Pruefbericht?", Datenfrage um den Assistenten ergaenzt.
+- Ablauf & FAQ: Schritt 03 und 04 nennen taeglichen Stand, Anmerkungen im Entwurf und Pruefbericht. Startseite: ein Absatz im KI-Teaser.
+- Datenschutz: neuer Abschnitt 4 "Kundenportal und KI-Assistent" als gelb markierter ENTWURF (Anthropic als Auftragsverarbeiter, USA-Uebermittlung, Sitzungs-Cookie, Bildschirmfotos der Pruefstrecke). Erst nach Rechtspruefung und abgeschlossenem AVV/DPA mit Anthropic verwenden – die Livegang-Checkliste meldet die Markierungen.
+- Quellen: _build/*.body.html, danach "python _build/build.py ." – datenschutz.html wird direkt bearbeitet.
+
+WEBSITE: VERTRAUEN, BEISPIELRECHNUNG, SECHS SCHRITTE (14.11.2026)
+-----------------------------------------------------------------
+- Startseite neu geordnet (roter Faden Vertrauen): 01 Wobei helfen → 02 Referenzen & Zahlen (Nachweis frueh) → 03 Kostenloser Prototyp (Risiko weg) → 04 Arbeitsweise mit KI → 05 NEU "Offen gerechnet" → 06 Signature → 07 Leistungen → 08 Eigene Produkte → 09 Warum Reeder → 10 Ablauf → 11 FAQ → Kontakt.
+- "Offen gerechnet" (#preise): Beispielprojekt Physiotherapie-Website mit Online-Terminbuchung (Beispielansicht in reinem CSS, kein Kundenprojekt), 4.000 € netto Festpreis, Aufteilung: Qualitaet & Pruefung 1.000 € (25 %, hervorgehoben), Konzept/Design/Entwicklung 1.400 €, Projektleitung 500 €, Betrieb im Hintergrund 400 €, Unternehmen & Gewinn 700 €. Darunter "Selbst gebaut mit KI" gegen "Mit Reeder" und die Knoepfe "Festpreis anfragen" / "Erst den Prototyp sehen". Zahlen = Beispielrechnung; bitte so halten, dass sie die echte Kalkulation ungefaehr wiedergeben.
+- Ablauf ueberall gleich in sechs Schritten: Erstgespraech (Termin 1, kostenlos) → Prototyp (Termin 2, kostenlos) → Angebot & Start → jeden Tag neuer Stand → Abstimmung zur Halbzeit → Uebergabe & Betreuung (Startseite, Ablauf & FAQ, Arbeitsweise).
+- Startseite FAQ: neue erste Frage "Kann ich mir eine Website nicht einfach selbst mit KI bauen?" mit Verweis auf die Beispielrechnung.
+
+STARTSEITE KOMPAKT (14.11.2026, ersetzt die lange Fassung von oben)
+-------------------------------------------------------------------
+- Startseite jetzt nur noch: Hero (unveraendert) → Laufband → 1 "Nicht versprochen. Gebaut." (Galerie: Patientenverwaltung Physiotherapie, Covered, Lernpass, Perspektive, Online-Check-in, BusinessCat; Zahlen 2 / 4 / 24 h) → 2 "So entwickeln heute die Besten." (75 % Google, 95 % Microsoft, 84 % Entwickler – mit Quellen; "Die KI spielt die Instrumente. Wir dirigieren.") → 3 "Eine Praxis-Website. 4.000 €." (Aufteilung, Qualitaet & Pruefung hervorgehoben, Beispielansicht, Knopf "Festpreis anfragen", Link Signature) → 4 "Zwei Termine. Kostenlos. Dann entscheiden Sie." (Weg in 6 Schritten, Knopf "Kostenloses Erstgespraech buchen", naechster freier Termin).
+- Seitenhoehe ungefaehr halbiert. Leistungen, Signature-Rechenbeispiel, FAQ und Ablauf im Detail stehen auf ihren eigenen Seiten.
+- Die vorige lange Fassung liegt zum Nachschlagen in _build/index.vorher-lang.body.html.txt (wird nicht gebaut).
+
+STARTSEITE NACH BESUCHERFRAGEN (14.11.2026, Fassung 3 - gilt)
+-------------------------------------------------------------
+- Hero und Laufband unveraendert. Darunter fuenf Bereiche mit kurzen Ueberschriften, je eine Frage des Besuchers:
+  1 "Was wir bauen." - Websites & Web-Apps / KI-Assistenten / Praxis- & Patientensysteme (je Bild, ein Satz, Link zu Leistungen)
+  2 "Im Einsatz." - zwei Patientenverwaltungen (ohne Kundennamen), Covered, Lernpass, Perspektive, BusinessCat - andere Bilder als im Hero
+  3 "Mit KI - wie Google und Microsoft." - 75 / 95 / 84 % mit Quellen, "Die KI spielt die Instrumente. Wir dirigieren."
+  4 "Was es kostet." - Beispiel Praxis-Website 4.000 EUR mit Aufteilung, Knopf "Festpreis anfragen", Link Signature
+  5 "So fangen wir an." - zwei kostenlose Termine, Weg in 6 Schritten, Knopf "Kostenloses Erstgespraech buchen"
+- Die Fassungen 1 und 2 (lang bzw. "Nicht versprochen. Gebaut.") sind ersetzt.
+
+STARTSEITE FASSUNG 4 (14.11.2026 - gilt, gleiche Abfolge, neue Gestaltung)
+-------------------------------------------------------------------------
+- Leistungen "Was wir fuer Sie entwickeln.": drei dunkle Karten mit lila-rosa Leuchten und Raster (Website-Ansicht schraeg, KI-Telefonassistent als leuchtende Kugel mit Sprachwelle, Patientenverwaltung im Handy), darunter weitere Leistungen als Links.
+- Im Einsatz: wieder die urspruenglichen Bloecke "Zwei Patientenverwaltungen. Im Einsatz." (dunkel, Koerpermodell, Zahlen) und "Gebaut aus Ueberzeugung. Taeglich im Einsatz." (Produktkarten mit den Original-Bildern).
+- KI "Entwickelt mit KI. Gefuehrt von Menschen.": grosse Zahlen 75/95/84 % mit Quellen und das Dirigenten-Zitat.
+- Preis "Ein fairer Preis. Offen gerechnet.": zentriert, 4.000 EUR gross im Farbverlauf, ein Balken in fuenf Teilen mit Betraegen darunter (Pruefung hervorgehoben), Knoepfe Festpreis anfragen / Signature.
+- Abschluss "Erzaehlen Sie uns von Ihrer Idee." mit zwei kostenlosen Terminen, Weg in 6 Schritten und Buchungsknopf.
+
+FRAGEBOGEN UND VORAB-ENTWURF (19.11.2026)
+- Wird ein Erstgespräch oder Workshop bestätigt (mit Benachrichtigung), geht eine zweite Mail
+  raus: „Damit wir uns gut vorbereiten können – 3 Minuten für Ihren Fragebogen“.
+- Der Link führt zu portal/fragebogen.html (ohne Anmeldung, eigener Link pro Termin, einmal absendbar).
+  Fragen: Art des Projekts, Unternehmen und Ziel, Aufteilung Bild/Text, Bewegung, Farbwelt,
+  Tonalität, gewünschte Funktionen, freie Wünsche.
+- Bei Website, Web-App oder App baut die KI (Opus 5.5) daraus automatisch einen Vorab-Entwurf.
+  Danach prüft der Server ihn selbst in Handy- und Desktop-Breite (Überbreite, Skriptfehler),
+  lässt Probleme einmal korrigieren und sichert zur Not den Rand ab.
+- Ergebnis: Antworten und Link zum Entwurf stehen am Termin, Sie bekommen eine Mail.
+  Der Entwurf läuft wie jeder Prototyp unter /p/… und lädt nichts von außen nach.
+- Kosten im Test: 0,45–0,62 $ pro Entwurf, Dauer 3–4 Minuten. Ein Limit gibt es noch nicht.
+- Board-Schnittstelle: GET /api/admin/vorab (Liste), POST /api/admin/vorab/<id>/neu (neu bauen).
+  Eine eigene Ansicht im Board fehlt noch.
+- Code: server/vorab.mjs, portal/fragebogen.html.
+
+NOVA / COVERED (19.11.2026)
+- Das Board meldet an Nova in der Covered-App (jede Minute, über die Automatik):
+  Termine (neu, verschoben, abgesagt) → Ihr Kalender mit Videolink; neue Buchungen, Projekt- und
+  Terminanfragen → Meldung mit Push; Kundennachrichten und Anmerkungen → eine Meldung je Kunde
+  und Stunde ohne Push; nach dem Termin Zusammenfassung + nächste Schritte → Briefing am Termin.
+- Einrichtung: in der Covered-App Schlüssel anlegen (Menü › Kalender und Verbindungen › Andere
+  Programme), in .env bei COVERED_API_KEY eintragen (Adresse steht schon drin), Board neu starten,
+  Einstellungen › Nova › „Verbindung testen“.
+- Ist Covered nicht erreichbar, läuft das Board normal weiter; Meldungen werden nachgeholt
+  (Pause 5 Min., bei falschem Schlüssel 30 Min.). Anfragen von vor der Einrichtung werden nicht nachgemeldet.
+- Das Demo-Board meldet nie etwas (COVERED_DISABLED).
+- Nova live im Videogespräch (Mithören, Antworten) ist bei Covered als eigene Etappe geplant – noch nicht gebaut.
+- Code: server/covered.mjs, admin/covered.js.
+
+TERMIN BUCHEN – EIN ABLAUF, SOFORT BESTÄTIGT (19.11.2026)
+- Die Seite termin.html hat keine getrennte „Projekt anfragen“-Ansicht mehr. Ablauf:
+  Was möchten Sie buchen? → (beim Erstgespräch: Worum geht es? Themen zum Anklicken + kurzer Text)
+  → Datum & Zeit → Ihre Daten → „Termin verbindlich buchen“.
+- Terminarten: Kostenloses Erstgespräch 30 Min · Produktdemo 30 Min · Beratung „Wo Software & KI
+  Ihnen helfen“ 60 Min, 100 € zzgl. MwSt. (Rechnung nach dem Termin). Der Projekt-Workshop ist
+  abgeschaltet (alte Links landen bei der Beratung).
+- Gebuchte Termine sind sofort bestätigt: Termin im Kalender, Kontakt im Vertrieb als Interessent,
+  Videolink, Bestätigung mit Kalenderdatei an den Kunden, Info-Mail an Sie, beim Erstgespräch
+  zusätzlich der Fragebogen (→ Vorab-Entwurf).
+- Plant das Team selbst ein Erstgespräch ein (Kontakt › Termin vereinbaren), geht der Fragebogen ebenfalls raus.
+- Website-Texte angepasst: „kostenlose Beratung“ heißt jetzt „kostenloses Erstgespräch“; die Beratung ist kostenpflichtig.
+- Noch offen: Rechnung für die bezahlte Beratung wird nicht automatisch erstellt.
+
+FRAGEBOGEN 2.0 (19.11.2026)
+- 15 Fragen (Website/App), jede deckt genau einen Bereich ab: Vorhaben · Über Sie (inkl. Zielgruppe,
+  bisherige Website) · wichtigste Handlung · erster Eindruck (8 echte Laptop-Beispiele) · Textmenge
+  (durchlaufende Handy-Beispiele) · eine Seite/mehrere · Bildsprache · Herkunft der Bilder · hell/dunkel ·
+  Farbwelt (zeigt den gewählten Aufbau in jeder Farbe) · Schrift · Bewegung (8 laufende Beispiele, je
+  „Gefällt mir / Lieber nicht“, oder „gar keine Bewegung“) · Wirkung + Sie/Du · Funktionen · Vorbilder/No-Gos.
+- Alle Beispiele zeigen den Firmennamen und die bisherigen Antworten des Kunden. Antworten bleiben beim
+  Neuladen erhalten.
+- Website-Bilder werden nur mit ausdrücklicher Erlaubnis übernommen (Haken im Fragebogen) und in den
+  Entwurf kopiert; interne Netzadressen sind gesperrt.
+- Lizenzfreie Fotos (Pexels) erscheinen als Option erst, wenn PEXELS_API_KEY in der .env steht.
+- Jede Antwort wird in eine feste Gestaltungsvorgabe für die KI übersetzt (server/vorab.mjs, RULE/briefing).
+- Selbstprüfung zusätzlich: Hauptüberschrift muss im ersten Bildschirm stehen, sonst Korrektur.
+- Test: 0,52–0,61 $ und ca. 3 Minuten pro Entwurf.
+
+FRAGEBOGEN 2.1 + ENTWURF MIT PRÜFRUNDE (19.11.2026)
+- Schrift-Frage mit echten Schriften (Open Font License, assets/fonts/vorab): Playfair Display, Inter,
+  Nunito, Anton, Space Grotesk + JetBrains Mono, Syne. Die gewählte Schrift wird in den Entwurf kopiert.
+- Neue Frage „Wie viel Bewegung?“ (wenig = Erklärung, mittel = beste Conversion-Rate, viel = repräsentativ)
+  mit drei laufenden Beispielen; danach Feinabstimmung der Effekte (passend vorausgewählt). 16 Fragen.
+- Website-Bilder werden in einem echten Browser eingesammelt (auch nachgeladene Bilder, AVIF → WebP,
+  Hintergrundbilder, bis zu 2 Videos); Deko-Grafiken werden aussortiert. Bildschirmfotos der bisherigen
+  Seite gehen als Qualitätsmaßstab an die KI. Interne Netzadressen sind gesperrt.
+- Prüfrunde: Die KI schaut den fertigen Entwurf an (Laptop + Handy), prüft jede Vorgabe und überarbeitet
+  einmal. Ergebnis und Punktzahl stehen beim Termin unter „Vorbereitung“.
+- Kosten im Test: ca. 3 $ pro Entwurf (Bau 1,45 $ + Prüfung 0,06 $ + Überarbeitung 1,49 $), ca. 20 Minuten.
+
+FRAGEBOGEN MIT KUNDENKONTO + KOMPAKTER ENTWURF (19.11.2026)
+- Vor der ersten Frage legt der Kunde sein Kundenkonto an (E-Mail aus der Buchung, Passwort, Datenschutz-
+  Haken) bzw. meldet sich an, wenn es schon eines gibt. Ohne Konto werden keine Antworten angenommen.
+  Danach Weiterleitung ins Kundenportal.
+- In der Kundenakte (Überblick) zeigt die Karte „Fragebogen & Vorab-Entwurf“: Status, Konto ja/nein,
+  KI-Kosten, alle Angaben gegliedert und den Link zum Entwurf.
+- Der Entwurf wird beim Kunden hinterlegt, ist für ihn aber erst nach Freigabe sichtbar (Kandidat) –
+  gezeigt wird er im Gespräch.
+- Standard ist jetzt der kompakte Entwurf: nur die Startseite (erster Bildschirm + bis zu 4 Abschnitte),
+  ohne Prüfrunde. Test: 0,74 $, ca. 5 Minuten. Der ausführliche Entwurf mit Prüfrunde (ca. 3–4 $) ist
+  weiter vorhanden: VORAB_AUSFUEHRLICH=1 in der .env.
+
+
+SOFTWARE UND HARDWARE IN EINEM BOARD
+------------------------------------
+Es gibt nur ein Board und eine Projektliste. Jedes Projekt hat einen Bereich (Software oder Hardware),
+der beim Anlegen unter "Neues Projekt" gewählt wird. Ein kleines Schild zeigt ihn überall an:
+- Projekte: Schild je Zeile, Filter "Bereich" über der Liste.
+- Kunden: Schilder zeigen, ob ein Kunde Software-Projekte, Hardware-Projekte oder beides hat.
+- Termine: Kürzel SW oder HW an jedem Termin, der zu einem Projekt gehört.
+Ein Hardware-Projekt öffnet seine eigene Seite mit dem Konzept in sechs Schritten (Anforderungen,
+Varianten, Module, 3D-Modell, Einkauf & Bau, Prüfung). Eigene Produktideen ohne Auftraggeber
+laufen unter dem Kunden "Reeder intern".
+
+Technik
+- Schnittstelle: server/hardware.mjs (/api/admin/hardware/...). Der Bereich steht in projects.bereich.
+- Oberfläche der Hardware-Seite: admin/hardware/hardware.js und hardware.css. Diese beiden Dateien werden
+  gebaut, nicht von Hand bearbeiten. Quelltext und Anleitung: ../Reeder Hardware GmbH/konzept-studio (CLAUDE.md).
+- Schilder und Adressen: bereichTag, bereicheTags, bereichKurz, projektHref in admin/admin.js.
+- Daten: data/hardware/<Projekt-ID>/projekt.json (das Konzept) und .../dateien/ (Uploads).
+- Stand vor dem Einbau: Ordner _sicherung-2026-11-25/ (Server- und Board-Dateien, Datenbank).
+
+Terminarten für Hardware
+- "Kostenloses Erstgespräch Hardware" (30 Min) und "Entwicklungskonzept anfragen" (45 Min), beide kostenlos.
+  Festgelegt in server/db.mjs (DEFAULT_AVAILABILITY, Kennzeichen bereich: "hardware"); Dauer, Puffer und
+  aktiv/inaktiv sind im Board unter Termine > Arbeitszeiten einstellbar.
+- Auf der Website: _build/termin.body.html, danach "python _build/build.py ." ausführen.
+- Gebuchte Termine tragen im Kalender automatisch das Kürzel HW bzw. SW.
+
+
+MIT CLAUDE AUSARBEITEN (Hardware-Projekte)
+------------------------------------------
+Jedes Hardware-Projekt hat einen Arbeitsordner unter "Reeder Hardware GmbH/Projekte/<Projektname>/"
+(neben dem Website-Ordner; Demo-Board und Server im Internet nutzen stattdessen DATA_DIR/hardware,
+mit HARDWARE_PROJEKTE_DIR lässt sich der Ort festlegen). Darin liegen projekt.json (Konzept),
+dateien/ (Unterlagen), notizen/, ergebnisse/ und CLAUDE.md (Anleitung, schreibt das Board selbst).
+- "Ordner öffnen" oben rechts im Projekt öffnet ihn im Explorer.
+- "In Claude öffnen" legt den Ordner an und öffnet Claude Code darin; der Auftrag steht schon im
+  Eingabefeld und wird mit Enter abgeschickt. Das läuft über das eigene Claude-Abo.
+Voraussetzung: Claude Code ist als Terminalprogramm installiert (npm install -g @anthropic-ai/claude-code)
+und angemeldet. Das Board ruft die Programmdatei direkt auf (claude --handle-uri ...), sucht sie im Pfad und
+im npm-Ordner des Benutzers und verwechselt sie nicht mit der Desktop-App. Beides geht nur, wenn Board und
+Browser auf demselben Rechner laufen. Das Board dafür im eigenen Terminal starten (npm start).

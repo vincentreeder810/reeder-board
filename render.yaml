@@ -1,0 +1,30 @@
+# Vorbereitung für Render – NICHT automatisch aktiv. Erst verwenden, wenn der Livegang freigegeben ist (siehe LIVEGANG.txt).
+services:
+  - type: web
+    name: reeder-website
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /
+    numInstances: 1
+    disk:
+      name: reeder-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DATA_DIR
+        value: /var/data
+      - key: SITE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: COVERED_API_URL
+        value: https://nova-9zlg.onrender.com/api/connect/v1
+      - key: COVERED_API_KEY
+        sync: false

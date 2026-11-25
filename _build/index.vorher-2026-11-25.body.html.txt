@@ -1,0 +1,222 @@
+<!-- ============ HERO ============ -->
+<section class="hero dark">
+  <canvas class="hero__canvas" id="heroCanvas" aria-hidden="true"></canvas>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="hero__content">
+    <p class="eyebrow reveal">Software · KI · Hardware</p>
+    <h1 class="h1">
+      <span class="line"><span>Software &amp; KI, die</span></span>
+      <span class="line"><span>Menschen <em class="serif">weiterbringt.</em></span></span>
+    </h1>
+    <p class="hero__lead reveal" style="--d:.5s">Unser Team aus Design, Entwicklung und KI baut Websites, Apps, KI-Telefonassistenten und Praxissysteme – auf Wunsch ohne Entwicklungskosten im Reeder Signature-Modell.</p>
+    <div class="hero__ctas reveal" style="--d:.65s">
+      <a href="termin.html" class="btn btn--lime magnetic">Kostenloses Erstgespräch <span class="arr">→</span></a>
+      <a href="modelle.html" class="btn btn--ghost magnetic">Signature-Modell entdecken <span class="arr">→</span></a>
+    </div>
+    <ul class="ticks reveal" style="--d:.8s"><li>Kostenloser Prototyp – ohne Vertrag</li><li>Erstgespräch kostenlos</li><li>Antwort in 24 h</li></ul>
+  </div>
+
+  <div class="hero__stage" id="heroStage" aria-hidden="true">
+    <div class="device device--laptop" data-depth="0.04">
+      <div class="device__screen"><img src="assets/img/praxis-koerper.webp" alt="" width="1800" height="1389"></div>
+    </div>
+    <div class="device device--phone device--left" data-depth="0.09">
+      <div class="phone phone--shot "><div class="phone__island"></div><img src="assets/img/app-covered-home.webp" alt="" loading="lazy" width="780" height="1688"></div>
+    </div>
+    <div class="device device--phone device--right" data-depth="0.12">
+      <div class="phone phone--shot "><div class="phone__island"></div><img src="assets/img/app-lernpass-home.webp" alt="" loading="lazy" width="780" height="1688"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MARQUEE ============ -->
+<div class="marquee dark" aria-hidden="true">
+  <div class="marquee__track">
+    <span>Kostenloser Prototyp</span><i>✦</i><span>Web-Apps</span><i>✦</i><span>KI-Telefonassistent</span><i>✦</i><span>KI-Integration</span><i>✦</i><span>iOS &amp; Android</span><i>✦</i><span>Patientenverwaltung</span><i>✦</i><span>Websites</span><i>✦</i><span>Marktrecherche</span><i>✦</i><span>Automatisierung</span><i>✦</i>
+    <span>Web-Apps</span><i>✦</i><span>KI-Telefonassistent</span><i>✦</i><span>KI-Integration</span><i>✦</i><span>iOS &amp; Android</span><i>✦</i><span>Patientenverwaltung</span><i>✦</i><span>Websites</span><i>✦</i><span>Marktrecherche</span><i>✦</i><span>Automatisierung</span><i>✦</i>
+  </div>
+</div>
+
+<!-- ============ SOFTWARE & HARDWARE ============ -->
+<section class="section">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal">Software &amp; Hardware</p>
+      <h2 class="h2 reveal">Zwei Bereiche. <span class="hl">Ein Haus.</span></h2>
+    </div>
+  </div>
+  <div class="bereiche">
+    <a class="bereiche__card bereiche__card--sw reveal" href="leistungen.html"><span class="bereiche__tag">Software</span><h3>Digitale Lösungen</h3><p>Websites, Apps, KI-Telefonassistenten und Praxissysteme – mit kostenlosem Prototyp.</p><span class="link">Zu den Software-Leistungen <span>→</span></span></a>
+    <a class="bereiche__card bereiche__card--hw reveal" style="--d:.1s" href="hardware.html"><span class="bereiche__tag">Hardware</span><h3>Physische Produkte</h3><p>Von der Idee über das technische Konzept mit 3D-Modell bis zum gebauten Prototyp.</p><span class="link">Zur Hardware-Entwicklung <span>→</span></span></a>
+  </div>
+</section>
+
+<!-- ============ LEISTUNGEN ============ -->
+<section class="section section--paper lx">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal">Software-Leistungen</p>
+      <h2 class="h2 reveal">Was wir für Sie <span class="hl">entwickeln.</span></h2>
+    </div>
+    <a href="leistungen.html" class="link reveal">Alle Leistungen <span>→</span></a>
+  </div>
+  <div class="lx__grid">
+    <a href="leistungen.html#websites" class="lxc reveal">
+      <div class="lxc__vis" aria-hidden="true">
+        <div class="lxc__glow"></div>
+        <div class="lxc__web">
+          <div class="sitemock">
+            <div class="sitemock__bar"><i></i><i></i><i></i><span>physio-am-park.de</span></div>
+            <div class="sitemock__page">
+              <div class="sitemock__nav"><b>Physio am Park</b><span>Leistungen</span><span>Team</span><em>Termin buchen</em></div>
+              <div class="sitemock__hero"><div><small>Physiotherapie · Manuelle Therapie</small><strong>Wieder schmerzfrei bewegen.</strong><em>Termin online buchen</em></div><div class="sitemock__img"></div></div>
+              <div class="sitemock__cards"><span><b>Krankengymnastik</b>45 Min.</span><span><b>Manuelle Therapie</b>30 Min.</span><span><b>Lymphdrainage</b>45 Min.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="lxc__body"><h3>Websites &amp; Web-Apps</h3><p>Schnell, sicher, für Google optimiert – mit Online-Terminbuchung, Portal oder Shop.</p><span class="lxc__go">Mehr erfahren <i>→</i></span></div>
+    </a>
+    <a href="leistungen.html#telefon" class="lxc reveal" style="--d:.08s">
+      <div class="lxc__vis lxc__vis--voice" aria-hidden="true">
+        <div class="lxc__glow"></div>
+        <div class="voice">
+          <div class="voice__orb"><span></span></div>
+          <div class="voice__wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="voice__chips"><span><em></em>Anruf angenommen</span><span class="ok">✓ Termin Di, 10:30</span></div>
+        </div>
+      </div>
+      <div class="lxc__body"><h3>KI-Telefonassistent</h3><p>Nimmt Anrufe an, beantwortet Fragen und vergibt Termine – rund um die Uhr.</p><span class="lxc__go">Mehr erfahren <i>→</i></span></div>
+    </a>
+    <a href="leistungen.html#praxis" class="lxc reveal" style="--d:.16s">
+      <div class="lxc__vis lxc__vis--app" aria-hidden="true">
+        <div class="lxc__glow"></div>
+        <div class="lxc__phone"><div class="phone phone--shot"><div class="phone__island"></div><img src="assets/img/praxis-koerper-mobil.webp" alt="" loading="lazy" width="700" height="1395"></div></div>
+      </div>
+      <div class="lxc__body"><h3>Praxis- &amp; Patientensysteme</h3><p>Patientenverwaltung, KI-Anamnese, Termine und Nachsorge – für den Praxisalltag.</p><span class="lxc__go">Mehr erfahren <i>→</i></span></div>
+    </a>
+  </div>
+  <p class="lx__more reveal">Außerdem: <a href="leistungen.html#apps">Mobile Apps</a> · <a href="leistungen.html#ki">KI-Integration</a> · <a href="leistungen.html#anpassung">Bestehende Software anpassen</a> · <a href="leistungen.html#beratung">Beratung</a></p>
+</section>
+
+<!-- ============ REFERENZEN + ZAHLEN ============ -->
+<section class="section dark" style="overflow:hidden;isolation:isolate">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="feature">
+    <div>
+      <p class="eyebrow reveal">Referenzen im Gesundheitswesen</p>
+      <h2 class="h2 reveal">Zwei Patienten&shy;verwaltungen. <span class="serif">Im Einsatz.</span></h2>
+      <p class="lead reveal">Für Kunden haben wir zwei komplette Patientenverwaltungssysteme entwickelt – für die Physiotherapie und für die Schönheitschirurgie.</p>
+      <ul class="checks checks--dark reveal">
+        <li><b>Physiotherapie:</b> KI-Anamnese vor der ersten Behandlung, Online-Check-in, Termine, Akte</li>
+        <li><b>Schönheitschirurgie:</b> OP-Plan, Vor- und Nachsorge, KI-Wundmanager, Fernsprechstunde</li>
+      </ul>
+      <div class="hero__ctas reveal" style="justify-content:flex-start">
+        <a href="projekte.html" class="btn btn--lime">Referenzen ansehen <span class="arr">→</span></a>
+      </div>
+    </div>
+    <figure class="feature__img reveal" style="--d:.15s;margin:0"><img src="assets/img/praxis-koerper.webp" alt="Patientenverwaltung Physiotherapie: Schmerzangabe am 3D-Körpermodell" loading="lazy" width="1800" height="1389"></figure>
+  </div>
+  <div class="stats">
+    <div class="stat reveal"><b><span class="count" data-to="2">0</span></b><span>Patientenverwaltungs&shy;systeme für Kunden entwickelt</span></div>
+    <div class="stat reveal" style="--d:.1s"><b><span class="count" data-to="4">0</span></b><span>eigene Produkte – und weitere in Arbeit</span></div>
+    <div class="stat reveal" style="--d:.2s"><b><span class="count" data-to="3">0</span></b><span>faire Vergütungsmodelle – inklusive Signature</span></div>
+    <div class="stat reveal" style="--d:.3s"><b>24<em>h</em></b><span>Antwortzeit auf jede Anfrage an Werktagen</span></div>
+  </div>
+</section>
+
+<!-- ============ PRODUKTE (Teaser) ============ -->
+<section class="section">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal">Eigene Produkte</p>
+      <h2 class="h2 reveal">Gebaut aus Überzeugung. <span class="muted">Täglich im Einsatz.</span></h2>
+    </div>
+    <a href="produkte.html" class="link reveal">Alle Produkte <span>→</span></a>
+  </div>
+  <div class="pteaser">
+    <a href="produkte.html#covered" class="pt reveal">
+      <div class="pt__media pt__media--dark"><img src="assets/img/app-covered-home.webp" alt="Covered: Nova begrüßt Thomas auf dem Startbildschirm" loading="lazy" style="object-position:center 22%"></div>
+      <div class="pt__body"><span class="tag">KI-Agenten · Bald</span><h3>Covered</h3><p>KI-Agenten, die für Sie handeln – bis zum Anruf beim Arzt.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+    <a href="produkte.html#businesscat" class="pt reveal" style="--d:0.08s">
+      <div class="pt__media"><div class="art art--bcat">Business<span>Cat</span></div></div>
+      <div class="pt__body"><span class="tag">Gründung</span><h3>BusinessCat</h3><p>Aus guten Ideen werden Unternehmen – mit KI in Phasen.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+    <a href="produkte.html#lernpass" class="pt reveal" style="--d:0.16s">
+      <div class="pt__media"><img src="assets/img/app-lernpass-home.webp" alt="Lernpass Startbildschirm mit 3D-Lerninsel" loading="lazy" style="object-position:center 8%"></div>
+      <div class="pt__body"><span class="tag">Bildung</span><h3>Lernpass</h3><p>KI, die beim Lernen hilft – mit Rechercheaufträgen und Lernspielen.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+    <a href="produkte.html#perspektive" class="pt reveal" style="--d:0.24s">
+      <div class="pt__media"><img src="assets/img/app-perspektive-home.webp" alt="Perspektive Startbildschirm mit Persönlichkeitstyp" loading="lazy" style="object-position:center 4%"></div>
+      <div class="pt__body"><span class="tag">Kommunikation</span><h3>Perspektive</h3><p>Verstehen, was andere denken – und besser argumentieren.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+  </div>
+</section>
+
+<!-- ============ MIT KI ============ -->
+<section class="section dark hk" style="overflow:hidden;isolation:isolate">
+  <div class="grid-bg" aria-hidden="true"></div><div class="sig__glow" aria-hidden="true"></div>
+  <div class="hk__inner">
+    <p class="eyebrow reveal">Entwicklung mit KI</p>
+    <h2 class="hk__title reveal">Entwickelt mit KI.<br><span class="grad">Geführt von Menschen.</span></h2>
+    <div class="hk__nums">
+      <a class="hk__n reveal" href="https://the-decoder.com/google-says-75-percent-of-its-new-code-is-now-written-by-ai/" target="_blank" rel="noopener"><b class="grad">75 %</b><span>des neuen Codes bei Google entsteht mit KI</span><small>Sundar Pichai, 2026 ↗</small></a>
+      <a class="hk__n reveal" style="--d:.08s" href="https://developers.slashdot.org/story/25/04/02/1611229/95-of-code-will-be-ai-generated-within-five-years-microsoft-cto-says" target="_blank" rel="noopener"><b class="grad">95 %</b><span>allen Codes wird künftig KI schreiben</span><small>Kevin Scott, Microsoft ↗</small></a>
+      <a class="hk__n reveal" style="--d:.16s" href="https://survey.stackoverflow.co/2025/ai" target="_blank" rel="noopener"><b class="grad">84 %</b><span>der Entwickler arbeiten mit KI</span><small>Stack Overflow 2025 ↗</small></a>
+    </div>
+    <div class="hk__punch reveal">
+      <p>„Programmieren mit KI ist wie ein Orchester zu dirigieren. <span class="grad">Ohne Dirigent wird daraus keine Musik.</span>“</p>
+      <a href="arbeitsweise.html" class="btn btn--ghost magnetic">So arbeiten wir <span class="arr">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PREIS ============ -->
+<section class="section px" id="preise">
+  <div class="px__inner">
+    <p class="eyebrow reveal" style="justify-content:center">Preise</p>
+    <h2 class="h2 reveal">Ein fairer Preis. <span class="hl">Offen gerechnet.</span></h2>
+    <p class="px__sub reveal">Beispiel: eine Praxis-Website mit Online-Terminbuchung.</p>
+    <p class="px__total reveal"><b>4.000 €</b><span>netto · Festpreis</span></p>
+    <div class="pstack reveal" role="img" aria-label="Aufteilung von 4.000 Euro: Qualität und Prüfung 1.000 Euro, Design und Entwicklung 1.400 Euro, Projektleitung 500 Euro, Server und Dienste 400 Euro, Unternehmen und Gewinn 700 Euro">
+      <div class="pstack__bar">
+        <span class="hi" style="--w:25"></span><span style="--w:35"></span><span style="--w:12.5"></span><span style="--w:10"></span><span style="--w:17.5"></span>
+      </div>
+      <ul class="pstack__lbl">
+        <li class="hi" style="--w:25"><b>1.000 €</b><span>Qualität &amp; Prüfung</span></li>
+        <li style="--w:35"><b>1.400 €</b><span>Design &amp; Entwicklung</span></li>
+        <li style="--w:12.5"><b>500 €</b><span>Projekt&shy;leitung</span></li>
+        <li style="--w:10"><b>400 €</b><span>Server &amp; Dienste</span></li>
+        <li style="--w:17.5"><b>700 €</b><span>Unternehmen &amp; Gewinn</span></li>
+      </ul>
+    </div>
+    <p class="px__note reveal"><span class="grad">Ein Viertel fließt in Prüfung</span> – jede Version auf Smartphone, Tablet und Desktop getestet. Genau das fehlt, wenn man selbst mit KI baut.</p>
+    <div class="hero__ctas reveal" style="justify-content:center;align-items:center;gap:26px">
+      <a href="termin.html" class="btn btn--ink magnetic">Festpreis anfragen <span class="arr">→</span></a>
+      <a href="modelle.html" class="link">Oder: 0 € Entwicklung im Signature-Modell <span>→</span></a>
+    </div>
+    <p class="px__fine reveal">Beispielrechnung, netto. Ihr Festpreis steht schriftlich fest, bevor wir starten.</p>
+  </div>
+</section>
+
+<!-- ============ START ============ -->
+<section class="final dark hs">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="final__glow" aria-hidden="true"></div>
+  <h2 class="final__title reveal">Erzählen Sie uns<br><em class="serif">von Ihrer Idee.</em></h2>
+  <p class="hs__sub reveal">Zwei Termine, beide kostenlos – beim zweiten klicken Sie sich durch Ihre eigene Software.</p>
+  <ol class="journey reveal" style="--d:.1s">
+    <li class="is-free"><i>1</i><b>Erstgespräch</b><small>kostenlos</small></li>
+    <li class="is-free"><i>2</i><b>Ihr Prototyp</b><small>kostenlos</small></li>
+    <li><i>3</i><b>Festpreis &amp; Start</b><small>Sie entscheiden</small></li>
+    <li><i>4</i><b>Jeden Tag neuer Stand</b><small>im Kundenportal</small></li>
+    <li><i>5</i><b>Abstimmung</b><small>zur Halbzeit</small></li>
+    <li><i>6</i><b>Übergabe</b><small>mit Prüfbericht</small></li>
+  </ol>
+  <div class="hero__ctas reveal" style="--d:.2s">
+    <a href="termin.html" class="btn btn--lime magnetic">Kostenloses Erstgespräch buchen <span class="arr">→</span></a>
+  </div>
+  <p class="slot-hint reveal" style="--d:.25s"><i></i>Nächster freier Termin: <span data-next-slot>in Kürze</span></p>
+</section>

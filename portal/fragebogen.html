@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Ihr Fragebogen · Reeder Software</title>
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<style>
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_400Regular.ttf") format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_600SemiBold.ttf") format("truetype");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_700Bold.ttf") format("truetype");font-weight:700 900;font-display:swap}
+@font-face{font-family:"Playfair Display";src:url("/assets/fonts/vorab/playfair-display-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Playfair Display";src:url("/assets/fonts/vorab/playfair-display-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Nunito";src:url("/assets/fonts/vorab/nunito-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Nunito";src:url("/assets/fonts/vorab/nunito-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"Anton";src:url("/assets/fonts/vorab/anton-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("/assets/fonts/vorab/space-grotesk-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Space Grotesk";src:url("/assets/fonts/vorab/space-grotesk-latin-700-normal.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("/assets/fonts/vorab/jetbrains-mono-latin-400-normal.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("/assets/fonts/vorab/jetbrains-mono-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Syne";src:url("/assets/fonts/vorab/syne-latin-600-normal.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Syne";src:url("/assets/fonts/vorab/syne-latin-800-normal.woff2") format("woff2");font-weight:800;font-display:swap}
+:root{--ink:#0a0a0c;--ink2:#424245;--muted:#86868b;--paper:#f5f5f7;--line:rgba(0,0,0,.08);--violet:#8b5cf6;--grad:linear-gradient(100deg,#4f7cff 0%,#8b5cf6 52%,#ec4899 100%);--ease:cubic-bezier(.22,1,.36,1)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;line-height:1.5}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;padding:0}
+input,textarea{font:inherit;color:inherit}
+/* ---------- Rahmen ---------- */
+.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.top__in{max-width:1080px;margin:auto;display:flex;align-items:center;gap:18px;padding:13px 22px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.brand svg{width:26px;height:26px}.brand span{font-weight:400;color:var(--muted)}
+.prog{flex:1;height:5px;border-radius:5px;background:var(--paper);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--grad);border-radius:5px;transition:width .6s var(--ease)}
+.stepno{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+main{max-width:1080px;margin:auto;padding:46px 22px 150px}
+.step{animation:in .55s var(--ease)}
+@keyframes in{from{opacity:0;transform:translateY(12px)}}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--ink2)}
+.eyebrow b{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 7px;border-radius:99px;background:var(--ink);color:#fff;font-size:12px}
+h1{font-size:clamp(30px,4.4vw,48px);letter-spacing:-.045em;line-height:1.04;margin:0 0 12px;max-width:820px}
+.lead{margin:0 0 8px;color:var(--ink2);font-size:17.5px;max-width:700px}
+.why{display:flex;gap:10px;align-items:flex-start;margin:14px 0 30px;max-width:700px;padding:12px 14px;border-radius:14px;background:var(--paper);font-size:14px;color:var(--ink2)}
+.why i{flex:none;width:20px;height:20px;border-radius:50%;background:var(--grad);color:#fff;font-style:normal;font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:1px}
+.hello{margin:0 0 8px;font-size:14px;font-weight:600;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content}
+/* ---------- Auswahlkarten ---------- */
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-rows:1fr}
+.grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{position:relative;display:flex;flex-direction:column;justify-content:flex-start;height:100%;width:100%;text-align:left;border-radius:22px;background:var(--paper);padding:12px 12px 16px;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .25s,transform .45s var(--ease),background .25s}
+.card:hover{transform:translateY(-3px)}
+.card:focus-visible,.chip:focus-visible,.yn button:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}
+.card.sel{background:#f5f3ff;box-shadow:inset 0 0 0 2px var(--violet)}
+.card.sel::after{content:"✓";position:absolute;top:18px;right:18px;z-index:3;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:14px;font-weight:700;box-shadow:0 6px 16px -4px rgba(139,92,246,.6)}
+.card b{display:block;font-size:16.5px;letter-spacing:-.02em;margin:12px 4px 0}
+.card small{display:block;color:var(--ink2);font-size:13.5px;margin:3px 4px 0;line-height:1.45}
+.card--plain{padding:18px}
+.card--plain b{margin:12px 0 0}.card--plain small{margin:3px 0 0}
+.ico{width:46px;height:46px;border-radius:14px;background:var(--ink);color:#fff;display:grid;place-items:center}
+.ico svg{width:22px;height:22px}
+/* ---------- Laptop-Rahmen mit echter Mini-Seite (800×500, skaliert) ---------- */
+.lap{border-radius:14px;background:#1d1d1f;padding:7px 7px 9px;box-shadow:0 18px 40px -22px rgba(0,0,0,.45)}
+.lap__bar{display:flex;align-items:center;gap:5px;padding:0 4px 6px}
+.lap__bar i{width:7px;height:7px;border-radius:50%;background:#48484c}
+.lap__bar span{flex:1;margin-left:8px;height:13px;border-radius:5px;background:#2c2c2f;color:#8e8e93;font-size:8.5px;line-height:13px;text-align:center;overflow:hidden;white-space:nowrap}
+.scr{position:relative;aspect-ratio:16/10;overflow:hidden;border-radius:5px;background:#fff}
+.phone{width:min(170px,100%);margin:auto;border-radius:26px;background:#1d1d1f;padding:7px}
+.phone .scr{aspect-ratio:9/18.5;border-radius:20px}
+.pg{position:absolute;left:0;top:0;width:800px;height:500px;transform-origin:0 0;overflow:hidden}
+.phone .pg{width:390px;height:802px}
+/* Mini-Seiten: Farben/Schrift kommen als Variablen */
+.pg{--bg:#ffffff;--surf:#f1f2f6;--fg:#15161a;--muted:#6b6f78;--acc:#4f5bd5;--acc2:#e05297;--on:#fff;--fh:"Inter",system-ui,sans-serif;--fb:"Inter",system-ui,sans-serif;--hw:800;--ls:-.04em;--tt:none;--r:14px;background:var(--bg);color:var(--fg);font-family:var(--fb)}
+.m-nav{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:center;gap:26px;padding:0 34px;font-size:13px;z-index:4}
+.m-nav b{font-family:var(--fh);font-size:17px;letter-spacing:var(--ls);margin-right:auto;font-weight:var(--hw);text-transform:var(--tt)}
+.m-nav span{opacity:.75}
+.m-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 20px;border-radius:calc(var(--r) * 2);background:var(--acc);color:var(--on);font-size:13.5px;font-weight:700}
+.m-btn--line{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
+.m-h{font-family:var(--fh);font-weight:var(--hw);letter-spacing:var(--ls);line-height:.98;text-transform:var(--tt);margin:0}
+.m-p{font-size:15px;line-height:1.5;color:var(--muted);margin:0}
+.m-k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--acc)}
+.ph{position:relative;overflow:hidden;border-radius:var(--r);background:#c9d3dc}
+.ph--a{background:radial-gradient(120% 70% at 70% 105%,#3d5a3a 0 35%,transparent 36%),radial-gradient(90% 60% at 15% 110%,#58784d 0 40%,transparent 41%),radial-gradient(60% 40% at 78% 28%,#fff5d8 0,#ffd9a0 18%,transparent 40%),linear-gradient(180deg,#8fb3d9 0%,#d7e3ea 55%,#e9e2cf 100%)}
+.ph--b{background:radial-gradient(40% 55% at 78% 30%,rgba(255,240,210,.95),transparent 70%),linear-gradient(90deg,transparent 62%,rgba(255,255,255,.35) 62% 63%,transparent 63%),radial-gradient(70% 50% at 30% 100%,#6e4e3a 0 40%,transparent 41%),linear-gradient(160deg,#d9c3a5,#a7826a 60%,#5d4536)}
+.ph--c{background:radial-gradient(30% 22% at 50% 74%,rgba(255,214,150,.95),transparent 70%),linear-gradient(180deg,transparent 70%,#2e3a4f 70.5%,#1f2838),linear-gradient(180deg,#f6b37f 0%,#e98a7a 40%,#8a6f9e 72%)}
+.ph::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.08));mix-blend-mode:soft-light}
+/* ---------- Chips, Felder, Ja/Nein ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{padding:11px 17px;border-radius:999px;background:var(--paper);font-weight:600;font-size:14.5px;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .2s,background .2s}
+.chip.sel{background:#f5f3ff;box-shadow:inset 0 0 0 2px var(--violet);color:#4c1d95}
+h2{font-size:21px;letter-spacing:-.03em;margin:38px 0 12px}
+label.f{display:grid;gap:7px;margin-bottom:18px;font-weight:600;font-size:15px}
+label.f span{font-weight:400;color:var(--muted);font-size:13.5px}
+.inp{width:100%;border:0;border-radius:14px;background:var(--paper);padding:14px 16px;font-size:16px;outline:none;box-shadow:inset 0 0 0 2px transparent;transition:box-shadow .2s}
+.inp:focus{box-shadow:inset 0 0 0 2px var(--violet)}
+textarea.inp{min-height:100px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.consent{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:14px 16px;border-radius:14px;background:#fff7ed;box-shadow:inset 0 0 0 1px #fed7aa;font-size:14px;cursor:pointer}
+.consent input{width:20px;height:20px;margin:1px 0 0;accent-color:#8b5cf6;flex:none}
+.yn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.yn button{height:40px;border-radius:12px;background:#fff;font-weight:600;font-size:14px;box-shadow:inset 0 0 0 1.5px var(--line);transition:all .2s}
+.yn button.yes.on{background:#ecfdf3;color:#166534;box-shadow:inset 0 0 0 2px #22c55e}
+.yn button.no.on{background:#fef2f2;color:#991b1b;box-shadow:inset 0 0 0 2px #f87171}
+.demo{background:var(--paper);border-radius:22px;padding:12px 12px 14px;display:flex;flex-direction:column;height:100%}
+.demo .yn{margin-top:auto;padding-top:12px}
+.demo b{display:block;font-size:15.5px;margin:12px 4px 0;letter-spacing:-.02em}
+.demo small{display:block;color:var(--ink2);font-size:13px;margin:2px 4px 0}
+.nomo{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 20px;padding:14px 18px;border-radius:16px;background:var(--paper)}
+.switch{position:relative;width:48px;height:28px;border-radius:99px;background:#d1d1d6;transition:background .25s;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .3s var(--ease)}
+.switch.on{background:#8b5cf6}.switch.on::after{transform:translateX(20px)}
+.seg{display:inline-flex;padding:4px;border-radius:99px;background:var(--paper)}
+.seg button{padding:9px 20px;border-radius:99px;font-weight:600;font-size:14.5px}
+.seg button.on{background:var(--ink);color:#fff}
+.sample{margin-top:14px;padding:16px 18px;border-radius:16px;background:var(--paper);font-size:15px}
+.sample q{font-style:normal;font-weight:600}
+.pal{display:flex;gap:6px;margin:12px 4px 0}
+.lvl{margin:10px 4px 0;padding:10px 12px;border-radius:12px;background:#fff;font-size:13px;line-height:1.45;color:var(--ink2)}
+.lvl b{display:inline;font-size:13px;margin:0;color:var(--ink)}
+.fname{display:inline-block;margin:10px 4px 0;padding:3px 9px;border-radius:99px;background:#fff;font-size:12px;font-weight:600;color:var(--ink2)}
+.pal i{width:22px;height:22px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.brandin{display:none;gap:12px;align-items:center;margin-top:16px;padding:14px 16px;border-radius:14px;background:var(--paper);font-size:14.5px}
+.brandin.on{display:flex}
+.brandin input{width:54px;height:38px;border:0;padding:0;background:none;cursor:pointer}
+.hint{font-size:13.5px;color:var(--muted)}
+/* ---------- Fußleiste ---------- */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
+.bar__in{max-width:1080px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 22px}
+.bar__mid{font-size:13.5px;color:var(--muted);text-align:center;flex:1}
+.btn{display:inline-flex;align-items:center;gap:10px;height:50px;padding:0 24px;border-radius:999px;font-weight:600}
+.btn--go{background:var(--ink);color:#fff}
+.btn--go i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--grad)}
+.btn--go:disabled{opacity:.35;cursor:not-allowed}
+.btn--back{color:var(--ink2)}
+.acc{max-width:520px;margin:10px auto 0;padding:30px;border-radius:26px;background:var(--paper)}
+.acc h1{font-size:clamp(28px,4vw,38px)}
+.acc .inp{background:#fff}
+.acc__mail{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:12px 14px;border-radius:14px;background:#fff;font-size:15px}
+.acc__mail span{color:var(--muted);font-size:13px}
+.acc__perks{display:grid;gap:8px;margin:0 0 22px;padding:0;list-style:none;font-size:14.5px;color:var(--ink2)}
+.acc__perks li{display:flex;gap:10px}.acc__perks li::before{content:"✓";flex:none;width:20px;height:20px;border-radius:50%;background:var(--grad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+.acc .btn--go{width:100%;justify-content:center;margin-top:8px}
+.acc .consent{background:#fff;box-shadow:inset 0 0 0 1px var(--line);margin:4px 0 6px}
+.acc__alt{margin:16px 0 0;text-align:center;font-size:13.5px;color:var(--muted)}.acc__alt a{color:var(--ink2)}
+.done{text-align:center;padding:50px 0}
+.done__orb{width:120px;height:120px;margin:0 auto 26px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-size:46px;box-shadow:0 30px 60px -20px rgba(139,92,246,.7)}
+.err{color:#c4314b;font-weight:600}
+/* ---------- Animationen der Beispiele ---------- */
+@keyframes blob1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(160px,60px) scale(1.25)}}
+@keyframes blob2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-180px,-40px) scale(.9)}}
+@keyframes marq{to{transform:translateX(-50%)}}
+@keyframes fadeup{0%,8%{opacity:0;transform:translateY(26px)}22%,82%{opacity:1;transform:none}95%,100%{opacity:0;transform:none}}
+@keyframes scrollpg{0%,12%{transform:translateY(0)}48%,60%{transform:translateY(-300px)}95%,100%{transform:translateY(0)}}
+@keyframes scrollbg{0%,12%{transform:translateY(0)}48%,60%{transform:translateY(-110px)}95%,100%{transform:translateY(0)}}
+@keyframes cursor{0%,10%{transform:translate(120px,330px)}30%,45%{transform:translate(170px,230px)}60%,75%{transform:translate(430px,230px)}95%,100%{transform:translate(120px,330px)}}
+@keyframes lift1{0%,25%,48%,100%{transform:none;box-shadow:0 2px 6px rgba(0,0,0,.06)}30%,45%{transform:translateY(-14px) scale(1.03);box-shadow:0 22px 40px -14px rgba(0,0,0,.35)}}
+@keyframes lift2{0%,55%,78%,100%{transform:none;box-shadow:0 2px 6px rgba(0,0,0,.06)}60%,75%{transform:translateY(-14px) scale(1.03);box-shadow:0 22px 40px -14px rgba(0,0,0,.35)}}
+@keyframes word{0%,6%{opacity:0;transform:translateY(40px)}14%,84%{opacity:1;transform:none}94%,100%{opacity:0}}
+@keyframes slide{0%,26%{transform:translateX(0)}33%,59%{transform:translateX(-33.333%)}66%,92%{transform:translateX(-66.666%)}100%{transform:translateX(0)}}
+@keyframes dot{0%,26%{background:var(--acc);width:22px}33%,100%{background:rgba(255,255,255,.6);width:8px}}
+@keyframes autoscroll{0%,8%{transform:translateY(0)}86%,100%{transform:translateY(var(--to))}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 10px color-mix(in srgb,var(--acc) 25%,transparent)}}
+@keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.14) translate(-20px,-10px)}}
+@keyframes tabs{0%,22%{transform:translateX(0)}25%,47%{transform:translateX(-25%)}50%,72%{transform:translateX(-50%)}75%,97%{transform:translateX(-75%)}100%{transform:translateX(0)}}
+@keyframes tabmark{0%,22%{transform:translateX(0)}25%,47%{transform:translateX(100%)}50%,72%{transform:translateX(200%)}75%,97%{transform:translateX(300%)}100%{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){.pg *,.pg{animation-duration:0s!important;animation-iteration-count:1!important}}
+@media (max-width:900px){.grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid--3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.grid--2,.grid--3,.grid--4{grid-template-columns:1fr}.two{grid-template-columns:1fr}main{padding-top:30px}.bar__mid{display:none}.top__in{gap:12px}.brand span{display:none}}
+</style>
+</head>
+<body>
+<div class="top"><div class="top__in">
+  <div class="brand"><svg viewBox="16.5 9 72 72" aria-hidden="true"><defs><linearGradient id="rm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7cff"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><path d="M52 10C66 30 75 54 78 80H52Z" fill="url(#rm)"/><path d="M45 28C37 44 30 62 27 80H45Z" fill="#0a0a0c"/></svg>Reeder<span>Software</span></div>
+  <div class="prog" aria-hidden="true"><i id="prog"></i></div><span class="stepno" id="stepno"></span>
+</div></div>
+
+<main id="app"><p id="loading">Einen Moment …</p></main>
+<div class="bar" id="bar" hidden><div class="bar__in">
+  <button class="btn btn--back" id="back">← Zurück</button>
+  <span class="bar__mid" id="barmid"></span>
+  <button class="btn btn--go" id="next">Weiter <i>→</i></button>
+</div></div>
+
+<script>
+(() => {
+  const token = (location.hash.match(/[a-f0-9]{48}/) || [])[0];
+  const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)], app = $("#app");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const A = { kind: null, company: "", branche: "", url: "", goal: "", audience: "", action: null, hero: null, density: null, structure: null, imagery: null, imgsrc: [], imgConsent: false,
+    mode: null, palette: null, brand1: "#0f766e", brand2: "#f59e0b", typo: null, motionLevel: null, motion: {}, motionTouched: false, motionNone: false, tone: [], voice: "sie", features: [], likes: "", nogo: "", extra: "" };
+  let meta = null, steps = [], at = 0, timers = [];
+  const KEY = token ? "rs-fragebogen-" + token : null;
+  const save = () => { try { if (KEY) localStorage.setItem(KEY, JSON.stringify({ A, at })); } catch {} };
+  const svg = (p, sw = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+
+  /* ---------- Farbwelten (hell/dunkel) und Schriften für die Beispiele ---------- */
+  const PAL = {
+    natuerlich: { l: ["#f7f1e8", "#ece0cd", "#2f241c", "#7a6a5c", "#b5562f", "#6b7b3a"], d: ["#1f1914", "#2c241c", "#f3e9dc", "#bba98f", "#de7c4c", "#a9b86e"] },
+    frisch: { l: ["#f6fbff", "#e3f1fa", "#0f2a3d", "#56718a", "#0e7fc0", "#14b8a6"], d: ["#0b1b2a", "#12293d", "#e8f4fb", "#8fb0c7", "#38bdf8", "#2dd4bf"] },
+    edel: { l: ["#f6f4ef", "#e9e3d8", "#1c1b19", "#77726a", "#9c7f45", "#5b2333"], d: ["#121212", "#1e1d1b", "#f2ede4", "#a59f94", "#c9a96a", "#a3485c"] },
+    kraeftig: { l: ["#fffaf3", "#ffe6d1", "#1a1033", "#6a5a7a", "#f2385a", "#6c3bff"], d: ["#160d2b", "#25174a", "#fff4ea", "#bfaed8", "#ff5c7a", "#8f73ff"] },
+    ruhig: { l: ["#f7f7f6", "#eaeae7", "#26282b", "#7b7f85", "#5f7a8a", "#a993c4"], d: ["#1b1d1f", "#26292c", "#ececea", "#9aa0a6", "#8fb0c2", "#c7b6d8"] },
+    neutral: { l: ["#ffffff", "#f1f2f6", "#15161a", "#6b6f78", "#4f5bd5", "#e05297"], d: ["#0f1015", "#1b1d26", "#f2f3f7", "#9a9fb0", "#7c88ff", "#ff6fb0"] },
+  };
+  const mixHex = (h, w, t) => { const n = x => parseInt(h.slice(x, x + 2), 16), m = x => Math.round(n(x) + (w - n(x)) * t); return "#" + [1, 3, 5].map(m).map(v => v.toString(16).padStart(2, "0")).join(""); };
+  const lum = h => { const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255); return .2126 * r + .7152 * g + .0722 * b; };
+  function colors(palette = A.palette, mode = A.mode) {
+    const dark = mode === "dunkel";
+    if (palette === "eigen") { const p = A.brand1, s = A.brand2; return dark ? ["#121417", "#1d2024", "#f2f2f0", "#a3a7ad", p, s] : ["#ffffff", mixHex(p, 255, .9), "#16181b", "#6b7078", p, s]; }
+    const set = PAL[palette] || PAL.neutral; return dark ? set.d : set.l;
+  }
+  const FONTS = {
+    klassisch: { fh: '"Playfair Display",Georgia,serif', hw: 700, ls: "-.01em", tt: "none", r: "4px", name: "Playfair Display + Inter", sample: "Mit Sorgfalt und Erfahrung.", desc: "Serifenschrift mit feinen Kontrasten – Tradition, Vertrauen, Eleganz." },
+    modern: { fh: '"Inter",system-ui,sans-serif', hw: 700, ls: "-.045em", tt: "none", r: "12px", name: "Inter", sample: "Klar. Direkt. Auf den Punkt.", desc: "Sachliche Grotesk – aufgeräumt, zeitgemäß, sehr gut lesbar." },
+    freundlich: { fh: '"Nunito",system-ui,sans-serif', fb: '"Nunito",system-ui,sans-serif', hw: 800, ls: "-.01em", tt: "none", r: "24px", name: "Nunito", sample: "Schön, dass Sie da sind!", desc: "Runde Buchstaben, weiche Formen – zugänglich und herzlich." },
+    markant: { fh: '"Anton",Impact,sans-serif', hw: 400, ls: ".005em", tt: "uppercase", r: "2px", name: "Anton + Inter", sample: "Stark auftreten.", desc: "Schmal, kräftig, in Großbuchstaben – laut und selbstbewusst." },
+    technisch: { fh: '"Space Grotesk",system-ui,sans-serif', fb: '"Space Grotesk",system-ui,sans-serif', mono: '"JetBrains Mono",ui-monospace,monospace', hw: 700, ls: "-.03em", tt: "none", r: "6px", name: "Space Grotesk + JetBrains Mono", sample: "Präzision in jedem Detail.", desc: "Mit Monospace-Details für Zahlen und Labels – präzise, digital." },
+    kreativ: { fh: '"Syne",system-ui,sans-serif', hw: 800, ls: "-.02em", tt: "none", r: "18px", name: "Syne + Inter", sample: "Anders gedacht.", desc: "Breit und eigenwillig – für Marken, die auffallen wollen." },
+  };
+  function vars({ palette, mode, typo } = {}) {
+    const [bg, surf, fg, muted, acc, acc2] = colors(palette ?? A.palette, mode ?? A.mode), f = FONTS[typo ?? A.typo] || FONTS.modern;
+    return (`--bg:${bg};--surf:${surf};--fg:${fg};--muted:${muted};--acc:${acc};--acc2:${acc2};--on:${lum(acc) > .62 ? "#111" : "#fff"};--fh:${f.fh};--hw:${f.hw};--ls:${f.ls};--tt:${f.tt};--r:${f.r}${f.fb ? `;--fb:${f.fb}` : ""};--fm:${f.mono || "ui-monospace,Consolas,monospace"}`).replace(/"/g, "'");
+  }
+  /* ---------- Texte für die Beispiele (aus den Antworten) ---------- */
+  const name = () => A.company.trim() || "Ihr Unternehmen";
+  const domain = () => (A.url || name()).toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].replace(/[^a-z0-9äöüß.-]+/g, "-").replace(/-+$/, "") + (A.url ? "" : ".de");
+  const CTA = { anrufen: "Jetzt anrufen", termin: "Termin buchen", kaufen: "Zum Shop", anfragen: "Anfrage stellen", informieren: "Mehr erfahren", anmelden: "Jetzt registrieren" };
+  const cta = () => CTA[A.action] || "Mehr erfahren";
+  const sub = () => A.branche ? `${A.branche} – so könnte Ihr erster Eindruck aussehen.` : "So könnte Ihr erster Eindruck aussehen.";
+  const nav = (light) => `<div class="m-nav" style="${light ? "color:#fff" : ""}"><b>${esc(name())}</b><span>Angebot</span><span>Über uns</span><span>Kontakt</span></div>`;
+  const lap = (inner, v = "", extra = "") => `<div class="lap"><div class="lap__bar"><i></i><i></i><i></i><span>${esc(domain())}</span></div><div class="scr"><div class="pg" style="${v}${extra}">${inner}</div></div></div>`;
+
+  /* ---------- Erster Bildschirm: 8 echte Varianten ---------- */
+  const HERO = {
+    foto: () => `<div class="ph ph--a" style="position:absolute;inset:0;border-radius:0"></div><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.05) 40%,rgba(0,0,0,.55))"></div>${nav(true)}
+      <div style="position:absolute;left:44px;bottom:56px;right:44px;color:#fff"><h3 class="m-h" style="font-size:66px;max-width:620px">${esc(name())}</h3><p style="margin:14px 0 22px;font-size:17px;opacity:.9;max-width:460px">${esc(sub())}</p><span class="m-btn">${cta()} →</span></div>`,
+    split: () => `${nav()}<div style="position:absolute;left:44px;top:120px;width:330px"><span class="m-k">${esc(A.branche || "Willkommen bei uns")}</span><h3 class="m-h" style="font-size:50px;margin:12px 0 16px">${esc(name())}</h3><p class="m-p">${esc(sub())}</p><div style="display:flex;gap:10px;margin-top:24px"><span class="m-btn">${cta()}</span><span class="m-btn m-btn--line">Leistungen</span></div></div>
+      <div class="ph ph--b" style="position:absolute;right:34px;top:76px;width:360px;height:384px"></div>`,
+    typo: () => `${nav()}<div style="position:absolute;left:40px;right:40px;top:96px"><h3 class="m-h" style="font-size:92px">${esc(name())}<span style="color:var(--acc)">.</span></h3><div style="display:flex;justify-content:space-between;align-items:end;margin-top:34px;border-top:1.5px solid var(--fg);padding-top:18px"><p class="m-p" style="max-width:360px">${esc(sub())}</p><span style="font-weight:700;font-size:14px">${cta()} ↘</span></div></div>`,
+    produkt: () => `${nav()}<div style="position:absolute;left:50%;top:84px;transform:translateX(-50%);width:270px;height:270px;border-radius:50%;background:var(--surf)"></div>
+      <svg viewBox="0 0 200 230" style="position:absolute;left:50%;top:100px;transform:translateX(-50%);width:200px;height:230px;filter:drop-shadow(0 26px 22px rgba(0,0,0,.28))"><path d="M70 62 C70 30 130 30 130 62" fill="none" stroke="var(--fg)" stroke-width="7" stroke-linecap="round"/><path d="M34 62 H166 L178 214 a10 10 0 0 1 -10 11 H32 a10 10 0 0 1 -10 -11 Z" fill="var(--acc)"/><path d="M34 62 H166 L168 86 H32 Z" fill="#000" opacity=".12"/><text x="100" y="160" text-anchor="middle" font-size="58" font-weight="800" fill="var(--on)" style="font-family:var(--fh)">${esc(name().trim()[0] || "R")}</text></svg>
+      <div style="position:absolute;left:44px;top:150px;width:180px"><span class="m-k">Neu</span><h3 class="m-h" style="font-size:34px;margin-top:8px">${esc(name())}</h3></div>
+      <div style="position:absolute;right:44px;top:170px;width:170px;text-align:right"><p class="m-p" style="font-size:13px">${esc(A.branche || "Unser Bestseller")}</p><p style="font-weight:800;font-size:22px;margin:6px 0 14px">ab 49 €</p><span class="m-btn">${cta()}</span></div>
+      <div style="position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center;gap:10px">${[1, 2, 3, 4].map(i => `<i style="width:${i === 1 ? 22 : 8}px;height:8px;border-radius:9px;background:${i === 1 ? "var(--acc)" : "var(--surf)"}"></i>`).join("")}</div>`,
+    video: () => `<div style="position:absolute;inset:0;background:var(--fg);overflow:hidden"><i style="position:absolute;width:520px;height:520px;left:-80px;top:-160px;border-radius:50%;background:var(--acc);filter:blur(70px);opacity:.85;animation:blob1 7s ease-in-out infinite"></i><i style="position:absolute;width:460px;height:460px;right:-120px;bottom:-200px;border-radius:50%;background:var(--acc2);filter:blur(70px);opacity:.8;animation:blob2 8s ease-in-out infinite"></i></div>
+      ${nav(true)}<div style="position:absolute;left:0;right:0;top:150px;text-align:center;color:#fff"><h3 class="m-h" style="font-size:68px">${esc(name())}</h3><p style="margin:16px auto 26px;max-width:460px;opacity:.85;font-size:16px">${esc(sub())}</p><span class="m-btn" style="background:#fff;color:#111">${cta()} →</span></div>`,
+    kacheln: () => `${nav()}<div style="position:absolute;left:30px;right:30px;top:66px;bottom:24px;display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:12px">
+      <div style="grid-row:span 2;border-radius:var(--r);background:var(--acc);color:var(--on);padding:26px;display:flex;flex-direction:column;justify-content:flex-end"><h3 class="m-h" style="font-size:40px">${esc(name())}</h3><p style="margin:10px 0 0;opacity:.85;font-size:13.5px">${esc(sub())}</p></div>
+      <div class="ph ph--a"></div><div style="border-radius:var(--r);background:var(--surf);padding:18px"><b style="font-family:var(--fh);font-size:38px;letter-spacing:var(--ls)">15+</b><p class="m-p" style="font-size:12.5px">Jahre Erfahrung</p></div>
+      <div style="border-radius:var(--r);background:var(--fg);color:var(--bg);padding:18px;display:flex;align-items:flex-end;font-weight:700;font-size:15px">${cta()} →</div><div class="ph ph--b"></div></div>`,
+    minimal: () => `<div class="m-nav"><b style="font-size:14px">${esc(name())}</b><span>Menü</span></div><div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center"><div><i style="display:block;width:36px;height:2px;background:var(--acc);margin:0 auto 22px"></i><h3 class="m-h" style="font-size:32px;font-weight:500">${esc(name())}</h3><p class="m-p" style="margin:12px 0 26px;font-size:14px">${esc(A.branche || "Weniger, aber besser.")}</p><span style="font-size:13px;font-weight:600;border-bottom:1.5px solid var(--fg);padding-bottom:3px">${cta()}</span></div></div>`,
+    info: () => `${nav()}<div style="position:absolute;left:44px;right:44px;top:84px"><h3 class="m-h" style="font-size:34px">Wie können wir helfen?</h3><div style="margin:16px 0 22px;height:46px;border-radius:calc(var(--r) * 2);background:var(--surf);display:flex;align-items:center;padding:0 18px;color:var(--muted);font-size:14px">🔍︎ Suchen Sie nach Leistungen, Preisen, Öffnungszeiten …</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">${["Leistungen", cta(), "Preise", "Kontakt"].map((t, i) => `<div style="border-radius:var(--r);background:${i === 1 ? "var(--acc)" : "var(--surf)"};color:${i === 1 ? "var(--on)" : "inherit"};padding:16px;height:150px;display:flex;flex-direction:column;justify-content:space-between"><i style="width:30px;height:30px;border-radius:9px;background:${i === 1 ? "rgba(255,255,255,.25)" : "var(--bg)"}"></i><b style="font-size:14px">${esc(t)}</b></div>`).join("")}</div></div>`,
+  };
+  const HERO_DESC = { foto: "Ein großes Bild trägt die Stimmung – stark für Gastronomie, Tourismus, Mode.", split: "Klar und vertraut: Aussage und Bild nebeneinander.", typo: "Die Schrift ist das Bild – selbstbewusst und modern.", produkt: "Ein Angebot steht im Rampenlicht – ideal für Shops.", video: "Bewegte Farben oder Bilder sorgen sofort für Aufmerksamkeit.", kacheln: "Viele Eindrücke auf einen Blick, wie ein Magazin.", minimal: "Viel Ruhe, wenig Elemente – wirkt hochwertig.", info: "Besucher finden sofort, was sie suchen – ideal für viel Inhalt." };
+  const hero = (k, v) => lap(HERO[k](), v);
+
+  /* ---------- Textmenge: Seiten laufen wie ein Video durch ---------- */
+  const lines = (n, w = [100, 92, 96, 70]) => Array.from({ length: n }, (_, i) => `<i style="display:block;height:8px;border-radius:4px;background:var(--muted);opacity:.35;width:${w[i % w.length]}%;margin-top:9px"></i>`).join("");
+  const DENS = {
+    wenig: () => `<div class="ph ph--a" style="height:420px;border-radius:0"></div><div style="padding:30px"><h3 class="m-h" style="font-size:40px">${esc(name())}</h3>${lines(1)}</div><div class="ph ph--b" style="height:300px;margin:0 30px"></div><div style="padding:30px"><h3 class="m-h" style="font-size:30px">Erleben.</h3>${lines(1)}</div><div class="ph ph--c" style="height:300px;margin:0 30px"></div>`,
+    mittel: () => `<div class="ph ph--a" style="height:260px;border-radius:0"></div><div style="padding:30px"><h3 class="m-h" style="font-size:32px">${esc(name())}</h3>${lines(3)}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 30px"><div class="ph ph--b" style="height:150px"></div><div>${lines(5)}</div></div><div style="padding:30px"><h3 class="m-h" style="font-size:24px">Unsere Leistungen</h3>${lines(4)}</div><div class="ph ph--c" style="height:200px;margin:0 30px"></div><div style="padding:30px">${lines(4)}</div>`,
+    viel: () => `<div style="padding:30px 30px 0"><h3 class="m-h" style="font-size:30px">${esc(name())}</h3>${lines(6)}</div><div style="padding:24px 30px"><h3 class="m-h" style="font-size:20px">Was wir anbieten</h3>${lines(9)}</div><div style="padding:0 30px"><div class="ph ph--b" style="height:120px"></div></div><div style="padding:24px 30px"><h3 class="m-h" style="font-size:20px">So arbeiten wir</h3>${lines(10)}</div><div style="padding:0 30px 24px"><h3 class="m-h" style="font-size:20px">Häufige Fragen</h3>${["Wie lange dauert es?", "Was kostet das?", "Wie läuft es ab?"].map(q => `<div style="margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--surf);font-weight:700;font-size:14px">${q}</div>`).join("")}${lines(5)}</div>`,
+  };
+  const phone = (inner, v, to) => `<div class="phone"><div class="scr"><div class="pg" style="${v}"><div style="animation:autoscroll 9s ease-in-out infinite alternate;--to:${to}px">${inner}</div></div></div></div>`;
+
+  /* ---------- Eine Seite oder mehrere ---------- */
+  const STRUCT = {
+    onepager: () => `<div style="position:absolute;inset:0"><div style="animation:scrollpg 7s ease-in-out infinite">${HERO.split()}<div style="position:absolute;top:500px;left:0;right:0;padding:40px 44px;background:var(--surf);height:300px"><h3 class="m-h" style="font-size:30px">Angebot</h3>${lines(4)}</div></div>
+      <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);display:grid;gap:8px">${[0, 1, 2, 3].map(i => `<i style="width:8px;height:8px;border-radius:50%;background:${i ? "var(--muted)" : "var(--acc)"};opacity:${i ? .4 : 1}"></i>`).join("")}</div></div>`,
+    mehrseitig: () => `<div class="m-nav" style="background:var(--bg);box-shadow:0 1px 0 rgba(0,0,0,.06)"><b>${esc(name())}</b><div style="position:relative;display:flex;gap:0">${["Start", "Angebot", "Über uns", "Kontakt"].map(t => `<span style="width:86px;text-align:center;opacity:1">${t}</span>`).join("")}<i style="position:absolute;left:18px;bottom:-14px;width:50px;height:2.5px;background:var(--acc);animation:tabmark 8s steps(1) infinite"></i></div></div>
+      <div style="position:absolute;top:56px;left:0;right:0;bottom:0;overflow:hidden"><div style="display:flex;width:400%;height:100%;animation:tabs 8s cubic-bezier(.7,0,.3,1) infinite">${["Willkommen", "Unser Angebot", "Über uns", "Kontakt"].map((t, i) => `<div style="flex:1;padding:50px 44px;background:${i % 2 ? "var(--surf)" : "var(--bg)"}"><span class="m-k">Seite ${i + 1}</span><h3 class="m-h" style="font-size:44px;margin:10px 0 14px">${t}</h3>${lines(4)}</div>`).join("")}</div></div>`,
+  };
+
+  /* ---------- Bildsprache: derselbe Abschnitt, vier Arten ---------- */
+  const ILLU = `<svg viewBox="0 0 200 150" style="width:100%;height:100%"><rect width="200" height="150" fill="var(--surf)"/><circle cx="152" cy="40" r="20" fill="var(--acc2)" opacity=".8"/><path d="M0 120 Q50 80 100 112 T200 100 V150 H0Z" fill="var(--acc)" opacity=".35"/><path d="M0 132 Q60 104 120 128 T200 124 V150 H0Z" fill="var(--acc)"/><rect x="62" y="66" width="34" height="48" rx="6" fill="var(--fg)"/><circle cx="79" cy="56" r="11" fill="#f2c9a6"/><path d="M68 52 q11-14 22 0" fill="var(--fg)"/><rect x="104" y="84" width="30" height="30" rx="5" fill="var(--acc2)"/><path d="M110 84 v-10 h18 v10" stroke="var(--fg)" stroke-width="3" fill="none"/></svg>`;
+  const ICONS = ['<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', '<path d="M4 20h16M6 20V9l6-5 6 5v11"/><path d="M10 20v-6h4v6"/>', '<path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/>'];
+  const IMG = {
+    fotos: () => `<div class="ph ph--b" style="position:absolute;left:30px;top:30px;width:430px;height:440px"></div><div style="position:absolute;left:500px;top:110px;right:40px"><span class="m-k">Echte Einblicke</span><h3 class="m-h" style="font-size:38px;margin:10px 0 14px">So arbeiten wir.</h3>${lines(4)}</div>`,
+    illustration: () => `<div style="position:absolute;left:30px;top:30px;width:430px;height:440px;border-radius:var(--r);overflow:hidden">${ILLU}</div><div style="position:absolute;left:500px;top:110px;right:40px"><span class="m-k">Gezeichnet</span><h3 class="m-h" style="font-size:38px;margin:10px 0 14px">So arbeiten wir.</h3>${lines(4)}</div>`,
+    icons: () => `<div style="position:absolute;left:40px;right:40px;top:60px"><h3 class="m-h" style="font-size:38px;margin-bottom:34px">So arbeiten wir.</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px">${ICONS.map(p => `<div style="padding:24px;border-radius:var(--r);background:var(--surf)"><span style="display:grid;place-items:center;width:58px;height:58px;border-radius:16px;background:var(--acc);color:var(--on)"><span style="width:28px;height:28px;display:block">${svg(p)}</span></span>${lines(3)}</div>`).join("")}</div></div>`,
+    abstrakt: () => `<div style="position:absolute;left:30px;top:30px;width:430px;height:440px;border-radius:var(--r);background:var(--surf);overflow:hidden"><i style="position:absolute;width:300px;height:300px;border-radius:50%;background:var(--acc);left:-60px;top:-40px"></i><i style="position:absolute;width:220px;height:220px;background:var(--acc2);right:-30px;bottom:-30px;transform:rotate(18deg);border-radius:30px"></i><i style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(0,0,0,.05) 22px 23px)"></i></div><div style="position:absolute;left:500px;top:110px;right:40px"><span class="m-k">Formen & Farben</span><h3 class="m-h" style="font-size:38px;margin:10px 0 14px">So arbeiten wir.</h3>${lines(4)}</div>`,
+  };
+  const IMG_DESC = { fotos: "Menschen, Räume, Produkte – am glaubwürdigsten.", illustration: "Gezeichnete Szenen in Ihren Farben – eigenständig und sympathisch.", icons: "Klare Symbole statt Bilder – sachlich und übersichtlich.", abstrakt: "Formen und Farbflächen – modern, ohne konkrete Motive." };
+
+  /* ---------- Bewegung: acht Elemente, laufen wie kleine Videos ---------- */
+  const MO = {
+    einblenden: () => `${nav()}<div style="position:absolute;left:40px;right:40px;top:110px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">${[0, 1, 2].map(i => `<div style="animation:fadeup 4.5s ${i * .35}s var(--ease, ease) infinite both"><div class="ph ph--${"abc"[i]}" style="height:200px"></div><b style="display:block;margin-top:14px;font-family:var(--fh);font-size:20px">Abschnitt ${i + 1}</b>${lines(2)}</div>`).join("")}</div>`,
+    laufband: () => `${HERO.typo()}<div style="position:absolute;left:0;right:0;bottom:44px;height:62px;background:var(--acc);color:var(--on);overflow:hidden;display:flex;align-items:center"><div style="display:flex;gap:46px;white-space:nowrap;animation:marq 9s linear infinite;font-family:var(--fh);font-weight:var(--hw);font-size:26px;text-transform:var(--tt)">${Array(2).fill([name(), A.branche || "Qualität", "Persönlich", "Aus der Region"].map(t => `<span>${esc(t)} ✦</span>`).join("")).join("")}</div></div>`,
+    parallax: () => `<div style="position:absolute;inset:0;overflow:hidden"><div class="ph ph--a" style="position:absolute;left:0;right:0;top:0;height:640px;border-radius:0;animation:scrollbg 6s ease-in-out infinite"></div><div style="position:absolute;left:0;right:0;top:0;animation:scrollpg 6s ease-in-out infinite"><div style="height:420px;display:grid;place-items:center;color:#fff"><h3 class="m-h" style="font-size:56px;text-shadow:0 4px 20px rgba(0,0,0,.3)">${esc(name())}</h3></div><div style="height:400px;background:var(--bg);padding:40px 44px"><h3 class="m-h" style="font-size:30px">Inhalt läuft schneller</h3>${lines(4)}</div></div></div>`,
+    zaehler: () => `<div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;padding:0 40px;background:var(--surf)">${[[1250, "+", "zufriedene Kunden"], [98, " %", "Weiterempfehlung"], [15, "", "Jahre Erfahrung"]].map(([n, s, t]) => `<div style="text-align:center"><b class="cnt" data-n="${n}" data-s="${s}" style="font-family:var(--fh);font-weight:var(--hw);letter-spacing:var(--ls);font-size:64px;color:var(--acc)">0</b><p class="m-p" style="margin-top:6px">${t}</p></div>`).join("")}</div>`,
+    hover: () => `<div style="position:absolute;left:40px;right:40px;top:110px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px">${[0, 1, 2].map(i => `<div style="border-radius:var(--r);background:var(--bg);padding:12px;animation:${i === 0 ? "lift1" : i === 1 ? "lift2" : "none"} 6s var(--ease, ease) infinite;box-shadow:0 2px 6px rgba(0,0,0,.06)"><div class="ph ph--${"abc"[i]}" style="height:170px"></div><b style="display:block;margin-top:12px;font-family:var(--fh)">Angebot ${i + 1}</b>${lines(2)}</div>`).join("")}</div>
+      <div style="position:absolute;left:0;top:0;width:22px;height:22px;animation:cursor 6s ease-in-out infinite;z-index:5"><svg viewBox="0 0 24 24" style="width:22px;height:22px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))"><path d="M4 2l16 9-7 2-3 7z" fill="#111" stroke="#fff" stroke-width="1.5"/></svg></div><div style="position:absolute;inset:0;background:var(--surf);z-index:-1"></div>`,
+    hintergrund: () => HERO.video(),
+    text: () => `${nav()}<div style="position:absolute;left:44px;right:44px;top:150px"><h3 class="m-h" style="font-size:70px;display:flex;flex-wrap:wrap;gap:0 18px">${["Ihre", "Idee.", "Unser", "Handwerk."].map((w, i) => `<span style="display:inline-block;animation:word 5s ${i * .45}s var(--ease, ease) infinite both;${i % 2 ? "color:var(--acc)" : ""}">${w}</span>`).join("")}</h3></div>`,
+    slider: () => `<div style="position:absolute;inset:0;overflow:hidden"><div style="display:flex;width:300%;height:100%;animation:slide 9s cubic-bezier(.7,0,.3,1) infinite">${["a", "b", "c"].map(c => `<div class="ph ph--${c}" style="flex:1;border-radius:0"></div>`).join("")}</div>${nav(true)}
+      <div style="position:absolute;left:44px;bottom:60px;color:#fff"><h3 class="m-h" style="font-size:48px">${esc(name())}</h3></div><div style="position:absolute;right:44px;bottom:66px;display:flex;gap:8px">${[0, 1, 2].map(i => `<i style="display:block;height:8px;border-radius:9px;background:rgba(255,255,255,.6);width:8px;animation:dot 9s ${i * 3}s infinite"></i>`).join("")}</div></div>`,
+  };
+  const MO_DESC = { einblenden: "Abschnitte erscheinen sanft, während man scrollt.", laufband: "Ein Band mit kurzen Botschaften läuft endlos durch.", parallax: "Das Bild im Hintergrund bewegt sich langsamer – wirkt räumlich.", zaehler: "Kennzahlen zählen beim Erscheinen hoch.", hover: "Karten heben sich an, wenn die Maus darüber fährt.", hintergrund: "Farben fließen langsam im Hintergrund.", text: "Die Hauptüberschrift baut sich Wort für Wort auf.", slider: "Mehrere Bilder wechseln sich automatisch ab." };
+  /* Bewegungsmenge: dieselbe Seite läuft wie ein Video durch – wenig, mittel, viel */
+  const LV = {
+    wenig: () => `<div style="animation:autoscroll 10s ease-in-out infinite alternate;--to:-560px">${HERO.split()}
+      <div style="position:absolute;top:500px;left:0;right:0;height:560px;padding:44px;background:var(--surf)"><h3 class="m-h" style="font-size:32px;margin-bottom:22px">Unsere Leistungen</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">${[0, 1, 2].map(i => `<div style="background:var(--bg);border-radius:var(--r);padding:18px"><div class="ph ph--${"abc"[i]}" style="height:120px"></div>${lines(3)}</div>`).join("")}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px;text-align:center">${["1.250", "98 %", "15"].map(n => `<b style="font-family:var(--fh);font-size:40px;color:var(--acc)">${n}</b>`).join("")}</div></div></div>`,
+    mittel: () => `<div style="animation:autoscroll 10s ease-in-out infinite alternate;--to:-560px">${HERO.split().replace('class="m-btn"', 'class="m-btn" style="animation:pulse 1.8s ease-in-out infinite"')}
+      <div style="position:absolute;top:500px;left:0;right:0;height:560px;padding:44px;background:var(--surf)"><h3 class="m-h" style="font-size:32px;margin-bottom:22px">Unsere Leistungen</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">${[0, 1, 2].map(i => `<div style="background:var(--bg);border-radius:var(--r);padding:18px;animation:fadeup 5s ${1.6 + i * .3}s var(--ease, ease) infinite both"><div class="ph ph--${"abc"[i]}" style="height:120px"></div>${lines(3)}</div>`).join("")}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:30px;text-align:center">${[[1250, "+"], [98, " %"], [15, ""]].map(([n, x]) => `<b class="cnt" data-n="${n}" data-s="${x}" style="font-family:var(--fh);font-size:40px;color:var(--acc)">0</b>`).join("")}</div></div></div>`,
+    viel: () => `<div style="animation:autoscroll 10s ease-in-out infinite alternate;--to:-560px">${MO.text().replace(nav(), nav(true))}<div style="position:absolute;inset:0 0 auto 0;height:500px;z-index:-1;background:var(--fg);overflow:hidden"><i style="position:absolute;width:520px;height:520px;left:-80px;top:-160px;border-radius:50%;background:var(--acc);filter:blur(70px);opacity:.85;animation:blob1 6s ease-in-out infinite"></i><i style="position:absolute;width:460px;height:460px;right:-120px;bottom:-200px;border-radius:50%;background:var(--acc2);filter:blur(70px);opacity:.8;animation:blob2 7s ease-in-out infinite"></i></div>
+      <div style="position:absolute;top:500px;left:0;right:0;height:56px;background:var(--acc);color:var(--on);overflow:hidden;display:flex;align-items:center"><div style="display:flex;gap:40px;white-space:nowrap;animation:marq 7s linear infinite;font-family:var(--fh);font-weight:var(--hw);font-size:22px;text-transform:var(--tt)">${Array(2).fill([name(), A.branche || "Qualität", "Persönlich", "Mit Herz"].map(t => `<span>${esc(t)} ✦</span>`).join("")).join("")}</div></div>
+      <div style="position:absolute;top:556px;left:0;right:0;height:504px;overflow:hidden;background:var(--surf)"><div class="ph ph--a" style="position:absolute;left:0;right:0;top:-80px;height:640px;border-radius:0;animation:scrollbg 5s ease-in-out infinite"></div>
+      <div style="position:absolute;left:44px;right:44px;bottom:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px">${[0, 1, 2].map(i => `<div style="background:var(--bg);border-radius:var(--r);padding:16px;animation:${["lift1", "lift2", "fadeup"][i]} 5s ${i * .3}s infinite both"><b style="font-family:var(--fh)">Erlebnis ${i + 1}</b>${lines(2)}</div>`).join("")}</div></div></div>`,
+  };
+  const LV_DESC = {
+    wenig: ["Für Erklärung & Information", "Inhalte stehen im Vordergrund, nichts lenkt ab. Ideal, wenn Besucher in Ruhe lesen und verstehen sollen."],
+    mittel: ["Für die beste Conversion-Rate", "Bewegung lenkt den Blick gezielt auf Kennzahlen und Knöpfe – so entstehen die meisten Anfragen, Buchungen und Käufe."],
+    viel: ["Für repräsentative Auftritte", "Bewegung erzeugt Emotion und einen Wow-Effekt – ideal für Marken, die sich hochwertig präsentieren wollen."],
+  };
+
+  /* ---------- Schrift-Muster ---------- */
+  const TYPO = k => { const f = FONTS[k], mono = k === "technisch";
+    return `<div style="position:absolute;inset:0;padding:38px 44px;display:flex;flex-direction:column;justify-content:space-between;background:var(--bg)">
+      <div style="display:flex;justify-content:space-between;align-items:start"><span style="font-family:${mono ? "var(--fm)" : "var(--fb)"};font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:600">${mono ? "01 / " : ""}${esc(name())}</span><b style="font-family:var(--fh);font-weight:var(--hw);font-size:84px;line-height:.8;color:var(--acc);text-transform:none">Aa</b></div>
+      <div><h3 class="m-h" style="font-size:${k === "markant" ? 76 : k === "klassisch" ? 64 : 60}px;line-height:1">${esc(f.sample)}</h3>
+      <p style="margin:18px 0 0;font-size:17px;line-height:1.55;color:var(--muted);max-width:560px;font-family:var(--fb)">${mono ? `<span style="font-family:var(--fm);color:var(--acc)">→ </span>` : ""}So sehen Überschriften und Fließtext auf Ihrer Seite aus – mit eigenem Charakter und gut lesbar.</p></div></div>`; };
+
+  /* ---------- Die Fragen ---------- */
+  const ICON = { website: '<path d="M3 5h18v14H3z"/><path d="M3 9h18"/>', webapp: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/>', app: '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+    ki: '<path d="M12 3a4 4 0 0 1 4 4v3a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', anderes: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/>',
+    anrufen: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>', termin: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>', kaufen: '<path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+    anfragen: '<path d="M4 5h16v11H8l-4 4z"/>', informieren: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>', anmelden: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>' };
+  const DESC = { website: "Auftritt für Ihr Unternehmen oder Ihre Praxis", webapp: "Portal, Buchung, Verwaltung im Browser", app: "Für iPhone und Android", ki: "Telefon- oder Chat-Assistent", anderes: "Etwas Eigenes – erzählen Sie uns davon" };
+  const ACT_DESC = { anrufen: "Ein Klick, und das Telefon klingelt bei Ihnen.", termin: "Besucher buchen selbst einen freien Termin.", kaufen: "Produkte ansehen und bestellen.", anfragen: "Ein kurzes Formular für Anfragen und Angebote.", informieren: "In Ruhe lesen, was Sie anbieten.", anmelden: "Konto anlegen und einloggen." };
+  const visual = () => ["website", "webapp", "app"].includes(A.kind);
+  const FALLBACK = { motionLevel: { wenig: "Wenig Bewegung", mittel: "Mittlere Bewegung", viel: "Viel Bewegung" }, typo: { kreativ: "Kreativ & eigenwillig" } };
+  const C = () => { const c = meta.choices; for (const [k, v] of Object.entries(FALLBACK)) c[k] = { ...v, ...(c[k] || {}) }; return c; };
+  const card = (key, val, inner, title, small, cls = "") => `<button class="card ${cls} ${A[key] === val ? "sel" : ""}" data-k="${key}" data-v="${val}" aria-pressed="${A[key] === val}">${inner}<b>${esc(title)}</b>${small ? `<small>${esc(small)}</small>` : ""}</button>`;
+
+  const STEP = {
+    kind: { e: "Ihr Vorhaben", t: "Was planen Sie?", l: "Wählen Sie, was am besten passt – Details klären wir im Gespräch.", ok: () => !!A.kind,
+      html: () => `<div class="grid">${Object.entries(C().kind).map(([k, v]) => card("kind", k, `<span class="ico">${svg(ICON[k])}</span>`, v, DESC[k], "card--plain")).join("")}</div>` },
+    about: { e: "Über Sie", t: "Erzählen Sie uns kurz von sich.", l: "Damit alle Beispiele in diesem Fragebogen schon nach Ihnen aussehen.", ok: () => A.company.trim().length > 1,
+      why: "Ihren Namen und Ihre Branche setzen wir ab jetzt in die Beispiele ein.",
+      html: () => `<div class="two"><label class="f">Name Ihres Unternehmens oder Ihrer Praxis<input class="inp" data-in="company" value="${esc(A.company)}" maxlength="120"></label>
+        <label class="f">Branche <span>z. B. Physiotherapie, Steuerberatung, Golfbekleidung</span><input class="inp" data-in="branche" value="${esc(A.branche)}" maxlength="120"></label></div>
+        <label class="f">Was soll Ihre neue Lösung erreichen? <span>Ein, zwei Sätze genügen</span><textarea class="inp" data-in="goal" maxlength="1200">${esc(A.goal)}</textarea></label>
+        <div class="two"><label class="f">Wer sind Ihre Kundinnen und Kunden? <span>z. B. Familien aus der Region, Golfer ab 40, Unternehmen</span><input class="inp" data-in="audience" value="${esc(A.audience)}" maxlength="300"></label>
+        <label class="f">Ihre bisherige Website <span>falls vorhanden</span><input class="inp" data-in="url" value="${esc(A.url)}" maxlength="200" placeholder="www.…"></label></div>` },
+    action: { e: "Das Ziel jeder Seite", t: "Was sollen Besucher als Erstes tun?", l: "Darauf richten wir den wichtigsten Knopf und den ganzen Aufbau aus.", ok: () => !!A.action,
+      why: "Eine Seite mit einem klaren Ziel funktioniert besser als eine, die alles gleichzeitig will.",
+      html: () => `<div class="grid">${Object.entries(C().action).map(([k, v]) => card("action", k, `<span class="ico">${svg(ICON[k])}</span>`, v, ACT_DESC[k], "card--plain")).join("")}</div>` },
+    hero: { e: "Erster Eindruck", t: "Sie öffnen die Seite am Laptop. Was sehen Sie zuerst?", l: "Das ist der wichtigste Moment: In wenigen Sekunden entscheidet sich, ob jemand bleibt. Wählen Sie den Aufbau, der Ihnen am besten gefällt.", ok: () => !!A.hero,
+      why: "Hier geht es nur um den Aufbau. Farben, Schrift und Bilder wählen Sie gleich noch selbst.",
+      html: () => `<div class="grid grid--2">${Object.keys(HERO).map(k => card("hero", k, hero(k, vars()), C().hero[k], HERO_DESC[k])).join("")}</div>` },
+    density: { e: "Textmenge", t: "Wie viel Text darf es sein?", l: "So fühlt sich die ganze Seite beim Durchscrollen an – auf dem Handy, wo die meisten Besucher herkommen.", ok: () => !!A.density,
+      html: () => `<div class="grid grid--3">${["wenig", "mittel", "viel"].map((k, i) => card("density", k, phone(DENS[k](), vars(), [-1050, -900, -1050][i]), C().density[k].split(" – ")[0], { wenig: "Bilder sprechen – kurze Aussagen, viel Wirkung.", mittel: "Bild und Text im Wechsel.", viel: "Alles ausführlich erklärt – gut für Fragen und Vergleiche." }[k])).join("")}</div>` },
+    structure: { e: "Aufbau", t: "Eine lange Seite oder mehrere Unterseiten?", l: "Beides geht – es ist eine Frage des Umfangs und Geschmacks.", ok: () => !!A.structure,
+      html: () => `<div class="grid grid--2">${["onepager", "mehrseitig"].map(k => card("structure", k, lap(STRUCT[k](), vars()), C().structure[k], k === "onepager" ? "Man scrollt durch alles – kompakt und modern." : "Klare Bereiche mit eigener Seite – gut bei viel Inhalt.")).join("")}</div>` },
+    imagery: { e: "Bildsprache", t: "Welche Art von Bildern passt zu Ihnen?", l: "Derselbe Abschnitt – vier Arten, ihn zu bebildern.", ok: () => !!A.imagery,
+      html: () => `<div class="grid grid--2">${Object.keys(IMG).map(k => card("imagery", k, lap(IMG[k](), vars()), C().imagery[k], IMG_DESC[k])).join("")}</div>` },
+    imgsrc: { e: "Ihre Bilder", t: "Woher sollen die Bilder kommen?", l: "Für den Entwurf vor unserem Gespräch – später ersetzen wir gern alles durch Ihre Wunschbilder.", ok: () => A.imgsrc.length > 0 && (!A.imgsrc.includes("website") || (A.imgConsent && A.url.trim())),
+      why: "Bilder Ihrer bisherigen Website verwenden wir nur, wenn Sie es hier ausdrücklich erlauben – und nur für Ihren Entwurf.",
+      html: () => { const opts = ["website", ...(meta.stock ? ["stock"] : []), "eigene"];
+        const ic = { website: '<path d="M3 5h18v14H3z"/><path d="M3 9h18"/><path d="M8 15l3-3 3 3 2-2 2 2"/>', stock: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>', eigene: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>' };
+        const ds = { website: "Wir übernehmen Fotos und Logo von Ihrer jetzigen Seite.", stock: "Wir suchen passende Fotos aus einer lizenzfreien Bilddatenbank.", eigene: "Bis dahin zeigen wir gekennzeichnete Bildplatzhalter." };
+        return `<div class="grid grid--3">${opts.map(k => `<button class="card card--plain ${A.imgsrc.includes(k) ? "sel" : ""}" data-m="imgsrc" data-v="${k}"><span class="ico">${svg(ic[k])}</span><b>${esc(C().imgsrc[k])}</b><small>${ds[k]}</small></button>`).join("")}</div>
+        ${A.imgsrc.includes("website") ? `${A.url.trim() ? "" : `<label class="f" style="margin-top:18px">Adresse Ihrer bisherigen Website<input class="inp" data-in="url" value="${esc(A.url)}" placeholder="www.…"></label>`}
+          <label class="consent"><input type="checkbox" data-chk="imgConsent" ${A.imgConsent ? "checked" : ""}><span>Ich bin damit einverstanden, dass Reeder Software die Bilder und das Logo meiner Website${A.url ? ` (<b>${esc(A.url)}</b>)` : ""} für meinen Vorab-Entwurf verwendet. Ich habe die Rechte an diesen Bildern bzw. darf sie so nutzen.</span></label>` : ""}` } },
+    mode: { e: "Grundton", t: "Hell oder dunkel?", l: "Ihr gewählter Aufbau – einmal hell, einmal dunkel, einmal gemischt.", ok: () => !!A.mode,
+      html: () => `<div class="grid grid--3">${["hell", "dunkel", "kontrast"].map(k => card("mode", k, lap(HERO[A.hero || "split"]() + (k === "kontrast" ? `<div style="position:absolute;left:0;right:0;bottom:0;height:70px;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:space-around;font-weight:700;font-size:14px"><span>Abschnitt</span><span>in dunkel</span><span>als Kontrast</span></div>` : ""), vars({ mode: k === "kontrast" ? "hell" : k })), C().mode[k], { hell: "Freundlich, offen, klassisch.", dunkel: "Edel, modern, Farben leuchten.", kontrast: "Hell, mit dunklen Akzent-Abschnitten." }[k])).join("")}</div>` },
+    palette: { e: "Farben", t: "Welche Farbwelt passt zu Ihnen?", l: "Schon mit Ihrem Aufbau und Grundton – so sähe Ihre Seite aus.", ok: () => !!A.palette,
+      why: "Sie haben schon Firmenfarben? Dann wählen Sie „Eigene Firmenfarben“ und stellen sie direkt ein.",
+      html: () => `<div class="grid grid--3">${Object.keys(C().palette).map(k => card("palette", k, lap(HERO[A.hero || "split"](), vars({ palette: k })) + `<div class="pal">${colors(k).map(c => `<i style="background:${c}"></i>`).join("")}</div>`, C().palette[k], "")).join("")}</div>
+        <div class="brandin ${A.palette === "eigen" ? "on" : ""}"><span>Ihre Farben:</span><input type="color" data-in="brand1" value="${A.brand1}" aria-label="Hauptfarbe"> Hauptfarbe <input type="color" data-in="brand2" value="${A.brand2}" aria-label="Akzentfarbe"> Akzent</div>` },
+    typo: { e: "Schrift", t: "Welche Schrift hat Ihren Charakter?", l: "Schrift wirkt stärker, als man denkt – sie erzählt, wer Sie sind.", ok: () => !!A.typo,
+      html: () => `<div class="grid grid--3">${Object.keys(FONTS).map(k => card("typo", k, lap(TYPO(k), vars({ typo: k })) + `<span class="fname">${esc(FONTS[k].name)}</span>`, C().typo[k], FONTS[k].desc)).join("")}</div>` },
+    motionLevel: { e: "Bewegung", t: "Wie viel Bewegung soll Ihre Seite haben?", l: "Schauen Sie sich die drei Varianten kurz an – es ist dieselbe Seite, einmal ruhig, einmal ausgewogen, einmal voller Bewegung.", ok: () => !!A.motionLevel,
+      why: "Im nächsten Schritt können Sie einzelne Effekte noch gezielt an- oder abwählen.",
+      html: () => `<div class="grid grid--3">${["wenig", "mittel", "viel"].map(k => card("motionLevel", k, lap(LV[k](), vars()) + `<p class="lvl"><b>${LV_DESC[k][0]}.</b> ${LV_DESC[k][1]}</p>`, C().motionLevel[k], "")).join("")}</div>` },
+    motion: { e: "Bewegung im Detail", t: "Welche Effekte genau?", l: () => `Passend zu Ihrer Auswahl „${esc(C().motionLevel[A.motionLevel] || "")}“ haben wir schon vorausgewählt. Ändern Sie, was Sie anders möchten.`, ok: () => true,
+      why: "Was Sie mit „Gefällt mir“ markieren, kommt sicher vor – was Sie ablehnen, kommt auf keinen Fall vor.",
+      html: () => `<div class="grid grid--3">${Object.keys(MO).map(k => `<div class="demo">${lap(MO[k](), vars())}<b>${esc(C().motion[k])}</b><small>${MO_DESC[k]}</small>
+          <div class="yn"><button class="yes ${A.motion[k] === true ? "on" : ""}" data-mo="${k}" data-yn="1">Gefällt mir</button><button class="no ${A.motion[k] === false ? "on" : ""}" data-mo="${k}" data-yn="0">Lieber nicht</button></div></div>`).join("")}</div>` },
+    tone: { e: "Sprache & Wirkung", t: "Wie sollen Sie wirken – und wie sprechen Sie Ihre Kunden an?", l: "Bis zu drei Begriffe.", ok: () => A.tone.length > 0,
+      html: () => `<div class="chips">${Object.entries(C().tone).map(([k, v]) => `<button class="chip ${A.tone.includes(k) ? "sel" : ""}" data-m="tone" data-v="${k}">${esc(v)}</button>`).join("")}</div>
+        <h2>Ansprache</h2><div class="seg">${Object.entries(C().voice).map(([k, v]) => `<button class="${A.voice === k ? "on" : ""}" data-voice="${k}">${v}</button>`).join("")}</div>
+        <div class="sample">Beispiel: <q>${A.voice === "du" ? "Buch dir jetzt deinen Termin – wir freuen uns auf dich!" : "Buchen Sie jetzt Ihren Termin – wir freuen uns auf Sie!"}</q></div>` },
+    features: { e: "Funktionen", t: "Was soll alles dabei sein?", l: "Wählen Sie, was Ihnen wichtig ist – das bauen wir im Entwurf bedienbar ein.", ok: () => true,
+      html: () => { const list = A.kind === "ki" ? ["telefon", "chat", "termin", "faq", "sprachen"] : ["termin", "kontakt", "team", "leistungen", "shop", "login", "bewertungen", "galerie", "faq", "news", "anfahrt", "sprachen", "jobs", "newsletter"];
+        return `<div class="chips">${list.map(k => `<button class="chip ${A.features.includes(k) ? "sel" : ""}" data-m="features" data-v="${k}">${esc(C().features[k])}</button>`).join("")}</div>`; } },
+    notes: { e: "Zum Schluss", t: "Gibt es Vorbilder – oder etwas, das Sie auf keinen Fall möchten?", l: "Alles freiwillig. Gerade das „Auf keinen Fall“ hilft uns sehr.", ok: () => true,
+      html: () => `<label class="f">Websites oder Marken, die Ihnen gefallen <span>Name oder Adresse – und gern, was Ihnen daran gefällt</span><textarea class="inp" data-in="likes" maxlength="600">${esc(A.likes)}</textarea></label>
+        <label class="f">Was möchten Sie auf keinen Fall? <span>z. B. „keine Stockfotos mit Händeschütteln“, „nicht zu bunt“</span><textarea class="inp" data-in="nogo" maxlength="600">${esc(A.nogo)}</textarea></label>
+        <label class="f">Sonst noch etwas?<textarea class="inp" data-in="extra" maxlength="1200">${esc(A.extra)}</textarea></label>` },
+  };
+  const plan = () => visual()
+    ? ["kind", "about", "action", "hero", "density", "structure", "imagery", ...(["fotos", "illustration"].includes(A.imagery) || !A.imagery ? ["imgsrc"] : []), "mode", "palette", "typo", "motionLevel", "motion", "tone", "features", "notes"]
+    : ["kind", "about", "action", "tone", "features", "notes"];
+
+  /* ---------- Darstellung ---------- */
+  function scaleAll() { $$(".scr").forEach(s => { const pg = s.firstElementChild; if (pg) pg.style.transform = `scale(${s.clientWidth / pg.offsetWidth})`; }); }
+  const ro = new ResizeObserver(scaleAll);
+  function counters() {
+    timers.forEach(clearInterval); timers = [];
+    $$(".cnt").forEach(el => { const n = +el.dataset.n, s = el.dataset.s; let t = 0;
+      timers.push(setInterval(() => { t = (t + 1) % 90; const p = Math.min(1, t / 45), v = Math.round(n * (1 - Math.pow(1 - p, 3))); el.textContent = v.toLocaleString("de-DE") + s; }, 60)); });
+  }
+  function render(scroll) {
+    steps = plan(); if (at >= steps.length) at = steps.length - 1;
+    const k = steps[at], s = STEP[k];
+    $("#prog").style.width = `${(at + 1) / steps.length * 100}%`; $("#stepno").textContent = `Frage ${at + 1} von ${steps.length}`;
+    app.innerHTML = `${at === 0 ? `<p class="hello">Hallo ${esc(meta.name || "")}</p>` : ""}<section class="step"><p class="eyebrow"><b>${at + 1}</b>${esc(s.e)}</p><h1>${s.t}</h1><p class="lead">${typeof s.l === "function" ? s.l() : s.l}</p>${s.why ? `<p class="why"><i>i</i><span>${s.why}</span></p>` : `<div style="height:22px"></div>`}${s.html()}</section><p class="err" id="err" hidden></p>`;
+    $("#back").style.visibility = at ? "visible" : "hidden";
+    $("#next").innerHTML = at === steps.length - 1 ? "Absenden <i>→</i>" : "Weiter <i>→</i>";
+    $("#barmid").textContent = at === steps.length - 1 ? "Danach bereiten wir Ihren Entwurf vor." : "";
+    ro.disconnect(); $$(".scr").forEach(x => ro.observe(x)); scaleAll(); counters(); sync(); save();
+    if (scroll) scrollTo({ top: 0, behavior: "instant" });
+  }
+  const sync = () => { $("#next").disabled = !STEP[steps[at]].ok(); };
+  const rerenderKeepScroll = () => { const y = scrollY; render(); scrollTo({ top: y, behavior: "instant" }); };
+  app.addEventListener("click", e => {
+    const c = e.target.closest("[data-k]"); if (c) { A[c.dataset.k] = c.dataset.v;
+      if (c.dataset.k === "motionLevel" && !A.motionTouched) { const D = { wenig: ["einblenden"], mittel: ["einblenden", "hover", "zaehler"], viel: ["einblenden", "hover", "zaehler", "parallax", "text", "hintergrund", "laufband", "slider"] }; A.motion = {}; for (const m of D[c.dataset.v]) A.motion[m] = true; }
+      $$(`[data-k="${c.dataset.k}"]`, app).forEach(x => { x.classList.toggle("sel", x === c); x.setAttribute("aria-pressed", x === c); });
+      if (c.dataset.k === "palette") $(".brandin", app)?.classList.toggle("on", c.dataset.v === "eigen");
+      if (c.dataset.k === "kind" || c.dataset.k === "imagery") { steps = plan(); $("#stepno").textContent = `Frage ${at + 1} von ${steps.length}`; }
+      sync(); save(); return; }
+    const m = e.target.closest("[data-m]"); if (m) { const arr = A[m.dataset.m], v = m.dataset.v, i = arr.indexOf(v);
+      if (i >= 0) arr.splice(i, 1); else if (m.dataset.m !== "tone" || arr.length < 3) arr.push(v);
+      if (m.dataset.m === "imgsrc") return rerenderKeepScroll();
+      m.classList.toggle("sel", arr.includes(v)); sync(); save(); return; }
+    const y = e.target.closest("[data-mo]"); if (y) { const k = y.dataset.mo, val = y.dataset.yn === "1"; A.motion[k] = A.motion[k] === val ? undefined : val; A.motionTouched = true;
+      $$(`[data-mo="${k}"]`, app).forEach(b => b.classList.toggle("on", A.motion[k] === (b.dataset.yn === "1"))); save(); return; }
+    if (e.target.closest("[data-nomo]")) { A.motionNone = !A.motionNone; return rerenderKeepScroll(); }
+    const vo = e.target.closest("[data-voice]"); if (vo) { A.voice = vo.dataset.voice; return rerenderKeepScroll(); }
+  });
+  app.addEventListener("input", e => { const i = e.target.closest("[data-in]"); if (!i) return; A[i.dataset.in] = i.value; if (i.type !== "color") { sync(); save(); } });
+  app.addEventListener("change", e => {
+    if (e.target.type === "color") return rerenderKeepScroll();
+    const ch = e.target.closest("[data-chk]"); if (ch) { A[ch.dataset.chk] = ch.checked; sync(); save(); }
+    if (e.target.dataset.in === "url" && steps[at] === "imgsrc") rerenderKeepScroll();
+  });
+  $("#back").addEventListener("click", () => { if (at) { at--; render(true); } });
+  $("#next").addEventListener("click", async () => {
+    if (at < steps.length - 1) { at++; render(true); return; }
+    const b = $("#next"); b.disabled = true; b.textContent = "Wird gesendet …";
+    try {
+      const r = await fetch(`/api/vorab/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(A) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 401) { meta.loggedIn = false; save(); return account(); }
+      if (!r.ok) throw new Error(d.error || "Senden fehlgeschlagen");
+      try { localStorage.removeItem(KEY); } catch {}
+      done(d.building);
+    } catch (err) { $("#err").textContent = err.message; $("#err").hidden = false; b.disabled = false; b.innerHTML = "Absenden <i>→</i>"; }
+  });
+  function account() {
+    $("#bar").hidden = true; $("#prog").style.width = "0%"; $("#stepno").textContent = "";
+    const neu = meta.account === "neu";
+    app.innerHTML = `<p class="hello" style="margin-inline:auto">Hallo ${esc(meta.name || "")}</p><form class="acc" id="accForm" novalidate>
+      <h1>${neu ? "Ihr persönlicher Bereich" : "Willkommen zurück"}</h1>
+      <p class="lead" style="font-size:16px">${neu ? "Bevor es losgeht, legen Sie kurz Ihr Kundenkonto an – das dauert 20 Sekunden." : "Für diese E-Mail-Adresse gibt es schon ein Konto. Bitte melden Sie sich kurz an."}</p>
+      ${neu ? `<ul class="acc__perks"><li>Ihre Angaben sind sicher gespeichert – Sie können jederzeit unterbrechen.</li><li>Nach dem Gespräch finden Sie dort Entwürfe, Termine und Unterlagen.</li><li>Kostenlos und unverbindlich.</li></ul>` : ""}
+      <div class="acc__mail">✉︎ <b>${esc(meta.email || "")}</b> <span>(aus Ihrer Buchung)</span></div>
+      <label class="f">Passwort${neu ? " <span>mindestens 10 Zeichen</span>" : ""}<input class="inp" type="password" id="pw1" autocomplete="${neu ? "new-password" : "current-password"}" required></label>
+      ${neu ? `<label class="f">Passwort wiederholen<input class="inp" type="password" id="pw2" autocomplete="new-password" required></label>
+        <label class="consent"><input type="checkbox" id="pc"><span>Ich habe die <a href="/datenschutz.html" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen. Meine Angaben werden zur Vorbereitung unseres Gesprächs verwendet.</span></label>` : ""}
+      <p class="err" id="accErr" hidden></p>
+      <button class="btn btn--go" type="submit">${neu ? "Konto anlegen & loslegen" : "Anmelden & weiter"} <i>→</i></button>
+      ${neu ? "" : `<p class="acc__alt">Passwort vergessen? <a href="/portal/">Hier zurücksetzen</a></p>`}</form>`;
+    $("#pw1").focus();
+    $("#accForm").addEventListener("submit", async e => {
+      e.preventDefault(); const err = $("#accErr"), b = $("button[type=submit]", e.target), pw = $("#pw1").value;
+      const fail = m => { err.textContent = m; err.hidden = false; b.disabled = false; };
+      if (neu && pw.length < 10) return fail("Das Passwort braucht mindestens 10 Zeichen.");
+      if (neu && pw !== $("#pw2").value) return fail("Die beiden Passwörter stimmen nicht überein.");
+      if (neu && !$("#pc").checked) return fail("Bitte bestätigen Sie die Datenschutzhinweise.");
+      b.disabled = true; err.hidden = true;
+      try {
+        const r = await fetch(`/api/vorab/${token}/${neu ? "konto" : "anmelden"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw, consent: neu ? true : undefined }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 409) { meta.account = "vorhanden"; return account(); }
+        if (!r.ok) return fail(d.error || "Das hat nicht geklappt.");
+        meta.loggedIn = true; $("#bar").hidden = false; render(true);
+      } catch { fail("Keine Verbindung – bitte erneut versuchen."); }
+    });
+  }
+  function done(building) {
+    timers.forEach(clearInterval); ro.disconnect();
+    $("#bar").hidden = true; $("#prog").style.width = "100%"; $("#stepno").textContent = "";
+    app.innerHTML = `<div class="done"><div class="done__orb">✓</div><h1 style="margin-inline:auto">Vielen Dank!</h1><p class="lead" style="margin:0 auto">${building ? "Wir bereiten aus Ihren Angaben einen ersten Entwurf vor und zeigen ihn Ihnen in unserem Gespräch." : "Ihre Angaben sind bei uns – so können wir uns gut auf unser Gespräch vorbereiten."}${meta.start ? `<br><br>Bis zum <b>${new Date(meta.start).toLocaleString("de-DE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} Uhr</b>.` : ""}</p>
+      <p style="margin-top:28px"><a class="btn btn--go" href="/portal/" style="text-decoration:none">Zu Ihrem Kundenportal <i>→</i></a></p></div>`;
+  }
+  (async () => {
+    if (!token) { app.innerHTML = `<h1>Link unvollständig</h1><p class="lead">Bitte öffnen Sie den Link direkt aus unserer E-Mail.</p>`; return; }
+    const r = await fetch(`/api/vorab/${token}`); const d = await r.json().catch(() => ({}));
+    if (!r.ok) { app.innerHTML = `<h1>Link nicht gültig</h1><p class="lead">${esc(d.error || "")}</p>`; return; }
+    meta = d; A.company = d.company || "";
+    if (d.answered) { done(false); $("h1", app).textContent = "Ihre Angaben liegen uns schon vor."; return; }
+    try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s?.A) { Object.assign(A, s.A); at = s.at || 0; } } catch {}
+    if (!d.loggedIn) return account();
+    $("#bar").hidden = false; render(true);
+  })();
+})();
+</script>
+</body>
+</html>

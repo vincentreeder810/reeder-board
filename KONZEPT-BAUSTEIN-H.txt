@@ -1,0 +1,227 @@
+KONZEPT BAUSTEIN H – Täglicher Stand, KI-Assistent im Portal, nächtliche Prüfstrecke
+====================================================================================
+Stand: 14.11.2026 · H1–H8 gebaut (Details in ADMIN-BOARD.txt)
+
+
+ZIELBILD IN EINEM SATZ
+----------------------
+Der Kunde sieht jeden Morgen einen neuen, geprüften Stand seiner Website, markiert direkt darauf,
+was ihm nicht gefällt, ein KI-Assistent klärt die Details sofort mit ihm – und Menschen entscheiden,
+bauen und geben frei.
+
+
+1. DER TAG DES KUNDEN (so erlebt er es)
+---------------------------------------
+Morgens, Portal öffnen:
+  ┌──────────────────────────────────────────────────────────────┐
+  │ Seit Ihrem letzten Besuch (Dienstag)                         │
+  │  12 Änderungen umgesetzt · 1.940 Prüfungen · 3 Schwachstellen│
+  │  gefunden und behoben · alle Sicherheitsprüfungen bestanden  │
+  │  [Neuen Stand ansehen]   [Was hat sich geändert?]            │
+  └──────────────────────────────────────────────────────────────┘
+  - "Was hat sich geändert?" zeigt jede Änderung mit Vorher/Nachher und springt zur Stelle.
+  - Erledigte eigene Anmerkungen sind abgehakt ("Umgesetzt wie besprochen: Überschrift 40 px").
+
+Anmerken (wie bisher Stift, Markieren, Pin – neu: das Board erkennt, WAS markiert wurde):
+  Herr Müller kreist die Überschrift "Mein Café" ein und schreibt: "zu groß".
+  Der Assistent antwortet in Sekunden, direkt an der Anmerkung:
+
+    "Verstanden, Herr Müller – es geht um die Überschrift ‚Mein Café' (aktuell 56 px).
+     Hier drei Vorschläge – tippen Sie einen an, um ihn direkt auf der Seite zu sehen:"
+     [ 48 px · etwas kleiner ]  [ 40 px · deutlich ruhiger ]  [ 34 px · zurückhaltend ]
+     [ – ]  Größe selbst einstellen  [ + ]
+
+  Antippen = die Seite zeigt die Variante sofort als Vorschau (nur bei ihm, nur vorübergehend).
+  Er wählt 40 px. Assistent:
+    "Notiert: Überschrift ‚Mein Café' auf 40 px. Das ist eine kleine Änderung – Sie sehen sie
+     morgen früh im neuen Stand. Soll die Überschrift auf den anderen Seiten auch angepasst werden?"
+     [ Ja, überall einheitlich ]  [ Nur hier ]
+
+  Bei Texten: drei Umformulierungen als Karten, plus "Eigenen Text schreiben".
+  Bei großen Wünschen ("Hier soll ein Online-Shop hin"):
+    "Das ist eine größere Erweiterung. Ich habe sie an Vincent Reeder weitergegeben – er meldet
+     sich bis morgen 12 Uhr persönlich bei Ihnen, auch zu Aufwand und Kosten."
+
+  Immer sichtbar: "Sie schreiben mit dem KI-Assistenten von Reeder Software. Entscheidungen
+  treffen unsere Entwickler." + Knopf [Mit Vincent sprechen] (Chat oder Rückruf-Termin).
+
+Nachts: Team und Bau-Agent setzen die freigegebenen Änderungen um, die Prüfstrecke läuft.
+Morgens: neuer Stand – der Kreis schließt sich.
+
+
+2. KLEIN, MITTEL, GROSS – WER ENTSCHEIDET WAS
+---------------------------------------------
+  KLEIN  → Assistent klärt, Bau-Agent setzt um, Mensch gibt morgens mit einem Klick frei
+           Texte, Schriftgrößen, Farben aus der Markenpalette, Abstände, Bilder tauschen,
+           Reihenfolge innerhalb eines Abschnitts, Tippfehler, Links, Öffnungszeiten.
+  MITTEL → Assistent klärt Details, Team entscheidet, wird meist am nächsten oder übernächsten
+           Tag sichtbar. Neuer Abschnitt, Layout einer Seite umbauen, neue Unterseite aus
+           vorhandenen Bausteinen, anderes Menü.
+  GROSS  → sofort an Vincent, keine Zusage durch den Assistenten
+           Neue Funktion (Shop, Buchung, Login, Formularlogik), Schnittstellen, alles mit
+           Daten/Datenschutz/Preisen, Änderungen am vereinbarten Leistungsumfang.
+
+  Feste Regeln für den Assistenten:
+  - Er sagt nie einen Preis, nie einen Termin außer "morgen früh" (klein) und "Rückmeldung bis …".
+  - Er ändert nie selbst etwas am echten Stand – er erzeugt nur Aufträge.
+  - Im Zweifel stuft er höher ein (lieber Mensch als falsche Zusage).
+  - Er sieht nur das Projekt dieses Kunden, nie andere Kunden.
+  - Ab 18 Uhr eingegangen = übernächster Morgen (sagt er ehrlich so).
+  - Änderungsbudget im Paket: kleine Änderungen unbegrenzt während der 4 Wochen,
+    mittlere nach Absprache, große über Nachtragsangebot (läuft über Baustein B).
+
+
+3. DER NACHTABLAUF
+------------------
+  18:00  Annahmeschluss für den nächsten Morgen.
+  18:30  Board stellt die "Auftragsliste" zusammen: alle geklärten kleinen Änderungen,
+         gebündelt pro Projekt, mit Element, alter/neuer Wert, Seite, Gerät.
+  19:00  Bau-Agent (Claude Code im Projektordner auf dem Entwickler-Rechner) setzt die Liste um
+         → "Kandidat" = neue Version, noch NICHT beim Kunden sichtbar.
+  20:00  Prüfstrecke gegen den Kandidaten (siehe 4.).
+  07:00  Morgenbericht im Board: "Café Müller: 7 Änderungen, 1.940 Prüfungen, alles grün."
+         Abweichungen rot, mit Screenshot.
+  08:00  Mensch prüft kurz, [Freigeben] → Kunde sieht neuen Stand + Mitteilung.
+         [Zurückweisen] → Kandidat verworfen, Aufgabe für das Team.
+  Kein Kandidat geht ohne menschliche Freigabe zum Kunden.
+
+  Hinweis zum Betrieb: Solange alles lokal läuft, muss der Rechner nachts an sein.
+  Nach dem Livegang: Board auf dem Server, Bau-Agent weiterhin beim Entwickler (er braucht den
+  Projektordner), er holt sich die Auftragsliste per gesichertem Zugang ab und lädt den Kandidaten hoch.
+
+
+4. DIE PRÜFSTRECKE
+------------------
+Zwei Schichten:
+
+  A) Feste Prüfungen – laufen jede Nacht, kosten praktisch nichts (keine KI nötig)
+     - Funktion: jede Seite lädt, jeder Link, jedes Formular, jeder Knopf (Playwright)
+     - Geräte: Smartphone, Tablet, Desktop × Chrome, Safari, Firefox
+     - Optik: Bildvergleich mit dem letzten Stand – hat sich etwas ungewollt verschoben?
+     - Barrierefreiheit: Kontraste, Alternativtexte, Tastaturbedienung (axe)
+     - Tempo: Ladezeit, Bildgrößen (Lighthouse)
+     - Sicherheit: Header, offene Dateien, Eingaben mit Angriffsmustern (OWASP-Liste)
+     - Inhalte: Pflichtangaben (Impressum, Datenschutz), Telefonnummern, tote Links
+     - Jeder früher gefundene Fehler bleibt als Test drin (wächst mit jedem Projekt)
+
+  B) Erkundende Prüfungen – KI-Agenten mit Browser, das ist das Budget
+     Ein Prüfraster: Seiten × Geräte × Personen × Prüfart. Jeder Agent bekommt EIN offenes Feld:
+       Personen z. B.: 70-jährige Stammkundin sucht Öffnungszeiten · Eilige Tischreservierung
+       am Handy · Blinder Nutzer mit Bildschirmleser · Jemand, der Formulare missbrauchen will
+       · Kunde, der nach Preisen sucht · Erstbesucher, der verstehen will, was das Café bietet
+     - Zweites Modell prüft jeden Fund gegen, bevor er im Bericht landet (keine Fehlalarme).
+     - Bestätigter Fund → Aufgabe fürs Team + wird zur festen Prüfung (Schicht A).
+     - Stopp-Regel: Budget ist Obergrenze. Wenn 20 Durchläufe hintereinander nichts Neues
+       finden, ist das Projekt "durchgeprüft" – Rest wird nicht verbraucht.
+     - Volle Runde nach jedem neuen Stand nur für geänderte Seiten; Komplettrunde wöchentlich
+       und vor der Übergabe.
+
+  Ehrlichkeit: Alle Zahlen im Portal und Bericht sind echte, gezählte Prüfungen.
+  Keine geschönten Zahlen – das wäre irreführende Werbung und zerstört Vertrauen.
+
+
+5. KOSTEN (grobe Schätzung, Claude-API-Listenpreise Stand 11/2026, Dollar ≈ Euro)
+---------------------------------------------------------------------------------
+  Modell: Claude Opus 5.5 ($4 je 1 Mio. Eingabe-Token, $20 je 1 Mio. Ausgabe-Token).
+  Günstigere Modelle (Sonnet 5.5: $2/$10, Haiku 5.5: $0,10/$0,50) sind für einfache Teilaufgaben
+  möglich – Ihre Entscheidung, erst nach Messung der Qualität.
+
+  Antwort-Assistent   ca. 0,10 $ je Antwort, ein Gespräch zu einer Anmerkung ca. 0,30 $
+                      bei 100 Anmerkungen im Projekt: ca. 30 $
+  Bau-Agent           ca. 1–3 $ je Nacht und Projekt (mit Zwischenspeicher/Caching)
+                      20 Arbeitsnächte: ca. 20–60 $
+  Prüfstrecke A       0 $ (läuft lokal, nur Rechenzeit)
+  Prüfstrecke B       ca. 1–2 $ je erkundendem Durchlauf mit Browser und Bildschirmfotos
+                      einfache Website (6 Seiten × 3 Geräte × 6 Personen ≈ 110 Felder): ca. 150–250 $
+                      bis zur Sättigung; Portal/Shop entsprechend mehr
+  ----------------------------------------------------------------------------------
+  Einfache Website, 4 Wochen, gesamt:   ca. 200–350 $ KI-Kosten
+  Ihre geplanten 1.000 € reichen also deutlich – bei einfachen Seiten wird das Budget
+  vor Erreichen der Obergrenze "satt". Bei größeren Projekten wird es ausgeschöpft.
+  Diese Werte sind Schätzungen; das Board misst die echten Kosten je Projekt und zeigt sie
+  in den Kennzahlen (Baustein E) – nach 2–3 Projekten wissen Sie es genau.
+
+
+6. WAS TECHNISCH GEBAUT WIRD
+----------------------------
+  H1  Stand per Knopfdruck
+      - Projekt mit einem lokalen Ordner verknüpfen (z. B. C:\Projekte\cafe-mueller\dist).
+      - Knopf [Neuen Stand hochladen] bzw. Befehl "npm run stand -- cafe-mueller" für Claude Code.
+      - Board vergleicht mit der Vorversion: welche Seiten/Dateien geändert, Änderungsliste.
+      - Nach dem Livegang: Hochladen über einen gesicherten Projekt-Schlüssel statt Ordnerpfad.
+  H2  "Seit Ihrem letzten Besuch"
+      - Board merkt sich je Kunde, welche Version er zuletzt angesehen hat.
+      - Kopfkarte mit Änderungen, Prüfungen, Funden; Liste "Was hat sich geändert?" mit Sprung.
+  H3  Elementerkennung und Live-Vorschau (funktioniert auch ganz ohne KI)
+      - Das schon vorhandene Skript in jeder Prototyp-Seite meldet, welches Element unter der
+        Markierung liegt: Art, Text, Schriftgröße, Farbe, Abstand.
+      - Vorschläge werden per Nachricht in die Seite gespielt und nur dort vorübergehend gezeigt.
+      - Regler für Größe/Abstand, Farbwahl aus der Markenpalette des Projekts.
+  H4  KI-Assistent an Anmerkungen
+      - Claude über die offizielle Anthropic-Schnittstelle (Node-SDK), Schlüssel in .env.
+      - Bekommt: Anmerkung, erkanntes Element, Seitenausschnitt, Projektregeln, Markenpalette.
+      - Antwortet mit strukturierten Karten (Vorschläge, Rückfrage, Einstufung klein/mittel/groß).
+      - Kennzeichnung als KI, Knopf "Mit Vincent sprechen", Übergabe an Mensch bei "groß".
+      - Ohne Schlüssel (z. B. Demo) läuft H3 trotzdem, nur ohne Formulierungsvorschläge.
+  H5  Auftragsliste und Morgenfreigabe
+      - Geklärte Änderungen werden zu Aufträgen (vorhandene Aufgaben aus Baustein D).
+      - Auftragsdatei je Projekt für Claude Code; Kandidat-Version, [Freigeben]/[Zurückweisen].
+  H6  Prüfstrecke
+      - Schicht A mit Playwright + axe (neue Entwickler-Abhängigkeit, lädt Browser ~ 500 MB).
+      - Schicht B: Prüf-Agenten mit Raster, Gegenprüfung, Stopp-Regel, Kostenobergrenze je Projekt.
+      - Ergebnisse als Prüfläufe in der Datenbank, Funde → Aufgaben.
+  H7  Prüfbericht zur Übergabe
+      - PDF wie Rechnung/Vertrag: Umfang, Geräte, Funde und Behebung, Sicherheit,
+        Barrierefreiheit, Ladezeiten. Liegt danach in den Dokumenten des Kunden.
+  H8  Website-Texte (siehe 7.)
+
+  Reihenfolge: H1 → H2 → H3 → H4 → H5 → H6 → H7 → H8.
+  H1–H3 sind ohne KI-Kosten testbar, ab H4 wird ein Anthropic-API-Schlüssel gebraucht.
+
+
+7. KOMMUNIKATION AUF DER WEBSITE
+--------------------------------
+Grundsatz: Menschen sind verantwortlich, KI macht es schneller und gründlicher.
+Nie "Sie sprechen mit unserer KI" als Hauptbotschaft – sondern "Sie sehen täglich Fortschritt,
+und nichts bleibt liegen".
+
+Neuer Abschnitt auf "Arbeitsweise" (und kurz auf der Startseite):
+
+  "Jeden Morgen ein neuer Stand."
+  Andere zeigen Zwischenstände alle paar Wochen. Bei uns sehen Sie Ihre Website wachsen –
+  Tag für Tag, geprüft und freigegeben von unserem Team.
+
+  Drei Bausteine:
+  1. Ihr Team.  Ein fester Ansprechpartner, der Ihr Projekt verantwortet. Erreichbar per Chat,
+     Telefon und in festen Abstimmungsterminen – zur Halbzeit und bei der Übergabe.
+  2. Ihr Assistent im Portal.  Markieren Sie direkt auf der Seite, was Ihnen nicht gefällt –
+     rund um die Uhr. Unser KI-Assistent versteht, was Sie meinen, zeigt Ihnen Varianten zum
+     Ausprobieren und gibt alles geordnet an das Team weiter. Entscheiden und bauen tun Menschen.
+  3. Unsere Prüfstrecke.  Jede Nacht testen automatische Prüfungen und KI-Prüfer Ihre Seite
+     auf Smartphone, Tablet und Desktop: Funktion, Sicherheit, Barrierefreiheit, Ladezeit.
+     Was sie finden, beheben wir, bevor Sie es bemerken.
+
+  FAQ "Kann ich das nicht einfach selbst mit KI bauen?"
+  Eine Seite erzeugen kann heute jeder. Was Sie bei uns bekommen, ist alles drumherum:
+  - Verantwortung: ein Vertrag mit einer GmbH, die für Ergebnis, Datenschutz und Sicherheit einsteht.
+  - Erfahrung: Menschen, die Aufbau, Datenschutz und Technik so entscheiden, dass es in drei
+    Jahren noch funktioniert.
+  - Prüfung: tausende Prüfungen pro Projekt auf vielen Geräten – das leistet niemand nebenbei.
+  - Betrieb: Hosting, tägliche Sicherung, Überwachung, Support mit festen Reaktionszeiten.
+  - Ihre Zeit: Sie sagen, was Sie wollen. Um alles andere kümmern wir uns.
+
+  Übergabe: "Zum Abschluss erhalten Sie Ihren Prüfbericht – schwarz auf weiß, was getestet
+  und behoben wurde."
+
+  Pflicht dabei: In Datenschutzerklärung und Vertrag ergänzen, dass im Portal ein KI-Dienst
+  (Anthropic) als Auftragsverarbeiter eingesetzt wird; im Portal selbst klare KI-Kennzeichnung
+  (EU-KI-Verordnung, Transparenzpflicht). Anthropic-AVV/DPA vor dem Einsatz mit echten Kunden
+  abschließen. Teil der Rechtsprüfung vor dem Livegang.
+
+
+8. OFFENE ENTSCHEIDUNGEN (für Vincent)
+--------------------------------------
+  - Anthropic-API-Konto anlegen und Schlüssel in .env eintragen (ab H4 nötig; das mache ich nicht).
+  - Kostenobergrenze je Projekt für Prüfstrecke B (Vorschlag: 300 €, im Board änderbar).
+  - Annahmeschluss 18 Uhr und Freigabe um 8 Uhr – passt das zu Ihrem Tag?
+  - Wer gibt morgens frei: nur Inhaber oder auch Entwickler?

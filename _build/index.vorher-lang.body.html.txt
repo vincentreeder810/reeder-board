@@ -1,0 +1,324 @@
+<!-- ============ HERO ============ -->
+<section class="hero dark">
+  <canvas class="hero__canvas" id="heroCanvas" aria-hidden="true"></canvas>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="hero__content">
+    <p class="eyebrow reveal">Softwareentwicklung · KI · Praxissoftware</p>
+    <h1 class="h1">
+      <span class="line"><span>Software &amp; KI, die</span></span>
+      <span class="line"><span>Menschen <em class="serif">weiterbringt.</em></span></span>
+    </h1>
+    <p class="hero__lead reveal" style="--d:.5s">Unser Team aus Design, Entwicklung und KI baut Websites, Apps, KI-Telefonassistenten und Praxissysteme – auf Wunsch ohne Entwicklungskosten im Reeder Signature-Modell.</p>
+    <div class="hero__ctas reveal" style="--d:.65s">
+      <a href="termin.html" class="btn btn--lime magnetic">Kostenloses Erstgespräch <span class="arr">→</span></a>
+      <a href="modelle.html" class="btn btn--ghost magnetic">Signature-Modell entdecken <span class="arr">→</span></a>
+    </div>
+    <ul class="ticks reveal" style="--d:.8s"><li>Kostenloser Prototyp – ohne Vertrag</li><li>Beratung kostenlos</li><li>Antwort in 24 h</li></ul>
+  </div>
+
+  <div class="hero__stage" id="heroStage" aria-hidden="true">
+    <div class="device device--laptop" data-depth="0.04">
+      <div class="device__screen"><img src="assets/img/praxis-koerper.webp" alt="" width="1800" height="1389"></div>
+    </div>
+    <div class="device device--phone device--left" data-depth="0.09">
+      <div class="phone phone--shot "><div class="phone__island"></div><img src="assets/img/app-covered-home.webp" alt="" loading="lazy" width="780" height="1688"></div>
+    </div>
+    <div class="device device--phone device--right" data-depth="0.12">
+      <div class="phone phone--shot "><div class="phone__island"></div><img src="assets/img/app-lernpass-home.webp" alt="" loading="lazy" width="780" height="1688"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MARQUEE ============ -->
+<div class="marquee dark" aria-hidden="true">
+  <div class="marquee__track">
+    <span>Kostenloser Prototyp</span><i>✦</i><span>Web-Apps</span><i>✦</i><span>KI-Telefonassistent</span><i>✦</i><span>KI-Integration</span><i>✦</i><span>iOS &amp; Android</span><i>✦</i><span>Patientenverwaltung</span><i>✦</i><span>Websites</span><i>✦</i><span>Marktrecherche</span><i>✦</i><span>Automatisierung</span><i>✦</i>
+    <span>Web-Apps</span><i>✦</i><span>KI-Telefonassistent</span><i>✦</i><span>KI-Integration</span><i>✦</i><span>iOS &amp; Android</span><i>✦</i><span>Patientenverwaltung</span><i>✦</i><span>Websites</span><i>✦</i><span>Marktrecherche</span><i>✦</i><span>Automatisierung</span><i>✦</i>
+  </div>
+</div>
+
+<!-- ============ WEGWAHL ============ -->
+<section class="section section--paper">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal"><b>01</b> Wobei können wir helfen?</p>
+      <h2 class="h2 reveal">Zwei Wege. <span class="hl">Ein Anspruch.</span></h2>
+    </div>
+    <p class="lead reveal">Ob Sie Software für Ihr Unternehmen brauchen oder eines unserer Produkte einsetzen möchten – Sie bekommen dieselbe Sorgfalt.</p>
+  </div>
+  <div class="paths">
+    <a href="leistungen.html" class="path path--a reveal">
+      <span class="path__no">Für Unternehmen</span>
+      <h3>Sie brauchen eine Website, App oder KI-Lösung.</h3>
+      <p>Wir planen, gestalten und entwickeln Ihre Software – vom kostenlosen Prototyp bis zum Betrieb.</p>
+      <span class="path__go">Leistungen ansehen <i>→</i></span>
+    </a>
+    <a href="produkte.html" class="path path--b reveal" style="--d:.1s">
+      <span class="path__no">Unsere Produkte</span>
+      <h3>Sie suchen fertige Software für Bildung, Gründung und Alltag.</h3>
+      <p>Covered, BusinessCat, Lernpass und Perspektive – erprobt und auf Wunsch an Sie angepasst.</p>
+      <span class="path__go">Produkte entdecken <i>→</i></span>
+    </a>
+  </div>
+</section>
+
+<!-- ============ REFERENZEN + ZAHLEN ============ -->
+<section class="section dark" style="overflow:hidden;isolation:isolate">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="feature">
+    <div>
+      <p class="eyebrow reveal"><b>02</b> Referenzen im Gesundheitswesen</p>
+      <h2 class="h2 reveal">Zwei Patienten&shy;verwaltungen. <span class="serif">Im Einsatz.</span></h2>
+      <p class="lead reveal">Für Kunden haben wir zwei komplette Patientenverwaltungssysteme entwickelt – für die Physiotherapie und für die Schönheitschirurgie.</p>
+      <ul class="checks checks--dark reveal">
+        <li><b>Physiotherapie:</b> KI-Anamnese vor der ersten Behandlung, Online-Check-in, Termine, Akte</li>
+        <li><b>Schönheitschirurgie:</b> OP-Plan, Vor- und Nachsorge, KI-Wundmanager, Fernsprechstunde</li>
+      </ul>
+      <div class="hero__ctas reveal" style="justify-content:flex-start">
+        <a href="projekte.html" class="btn btn--lime">Referenzen ansehen <span class="arr">→</span></a>
+      </div>
+    </div>
+    <figure class="feature__img reveal" style="--d:.15s;margin:0"><img src="assets/img/praxis-koerper.webp" alt="Patientenverwaltung Physiotherapie: Schmerzangabe am 3D-Körpermodell" loading="lazy" width="1800" height="1389"></figure>
+  </div>
+  <div class="stats">
+    <div class="stat reveal"><b><span class="count" data-to="2">0</span></b><span>Patientenverwaltungs&shy;systeme für Kunden entwickelt</span></div>
+    <div class="stat reveal" style="--d:.1s"><b><span class="count" data-to="4">0</span></b><span>eigene Produkte – und weitere in Arbeit</span></div>
+    <div class="stat reveal" style="--d:.2s"><b><span class="count" data-to="3">0</span></b><span>faire Vergütungsmodelle – inklusive Signature</span></div>
+    <div class="stat reveal" style="--d:.3s"><b>24<em>h</em></b><span>Antwortzeit auf jede Anfrage an Werktagen</span></div>
+  </div>
+</section>
+
+<!-- ============ KOSTENLOSER PROTOTYP ============ -->
+<section class="section proto " id="prototyp">
+  <div class="proto__inner">
+    <div class="proto__copy">
+      <p class="eyebrow reveal"><b>03</b> Unser Versprechen</p>
+      <h2 class="h2 reveal">Beim zweiten Termin sehen Sie <span class="grad">Ihre eigene Software.</span></h2>
+      <p class="lead reveal">Nach Ihrer kostenlosen Beratung bauen wir Ihnen einen klickbaren Prototyp – nur für Sie, nach Ihren Abläufen. Kostenlos und ohne dass Sie irgendetwas unterschreiben. Erst wenn Sie ihn selbst ausprobiert haben, entscheiden Sie, ob es weitergeht.</p>
+      <ul class="proto__pills reveal"><li><b>0 €</b>Kosten</li><li><b>0</b>Verträge</li><li><b>100 %</b>Ihre Entscheidung</li></ul>
+      <div class="hero__ctas reveal" style="justify-content:flex-start">
+        <a href="termin.html" class="btn btn--ink">Jetzt kostenlos starten <span class="arr">→</span></a>
+      </div>
+    </div>
+    <div class="proto__visual reveal" style="--d:.12s" aria-hidden="true">
+      <div class="proto__badge"><b>0 €</b><span>Prototyp</span></div>
+      <div class="proto__window">
+        <div class="proto__bar"><i></i><i></i><i></i><span>Prototyp · erstellt für Sie</span></div>
+        <div class="proto__ui">
+          <div class="proto__side"><span></span><span></span><span></span><span></span></div>
+          <div class="proto__main">
+            <div class="proto__title"></div>
+            <div class="proto__cards"><span></span><span></span><span></span></div>
+            <div class="proto__chart"><i style="--h:40%"></i><i style="--h:65%"></i><i style="--h:50%"></i><i style="--h:80%"></i><i style="--h:60%"></i><i style="--h:92%"></i></div>
+          </div>
+        </div>
+        <div class="proto__cursor"></div>
+      </div>
+    </div>
+  </div>
+  <ol class="proto__steps">
+    <li class="reveal"><span>Termin 1</span><b>Kostenlose Beratung</b><p>Sie erzählen von Ihren Abläufen, wir stellen die richtigen Fragen.</p></li>
+    <li class="reveal" style="--d:.08s"><span>Danach</span><b>Wir bauen Ihren Prototyp</b><p>Ein klickbarer Entwurf Ihrer Software – nur für Sie.</p></li>
+    <li class="reveal" style="--d:.16s"><span>Termin 2</span><b>Sie testen Ihre Software</b><p>Sie klicken sich selbst durch und sehen, was Sie bekommen.</p></li>
+    <li class="reveal" style="--d:.24s"><span>Erst dann</span><b>Sie entscheiden</b><p>Weiter mit dem passenden Modell – oder einfach nicht. Ohne Kosten.</p></li>
+  </ol>
+</section>
+
+<!-- ============ KI-ARBEITSWEISE ============ -->
+<section class="section section--paper">
+  <div class="kiteaser">
+    <div>
+      <p class="eyebrow reveal"><b>04</b> So entstehen unsere Produkte</p>
+      <blockquote class="reveal">„Programmieren mit KI ist wie ein Orchester zu dirigieren. Ohne Dirigent wird daraus <span class="grad">keine Musik.</span>“</blockquote>
+      <p class="lead reveal" style="margin:0 0 26px">Wir entwickeln ganz bewusst mit KI – das macht uns schnell und bezahlbar. Den Unterschied macht unser Team, das die KI führt, jedes Ergebnis prüft und Umwege erkennt, bevor sie Ihre Software belasten.</p>
+      <p class="reveal" style="margin:0 0 26px;color:var(--ink-2)">Während der Entwicklung sehen Sie <b>jeden Morgen einen neuen Stand</b>, merken direkt im Entwurf an, was Sie stört, und erhalten zur Übergabe einen Prüfbericht – jede Version vorher automatisch auf Smartphone, Tablet und Desktop getestet.</p>
+      <a href="arbeitsweise.html" class="link reveal">So arbeiten wir mit KI <span>→</span></a>
+    </div>
+    <div class="kiteaser__stats">
+      <div class="reveal"><b class="grad">84 %</b><span>der Entwickler nutzen KI oder planen es<small>Stack Overflow Developer Survey 2025</small></span></div>
+      <div class="reveal" style="--d:.08s"><b class="grad">75 %</b><span>des neuen Codes bei Google entstehen mit KI – von Ingenieuren geprüft<small>Sundar Pichai, April 2026</small></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BEISPIELRECHNUNG ============ -->
+<section class="section cost" id="preise">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal"><b>05</b> Offen gerechnet</p>
+      <h2 class="h2 reveal">Was eine Website bei uns kostet – <span class="grad">und wofür.</span></h2>
+    </div>
+    <p class="lead reveal">KI macht vieles schneller. Damit Ihre Website trotzdem zuverlässig läuft, fließt ein großer Teil des Preises in etwas, das man nicht sieht: Prüfung. Hier zeigen wir offen, wie sich ein typisches Projekt zusammensetzt.</p>
+  </div>
+  <div class="cost__grid">
+    <article class="cost__case reveal">
+      <p class="cost__kicker">Beispielprojekt</p>
+      <h3>Website für eine Physiotherapiepraxis mit Online-Terminbuchung</h3>
+      <div class="sitemock" aria-label="Beispielansicht einer Praxis-Website" role="img">
+        <div class="sitemock__bar"><i></i><i></i><i></i><span>physio-am-park.de</span></div>
+        <div class="sitemock__page">
+          <div class="sitemock__nav"><b>Physio am Park</b><span>Leistungen</span><span>Team</span><span>Kontakt</span><em>Termin buchen</em></div>
+          <div class="sitemock__hero"><div><small>Physiotherapie · Manuelle Therapie · KG</small><strong>Wieder schmerzfrei bewegen.</strong><em>Termin online buchen</em></div><div class="sitemock__img"></div></div>
+          <div class="sitemock__cards"><span><b>Krankengymnastik</b>45 Min.</span><span><b>Manuelle Therapie</b>30 Min.</span><span><b>Lymphdrainage</b>45 Min.</span></div>
+          <div class="sitemock__book"><b>Freie Termine diese Woche</b><div><span>Mo 8:00</span><span class="on">Di 10:30</span><span>Mi 16:00</span><span>Do 9:15</span></div></div>
+        </div>
+      </div>
+      <ul class="cost__incl">
+        <li>8 Seiten, für Smartphone, Tablet und Desktop</li><li>Online-Terminbuchung</li><li>Leistungen, Team, Anfahrt, Kontakt</li><li>Impressum, Datenschutz, Barrierefreiheit</li><li>Täglicher Stand im Kundenportal</li><li>Prüfbericht zur Übergabe</li>
+      </ul>
+      <p class="cost__price"><b>4.000 €</b><span>netto · Festpreis</span></p>
+    </article>
+    <div class="cost__split reveal" style="--d:.1s">
+      <p class="cost__kicker">So setzen sich die 4.000 € zusammen</p>
+      <ul class="cbars" aria-label="Aufteilung des Beispielpreises von 4.000 Euro netto">
+        <li class="cbar cbar--hi" title="Qualität &amp; Prüfung: 1.000 € (25 %)"><div class="cbar__head"><b>Qualität &amp; Prüfung</b><span><strong>1.000 €</strong><small>25 %</small></span></div><div class="cbar__track"><i style="--w:25%"></i></div><p>Prüfstrecke bei jeder Version auf Smartphone, Tablet und Desktop, KI-Prüfer, Korrekturrunden, Abnahme und Prüfbericht.</p><em class="cbar__note">Genau das fehlt, wenn man selbst mit KI baut.</em></li>
+        <li class="cbar" title="Konzept, Design &amp; Entwicklung: 1.400 € (35 %)"><div class="cbar__head"><b>Konzept, Design &amp; Entwicklung</b><span><strong>1.400 €</strong><small>35 %</small></span></div><div class="cbar__track"><i style="--w:35%"></i></div><p>Unser Team baut Ihre Seite mit KI: Aufbau, Texte, Gestaltung, Terminbuchung.</p></li>
+        <li class="cbar" title="Projektleitung &amp; Abstimmung: 500 € (12,5 %)"><div class="cbar__head"><b>Projektleitung &amp; Abstimmung</b><span><strong>500 €</strong><small>12,5 %</small></span></div><div class="cbar__track"><i style="--w:12.5%"></i></div><p>Fester Ansprechpartner, Onboarding, Halbzeit-Termin, Übergabe, Kundenportal.</p></li>
+        <li class="cbar" title="Betrieb im Hintergrund: 400 € (10 %)"><div class="cbar__head"><b>Betrieb im Hintergrund</b><span><strong>400 €</strong><small>10 %</small></span></div><div class="cbar__track"><i style="--w:10%"></i></div><p>KI-Dienste, Server, Software-Lizenzen, Versicherungen, Strom.</p></li>
+        <li class="cbar" title="Unternehmen &amp; Gewinn: 700 € (17,5 %)"><div class="cbar__head"><b>Unternehmen &amp; Gewinn</b><span><strong>700 €</strong><small>17,5 %</small></span></div><div class="cbar__track"><i style="--w:17.5%"></i></div><p>Rücklagen, Weiterentwicklung unserer Werkzeuge – und ein fairer Gewinn.</p></li>
+      </ul>
+      <p class="cost__foot">Beispielrechnung, gerundet. Ihr Festpreis hängt vom Umfang ab und steht schriftlich fest, bevor wir starten – ohne versteckte Kosten.</p>
+    </div>
+  </div>
+  <div class="vs">
+    <div class="vs__col reveal"><p class="cost__kicker">Selbst gebaut mit KI</p><b class="vs__price">0 € Rechnung</b><ul><li>Ihre Abende statt Zeit für Ihre Patienten</li><li>Niemand prüft Handy-Ansicht, Barrierefreiheit und Pflichtangaben</li><li>Kein Ansprechpartner, wenn etwas nicht funktioniert</li></ul></div>
+    <div class="vs__col vs__col--us reveal" style="--d:.08s"><p class="cost__kicker">Mit Reeder</p><b class="vs__price">Festpreis, geprüft</b><ul><li>Sie sagen, was Sie wollen – um den Rest kümmern wir uns</li><li>Jede Version geprüft, mit Prüfbericht zur Übergabe</li><li>Vertrag mit einer GmbH, Betreuung mit festen Reaktionszeiten</li></ul></div>
+  </div>
+  <div class="hero__ctas reveal" style="justify-content:center;align-items:center;gap:26px;margin-top:34px">
+    <a href="termin.html" class="btn btn--ink magnetic">Festpreis für Ihr Projekt anfragen <span class="arr">→</span></a>
+    <a href="#prototyp" class="link">Erst den kostenlosen Prototyp sehen <span>→</span></a>
+  </div>
+</section>
+
+<!-- ============ SIGNATURE ============ -->
+<section class="section dark sig" style="overflow:hidden;isolation:isolate">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="sig__glow" aria-hidden="true"></div>
+  <div class="sig__inner">
+    <div>
+      <p class="eyebrow reveal"><b>06</b> Reeder Signature-Modell</p>
+      <h2 class="h2 reveal">Wir entwickeln Ihre Software. <span class="grad">Kostenlos.</span></h2>
+      <p class="lead reveal">Für geeignete Projekte übernehmen wir die komplette Entwicklung – gemeinsam mit Ihnen abgestimmt, ohne Obergrenze. Sie zahlen eine Einrichtungsgebühr sowie monatlich Lizenz und Betreuung. Überzeugt Sie die Software, übernehmen Sie sie später – die Hälfte Ihrer Monatsraten wird angerechnet.</p>
+      <div class="hero__ctas reveal" style="justify-content:flex-start">
+        <a href="modelle.html#beispiel" class="btn btn--lime">Rechenbeispiel ansehen <span class="arr">→</span></a>
+        <a href="termin.html?modus=auftrag&amp;modell=Signature" class="btn btn--ghost">Projekt einreichen <span class="arr">→</span></a>
+      </div>
+    </div>
+    <ol class="sigsteps">
+      <li class="reveal"><b>0 €</b><span>Entwicklung</span><p>Wir bauen Ihre Software kostenlos – Sie bestimmen mit.</p></li>
+      <li class="reveal" style="--d:.08s"><b>Einmalig</b><span>Einrichtung</span><p>Aufwandsabhängige Einrichtungsgebühr, z. B. vor Ort in Ihrer Praxis.</p></li>
+      <li class="reveal" style="--d:.16s"><b>Monatlich</b><span>Lizenz &amp; Betreuung</span><p>Mit Updates, Verbesserungen und laufender Weiterentwicklung.</p></li>
+      <li class="reveal" style="--d:.24s"><b>Nach 2 Jahren</b><span>Ihre Wahl</span><p>Übernehmen mit 50 % Anrechnung der Raten – oder aussteigen.</p></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ LEISTUNGEN (Liste) ============ -->
+<section class="section">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal"><b>07</b> Leistungen</p>
+      <h2 class="h2 reveal">Was wir für Sie <span class="hl">entwickeln.</span></h2>
+    </div>
+    <a href="leistungen.html" class="link reveal">Alle Leistungen im Detail <span>→</span></a>
+  </div>
+  <div class="slist">
+    <a href="leistungen.html#beratung" class="srow reveal"><span class="srow__no">01</span><h3>Software- &amp; KI-Beratung</h3><p>Kostenlos und unverbindlich: Wir evaluieren gemeinsam, wo Software und KI Ihnen helfen.</p><span class="srow__arr">→</span></a>
+    <a href="leistungen.html#websites" class="srow reveal"><span class="srow__no">02</span><h3>Websites &amp; Web-Apps</h3><p>Unternehmensauftritte, Portale und Web-Anwendungen – schnell, sicher, für Google optimiert.</p><span class="srow__arr">→</span></a>
+    <a href="leistungen.html#telefon" class="srow reveal"><span class="srow__no">03</span><h3>KI-Telefonassistent</h3><p>Nimmt Anrufe an, beantwortet Fragen und vergibt Termine – direkt verbunden mit Ihrer Praxis oder Ihrem Büro.</p><span class="srow__arr">→</span></a>
+    <a href="leistungen.html#ki" class="srow reveal"><span class="srow__no">04</span><h3>KI-Integration</h3><p>Assistenten, Dokumentenanalyse und Spracherkennung – datenschutzbewusst eingebunden.</p><span class="srow__arr">→</span></a>
+    <a href="leistungen.html#praxis" class="srow reveal"><span class="srow__no">05</span><h3>Praxis- &amp; Patientensysteme</h3><p>Patientenverwaltung, KI-Anamnese, OP-Planung, Vor- und Nachsorge.</p><span class="srow__arr">→</span></a>
+    <a href="leistungen.html#anpassung" class="srow reveal"><span class="srow__no">06</span><h3>Bestehende Software anpassen</h3><p>Vorhandene Systeme erweitern, modernisieren und mit KI verbinden.</p><span class="srow__arr">→</span></a>
+    <a href="leistungen.html#apps" class="srow reveal"><span class="srow__no">07</span><h3>Mobile Apps</h3><p>Apps für iPhone, iPad und Android aus einer Codebasis – inklusive App-Store-Start.</p><span class="srow__arr">→</span></a>
+  </div>
+</section>
+
+<!-- ============ PRODUKTE (Teaser) ============ -->
+<section class="section">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal"><b>08</b> Eigene Produkte</p>
+      <h2 class="h2 reveal">Gebaut aus Überzeugung. <span class="muted">Täglich im Einsatz.</span></h2>
+    </div>
+    <a href="produkte.html" class="link reveal">Alle Produkte <span>→</span></a>
+  </div>
+  <div class="pteaser">
+    <a href="produkte.html#covered" class="pt reveal">
+      <div class="pt__media pt__media--dark"><img src="assets/img/app-covered-home.webp" alt="Covered: Nova begrüßt Thomas auf dem Startbildschirm" loading="lazy" style="object-position:center 22%"></div>
+      <div class="pt__body"><span class="tag">KI-Agenten · Bald</span><h3>Covered</h3><p>KI-Agenten, die für Sie handeln – bis zum Anruf beim Arzt.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+    <a href="produkte.html#businesscat" class="pt reveal" style="--d:0.08s">
+      <div class="pt__media"><div class="art art--bcat">Business<span>Cat</span></div></div>
+      <div class="pt__body"><span class="tag">Gründung</span><h3>BusinessCat</h3><p>Aus guten Ideen werden Unternehmen – mit KI in Phasen.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+    <a href="produkte.html#lernpass" class="pt reveal" style="--d:0.16s">
+      <div class="pt__media"><img src="assets/img/app-lernpass-home.webp" alt="Lernpass Startbildschirm mit 3D-Lerninsel" loading="lazy" style="object-position:center 8%"></div>
+      <div class="pt__body"><span class="tag">Bildung</span><h3>Lernpass</h3><p>KI, die beim Lernen hilft – mit Rechercheaufträgen und Lernspielen.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+    <a href="produkte.html#perspektive" class="pt reveal" style="--d:0.24s">
+      <div class="pt__media"><img src="assets/img/app-perspektive-home.webp" alt="Perspektive Startbildschirm mit Persönlichkeitstyp" loading="lazy" style="object-position:center 4%"></div>
+      <div class="pt__body"><span class="tag">Kommunikation</span><h3>Perspektive</h3><p>Verstehen, was andere denken – und besser argumentieren.</p><span class="pt__more"><span>Ansehen</span><span>→</span></span></div>
+    </a>
+  </div>
+</section>
+
+<!-- ============ WARUM REEDER ============ -->
+<section class="section section--paper">
+  <div class="shead shead--center">
+    <p class="eyebrow reveal"><b>09</b> Warum Reeder</p>
+    <h2 class="h2 reveal">Kein Risiko. <span class="hl">Keine Überraschungen.</span></h2>
+  </div>
+  <div class="why">
+    <div class="why__item reveal"><i>Kostenlos testen</i><h3>Prototyp vor jeder Entscheidung.</h3><p>Wir bauen Ihnen kostenlos einen Prototyp. Sie sehen und klicken Ihre Software, bevor Sie sich festlegen.</p></div>
+    <div class="why__item reveal" style="--d:.08s"><i>Fair bezahlt</i><h3>Das Modell, das zu Ihnen passt.</h3><p>Festpreis, Festpreis mit Betreuung – oder Signature: Entwicklung kostenlos, Lizenz und Betreuung monatlich.</p></div>
+    <div class="why__item reveal" style="--d:.16s"><i>Ein Team</i><h3>Alles aus einer Hand.</h3><p>Recherche, Konzept, Design, Entwicklung, KI und Betrieb – ein eingespieltes Team mit festem Ansprechpartner.</p></div>
+  </div>
+</section>
+
+<!-- ============ ABLAUF kompakt ============ -->
+<section class="section">
+  <div class="shead">
+    <div>
+      <p class="eyebrow reveal"><b>10</b> So läuft's ab</p>
+      <h2 class="h2 reveal">In sechs Schritten zur fertigen Software.</h2>
+    </div>
+    <a href="ablauf.html" class="link reveal">Ablauf &amp; FAQ <span>→</span></a>
+  </div>
+  <ol class="steps steps--6" id="steps">
+    <li class="step reveal"><span class="step__n">01</span><span class="step__tag">Termin 1 · kostenlos</span><h3>Erstgespräch</h3><p>Wir verstehen Ihr Vorhaben und klären, wo Software und KI helfen.</p></li>
+    <li class="step reveal" style="--d:.06s"><span class="step__n">02</span><span class="step__tag">Termin 2 · kostenlos</span><h3>Ihr Prototyp</h3><p>Sie klicken sich durch Ihre eigene Software – ohne Vertrag.</p></li>
+    <li class="step reveal" style="--d:.12s"><span class="step__n">03</span><span class="step__tag">Festpreis oder Signature</span><h3>Angebot &amp; Start</h3><p>Sie wählen Ihr Modell. Onboarding und Zugang zum Kundenportal.</p></li>
+    <li class="step reveal" style="--d:.18s"><span class="step__n">04</span><span class="step__tag">Jeden Tag</span><h3>Neuer Stand</h3><p>Jeden Morgen ein geprüfter Stand. Anmerken, wann es Ihnen passt.</p></li>
+    <li class="step reveal" style="--d:.24s"><span class="step__n">05</span><span class="step__tag">Zur Halbzeit</span><h3>Abstimmung</h3><p>Gemeinsam den Stand durchgehen und die nächsten Schritte festlegen.</p></li>
+    <li class="step reveal" style="--d:.3s"><span class="step__n">06</span><span class="step__tag">Übergabe</span><h3>Live &amp; betreut</h3><p>Prüfbericht, Einrichtung – wenn nötig vor Ort – und Betreuung.</p></li>
+  </ol>
+</section>
+
+<!-- ============ FAQ kompakt ============ -->
+<section class="section section--paper faq">
+  <div class="shead shead--center">
+    <p class="eyebrow reveal"><b>11</b> Häufige Fragen</p>
+    <h2 class="h2 reveal">Kurz beantwortet.</h2>
+  </div>
+  <div class="faq__list">
+    <details class="reveal"><summary>Kann ich mir eine Website nicht einfach selbst mit KI bauen?</summary><p>Eine Seite erzeugen kann heute fast jeder. Was Sie bei uns bezahlen, ist alles drumherum: ein Team, das Aufbau, Datenschutz und Technik so entscheidet, dass es in drei Jahren noch funktioniert, eine Prüfstrecke, die jede Version auf vielen Geräten testet, einen Vertrag mit einer GmbH, die dafür einsteht – und Ihre Zeit. Wie sich der Preis zusammensetzt, zeigen wir oben <a href="#preise" class="grad" style="font-weight:600;text-decoration:none">offen gerechnet</a>.</p></details>
+    <details class="reveal"><summary>Ist die Entwicklung wirklich kostenlos?</summary><p>Im Reeder Signature-Modell ja – für geeignete Projekte entwickeln wir die gesamte Software kostenlos. Sie zahlen eine aufwandsabhängige Einrichtungsgebühr sowie monatlich Lizenz und Betreuung. Nach mindestens zwei Jahren können Sie die Software übernehmen (50 % Ihrer Monatsraten werden angerechnet) oder aussteigen.</p></details>
+    <details class="reveal"><summary>Was kostet der Prototyp?</summary><p>Nichts. Nach dem Erstgespräch erstellen wir ein Konzept und bauen Ihnen kostenlos einen Prototyp, damit Sie sehen, was Sie bekommen.</p></details>
+    <details class="reveal"><summary>Was macht ein KI-Telefonassistent?</summary><p>Er nimmt Anrufe an, beantwortet häufige Fragen, nimmt Anliegen auf und vergibt Termine – und gibt alles über eine Schnittstelle direkt an Ihre Praxis- oder Bürosoftware weiter.</p></details>
+    <details class="reveal"><summary>Wofür ist die Einrichtungsgebühr?</summary><p>Für den Aufwand, Ihre Software in Betrieb zu nehmen. Bei einer Website ist das oft nur die Übergabe; bei großen Systemen mit Praxisanbindung richten wir vor Ort ein und schulen Ihr Team. Deshalb ist sie aufwandsabhängig.</p></details>
+  </div>
+  <p style="text-align:center;margin-top:36px"><a href="ablauf.html#faq" class="link">Alle Fragen &amp; Antworten <span>→</span></a></p>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="final dark">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="final__glow" aria-hidden="true"></div>
+  <h2 class="final__title reveal">Erzählen Sie uns<br><em class="serif">von Ihrer Idee.</em></h2>
+  <p class="slot-hint reveal" style="--d:.1s"><i></i>Nächster freier Termin: <span data-next-slot>in Kürze</span></p>
+  <div class="hero__ctas reveal" style="--d:.2s">
+    <a href="termin.html" class="btn btn--lime magnetic">Erstgespräch buchen <span class="arr">→</span></a>
+    <a href="termin.html?modus=auftrag" class="btn btn--ghost magnetic">Projekt anfragen <span class="arr">→</span></a>
+  </div>
+</section>

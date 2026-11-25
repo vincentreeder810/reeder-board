@@ -1,0 +1,25 @@
+<!-- ============ REFERENZEN + ZAHLEN ============ -->
+<section class="section dark" style="overflow:hidden;isolation:isolate">
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="feature">
+    <div>
+      <p class="eyebrow reveal">Referenzen im Gesundheitswesen</p>
+      <h2 class="h2 reveal">Zwei Patienten&shy;verwaltungen. <span class="serif">Im Einsatz.</span></h2>
+      <p class="lead reveal">Für Kunden haben wir zwei komplette Patientenverwaltungssysteme entwickelt – für die Physiotherapie und für die Schönheitschirurgie.</p>
+      <ul class="checks checks--dark reveal">
+        <li><b>Physiotherapie:</b> KI-Anamnese vor der ersten Behandlung, Online-Check-in, Termine, Akte</li>
+        <li><b>Schönheitschirurgie:</b> OP-Plan, Vor- und Nachsorge, KI-Wundmanager, Fernsprechstunde</li>
+      </ul>
+      <div class="hero__ctas reveal" style="justify-content:flex-start">
+        <a href="projekte.html" class="btn btn--lime">Referenzen ansehen <span class="arr">→</span></a>
+      </div>
+    </div>
+    <figure class="feature__img reveal" style="--d:.15s;margin:0"><img src="assets/img/praxis-koerper.webp" alt="Patientenverwaltung Physiotherapie: Schmerzangabe am 3D-Körpermodell" loading="lazy" width="1800" height="1389"></figure>
+  </div>
+  <div class="stats">
+    <div class="stat reveal"><b><span class="count" data-to="2">0</span></b><span>Patientenverwaltungs&shy;systeme für Kunden entwickelt</span></div>
+    <div class="stat reveal" style="--d:.1s"><b><span class="count" data-to="4">0</span></b><span>eigene Produkte – und weitere in Arbeit</span></div>
+    <div class="stat reveal" style="--d:.2s"><b><span class="count" data-to="3">0</span></b><span>faire Vergütungsmodelle – inklusive Signature</span></div>
+    <div class="stat reveal" style="--d:.3s"><b>24<em>h</em></b><span>Antwortzeit auf jede Anfrage an Werktagen</span></div>
+  </div>
+</section>

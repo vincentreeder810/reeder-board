@@ -1,0 +1,26 @@
+Quellen der Website
+===================
+Jede Seite besteht aus einem Inhaltsteil (*.body.html) und dem gemeinsamen
+Rahmen (Navigation, Footer, SEO-Angaben) aus build.py.
+
+Nach einer Änderung an einer *.body.html oder an build.py die Seiten neu erzeugen:
+
+    python _build/build.py .
+
+(im Ordner "Website R S GmbH" ausführen). Domain und E-Mail stehen oben in build.py
+und in assets/js/main.js (CONFIG).
+
+
+3D-Modell im iPad-Rahmen (Startseite und Hardware-Seite)
+---------------------------------------------------------
+Das Modell kommt aus assets/js/produkt3d.js. Diese Datei wird gebaut, nicht von Hand bearbeiten.
+Quelle: ../Reeder Hardware GmbH/konzept-studio/web/produkt3d.ts, bauen mit "npm run build:web" im
+Ordner konzept-studio, danach hier "python _build/build.py ." ausführen (setzt die Versionsnummer).
+Eingebunden wird es über ein Element mit data-pad3d; main.js lädt das Skript erst beim Heranscrollen.
+
+Umbau vom 25.11.2026
+--------------------
+Die Startseite hat jetzt fünf Abschnitte: Kopf, Kapitel Software, Kapitel Hardware, Entwicklung mit KI, Abschluss.
+Nichts wurde gelöscht: Der vollständige alte Stand liegt in index.vorher-2026-11-25.body.html.txt.
+Der Abschnitt Referenzen steht jetzt auf der Produktseite, das Preisbeispiel auf der Software-Seite.
+Das Menü hat vier Punkte (NAV in build.py); Angebote, Projekte und Ablauf & FAQ sind über den Fuß erreichbar.

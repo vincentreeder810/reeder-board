@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Board · Reeder Software</title>
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/admin/admin.css">
+<link rel="stylesheet" href="/admin/hardware/hardware.css">
+<link rel="stylesheet" href="/portal/chat.css">
+<link rel="stylesheet" href="/portal/viewer.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7cff"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+<symbol id="sail" viewBox="16.5 9 72 72"><path d="M52 10C66 30 75 54 78 80H52Z" fill="url(#g)"/><path d="M45 28C37 44 30 62 27 80H45Z" fill="currentColor"/></symbol>
+<symbol id="i-cockpit" viewBox="0 0 24 24"><path d="M4 13a8 8 0 1 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m12 13 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="10" y="4" width="5" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="17" y="4" width="4" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-lead" viewBox="0 0 24 24"><path d="M4 20 20 4M9 4h11v11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-team" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 3l.8 1.7 1.7.8-1.7.8L19 8l-.8-1.7-1.7-.8 1.7-.8z" fill="currentColor"/></symbol>
+<symbol id="i-euro" viewBox="0 0 24 24"><path d="M17.5 6.5A7 7 0 1 0 17.5 17.5M4 10h9M4 14h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-soft" viewBox="0 0 24 24"><path d="M12 3 20.5 7.5v9L12 21l-8.5-4.5v-9z M3.5 7.5 12 12l8.5-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="i-desk" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4M8 9l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-kpi" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1" fill="currentColor"/></symbol>
+<symbol id="i-hw" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<!-- ============ Anmeldung / Einladung ============ -->
+<main class="login" id="login" hidden>
+  <div class="login__glow" aria-hidden="true"></div>
+  <form class="login__card" id="loginForm">
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></div>
+    <h1>Willkommen zurück.</h1>
+    <label>E-Mail<input type="email" name="email" autocomplete="username" required></label>
+    <label>Passwort<input type="password" name="password" autocomplete="current-password" required></label>
+    <p class="err" id="loginErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Anmelden</button>
+    <button type="button" class="linkbtn" data-auth="forgot">Passwort vergessen?</button>
+  </form>
+  <form class="login__card" id="codeForm" hidden>
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></div>
+    <h1>Bestätigungscode</h1>
+    <p class="hint" style="margin:0">Den 6-stelligen Code aus Ihrer Authenticator-App eingeben – oder einen Ihrer Notfallcodes.</p>
+    <label>Code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required autofocus></label>
+    <p class="err" id="codeErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Bestätigen</button>
+    <button type="button" class="linkbtn" data-auth="back">Zurück</button>
+  </form>
+  <form class="login__card" id="forgotForm" hidden>
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></div>
+    <h1>Passwort vergessen</h1>
+    <p class="hint" style="margin:0">Wir schicken Ihnen einen Link, mit dem Sie ein neues Passwort festlegen. Er ist eine Stunde gültig.</p>
+    <label>E-Mail<input type="email" name="email" autocomplete="username" required></label>
+    <p class="ok" id="forgotOk" hidden></p>
+    <button class="btn btn--grad" type="submit">Link senden</button>
+    <button type="button" class="linkbtn" data-auth="back">Zurück zur Anmeldung</button>
+  </form>
+  <form class="login__card" id="resetForm" hidden>
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></div>
+    <h1>Neues Passwort</h1>
+    <label>Neues Passwort (mind. 10 Zeichen)<input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+    <label>Passwort wiederholen<input type="password" name="password2" autocomplete="new-password" minlength="10" required></label>
+    <p class="err" id="resetErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Passwort speichern</button>
+  </form>
+  <form class="login__card" id="teamInvite" hidden>
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></div>
+    <h1 id="tiHello">Willkommen im Team.</h1>
+    <p class="hint" id="tiSub" style="margin:0"></p>
+    <label>E-Mail<input type="email" id="tiEmail" readonly></label>
+    <label>Neues Passwort (mind. 10 Zeichen)<input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+    <label>Passwort wiederholen<input type="password" name="password2" autocomplete="new-password" minlength="10" required></label>
+    <p class="err" id="tiErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Zugang aktivieren</button>
+  </form>
+</main>
+
+<!-- ============ Board ============ -->
+<div class="app" id="app" hidden>
+  <aside class="side">
+    <a class="brand" href="#cockpit" style="text-decoration:none"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></a>
+    <nav>
+      <a href="#cockpit" data-view="cockpit"><svg><use href="#i-cockpit"/></svg><span>Cockpit</span><b class="badge" id="badgeCockpit" hidden></b></a>
+      <a href="#kennzahlen" data-view="kennzahlen" data-owner><svg><use href="#i-kpi"/></svg><span>Kennzahlen</span></a>
+      <a href="#arbeitsplatz" data-view="arbeitsplatz"><svg><use href="#i-desk"/></svg><span>Mein Arbeitsplatz</span><b class="badge badge--timer" id="badgeTimer" hidden>●</b></a>
+      <a href="#posteingang" data-view="posteingang"><svg><use href="#i-inbox"/></svg><span>Posteingang</span><b class="badge" id="badgeInbox" hidden></b></a>
+      <a href="#support" data-view="support"><svg><use href="#i-help"/></svg><span>Support</span><b class="badge" id="badgeSupport" hidden></b></a>
+      <a href="#kunden" data-view="kunden"><svg><use href="#i-users"/></svg><span>Kunden</span></a>
+      <a href="#projekte" data-view="projekte"><svg><use href="#i-board"/></svg><span>Projekte</span></a>
+      <a href="#termine" data-view="termine"><svg><use href="#i-cal"/></svg><span>Termine</span><b class="badge" id="badgeTermine" hidden></b></a>
+      <a href="#anfragen" data-view="anfragen" data-owner><svg><use href="#i-lead"/></svg><span>Vertrieb</span><b class="badge" id="badgeAnfragen" hidden></b></a>
+      <p class="side__label" data-owner>Unternehmen</p>
+      <a href="#software" data-view="software"><svg><use href="#i-soft"/></svg><span>Verträge &amp; Produkte</span></a>
+      <a href="#finanzen" data-view="finanzen" data-owner><svg><use href="#i-euro"/></svg><span>Finanzen &amp; Buchhaltung</span></a>
+      <a href="#team" data-view="team" data-owner><svg><use href="#i-team"/></svg><span>Team</span></a>
+      <a href="#einstellungen" data-view="einstellungen"><svg><use href="#i-gear"/></svg><span>Einstellungen</span></a>
+    </nav>
+    <div class="side__me"><span class="avatar" id="meAv"></span><div><b id="meName"></b><span id="meRole"></span></div>
+      <button class="side__out" id="logout" title="Abmelden" aria-label="Abmelden">⏻</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="banner" id="mailBanner" hidden>E-Mail-Versand ist noch nicht eingerichtet – Mails landen im <a href="#einstellungen/email">Postausgang</a>. <a href="#einstellungen/email">Jetzt einrichten →</a></div>
+
+    <!-- Cockpit -->
+    <section data-section="cockpit">
+      <header class="head"><div><p class="kicker" id="today"></p><h1 id="hello">Guten Tag.</h1></div></header>
+      <!-- Cockpit = Überblick über das Unternehmen. Die tägliche Arbeit (Vorgänge) steht in „Mein Arbeitsplatz“. -->
+      <div class="tiles" id="ckTiles"></div>
+      <div class="ckgrid">
+        <div class="card"><h2>Hinweise und Nachrichten</h2><div id="ckTodo" class="todo"></div></div>
+        <div class="stack">
+          <div class="card"><h2>Termine der nächsten 7 Tage</h2><div id="ckAppts" class="list"></div></div>
+          <div class="card"><h2>Projekte nach Phase</h2><div id="ckPhases" class="phasebars"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Posteingang -->
+    <section data-section="posteingang" hidden>
+      <header class="head"><div><p class="kicker">Posteingang</p><h1>Alles, was auf Antwort wartet</h1></div></header>
+      <div id="inboxList" class="inbox"></div>
+    </section>
+
+    <!-- Kunden -->
+    <section data-section="kunden" hidden>
+      <div id="kList">
+        <header class="head"><div><p class="kicker">Kunden</p><h1 id="kTitle">Ihre Kunden</h1><p class="sub" id="kSub"></p></div>
+          <div class="row" style="display:flex;gap:8px"><a class="btn btn--ghost" href="/portal/" target="_blank" rel="noopener">Portal ansehen ↗</a><button class="btn btn--grad" id="newClient" data-owner>Neuer Kunde</button></div></header>
+        <div class="lctl" id="kCtl"></div>
+        <div id="clients" class="ltab"></div>
+      </div>
+      <div id="clientDetail" class="kdetail" hidden></div>
+    </section>
+
+    <!-- Projekte (Board) -->
+    <section data-section="projekte" hidden>
+      <div id="pList">
+        <header class="head"><div><p class="kicker">Software &amp; Hardware</p><h1 id="pbTitle">Alle Projekte</h1><p class="sub" id="pbSub"></p></div>
+          <div class="row" style="display:flex;gap:8px"><button class="btn btn--grad" id="newProjectBtn" data-owner>Neues Projekt</button></div></header>
+        <div class="tload" id="pLoad"></div>
+        <div class="pboard" id="pboard"></div>
+      </div>
+      <div id="projectPage" class="ppage" hidden></div>
+    </section>
+
+    <!-- Termine (Website-Buchungen + Verfügbarkeit) -->
+    <!-- Seite eines Hardware-Projekts (#hardware/projekt/<id>): wird von /admin/hardware/hardware.js gefüllt (Quelle: Reeder Hardware GmbH/konzept-studio) -->
+    <section data-section="hardware" hidden><div id="hwRoot"></div></section>
+
+    <section data-section="termine" hidden>
+      <header class="head"><div><p class="kicker">Termine</p><h1 id="calTitle">Kalender</h1><p class="sub" id="calSub"></p></div>
+        <div class="calbar">
+          <div class="seg" id="calView"><button data-v="woche">Woche</button><button data-v="monat">Monat</button><button data-v="liste">Liste</button></div>
+          <div class="calnav" id="calNav"><button data-nav="-1" aria-label="Zurück">‹</button><button data-nav="0">Heute</button><button data-nav="1" aria-label="Weiter">›</button></div>
+          <span id="calWho"></span>
+          <button class="btn btn--ghost btn--sm" id="toAvail" data-owner>Arbeitszeiten</button>
+          <button class="btn btn--grad btn--sm" id="calNew" data-owner>Neuer Termin</button></div></header>
+      <div id="tKalender"><div id="cal"></div></div>
+      <div id="tVerfuegbarkeit" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><button class="back" id="backCal" style="margin:0">← Zurück zum Kalender</button><button class="btn btn--grad" id="saveAvail">Speichern</button></div>
+        <div class="grid2">
+          <div class="card"><h2>Arbeitszeiten</h2><p class="hint">Nur in diesen Zeitfenstern können Termine gewählt werden – auf der Website und im Kundenportal.</p><div id="weekly"></div></div>
+          <div class="stack">
+            <div class="card"><h2>Termintypen</h2><div id="types"></div></div>
+            <div class="card"><h2>Regeln</h2>
+              <div class="row3">
+                <label>Raster<select id="step"><option value="15">15 Min</option><option value="30">30 Min</option><option value="60">60 Min</option></select></label>
+                <label>Vorlauf<span class="unit"><input type="number" id="leadHours" min="0" max="336"> Std.</span></label>
+                <label>Buchbar bis<span class="unit"><input type="number" id="horizonDays" min="7" max="365"> Tage</span></label>
+              </div>
+            </div>
+            <div class="card"><h2>Urlaub &amp; Sperrtage</h2><div id="blocked"></div><button class="link" id="addBlock">+ Zeitraum hinzufügen</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vertrieb (Projektanfragen über die Website) -->
+    <section data-section="anfragen" hidden>
+      <header class="head"><div><p class="kicker">Vertrieb</p><h1>Anfragen &amp; Interessenten</h1><p class="sub">Vom ersten Gespräch bis zum Auftrag: Jede Karte wandert nach rechts – Gespräch, Angebot, Auftrag.</p></div>
+        <div class="row" style="display:flex;gap:8px"><button class="btn btn--grad" id="newLead">Neue Anfrage</button></div></header>
+      <div class="pipe" id="pipeline"></div>
+      <details class="formreq"><summary>Alle Projektanfragen aus dem Website-Formular</summary><div id="requests" class="list list--cards"></div></details>
+    </section>
+
+    <!-- Finanzen -->
+    <section data-section="support" hidden>
+      <header class="head"><div><p class="kicker">Kunden</p><h1>Support</h1></div></header>
+      <div id="supBody"></div>
+    </section>
+
+    <section data-section="kennzahlen" hidden>
+      <header class="head"><div><p class="kicker">Unternehmen</p><h1>Kennzahlen</h1></div></header>
+      <div id="kpiBody"></div>
+    </section>
+
+    <section data-section="arbeitsplatz" hidden>
+      <header class="head"><div><p class="kicker" id="wpDate">Heute</p><h1>Mein Arbeitsplatz</h1></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn--ghost" data-wp="log">Zeit nachtragen</button><button class="btn btn--grad" data-wp="newTask">Neue Aufgabe</button></div></header>
+      <!-- Vorgänge: je Vorhaben eine Karte mit Weg und nächstem Schritt -->
+      <div class="wpkopf"><h2>Vorgänge</h2><div class="seg" id="vgWahl" hidden><button data-vg="meine">Meine</button><button data-vg="alle">Alle</button></div></div>
+      <div class="heute" id="ckHeute"><div class="empty">Lade …</div></div>
+      <div id="wpBody"></div>
+    </section>
+
+    <section data-section="software" hidden>
+      <header class="head"><div><p class="kicker">Unternehmen</p><h1>Verträge &amp; Produkte</h1></div>
+        <div class="seg" id="swTabs"><button data-t="uebersicht" data-owner class="on">Übersicht</button><button data-t="vertraege" data-owner>Verträge</button><button data-t="produkte">Produkte</button></div></header>
+      <div data-sw="uebersicht" id="swOverview"></div>
+      <div data-sw="vertraege" id="swContracts" hidden></div>
+      <div data-sw="vertraege" id="swVerein" hidden></div>
+      <div data-sw="produkte" id="swProducts" hidden></div>
+    </section>
+
+    <section data-section="finanzen" hidden>
+      <header class="head"><div><p class="kicker">Unternehmen</p><h1>Finanzen &amp; Buchhaltung</h1>
+          <div class="seg" id="finFirma" hidden style="margin-top:10px"><button data-f="" class="on">Gesamt</button><button data-f="software">Software GmbH</button><button data-f="hardware">Hardware GmbH</button></div></div>
+        <div class="seg" id="finTabs"><button data-t="uebersicht" class="on">Übersicht</button><button data-t="rechnungen">Rechnungen &amp; Angebote</button><button data-t="belege">Ausgaben</button><button data-t="auswertung">Abschluss &amp; Steuerberater</button></div></header>
+      <div class="banner" id="finWarn" hidden></div>
+      <div data-fin="uebersicht" id="finOverview"></div>
+      <div data-fin="rechnungen" id="finInvoices" hidden></div>
+      <div data-fin="angebote" id="finQuotes" hidden></div>
+      <div data-fin="belege" id="finExpenses" hidden></div>
+      <div data-fin="auswertung" id="finReport" hidden></div>
+    </section>
+
+    <!-- Team -->
+    <section data-section="team" hidden>
+      <header class="head"><div><p class="kicker">Unternehmen</p><h1>Team</h1></div><button class="btn btn--grad" id="newMember">Person einladen</button></header>
+      <div class="rolecards">
+        <div class="rolecard rolecard--owner"><b>Inhaber</b><p>Sieht und darf alles: Finanzen, Vertrieb, Team, Einstellungen – und natürlich alle Kunden und Projekte.</p></div>
+        <div class="rolecard"><b>Entwickler</b><p>Sieht nur die Projekte, denen Sie ihn zuweisen: Chat, Prototypen, Anmerkungen, Termine. Keine Beträge, Rechnungen oder Verträge.</p></div>
+      </div>
+      <div id="teamList" class="teamlist"></div>
+    </section>
+
+    <!-- Einstellungen -->
+    <section data-section="einstellungen" hidden>
+      <header class="head"><div><p class="kicker">Einstellungen</p><h1>Einstellungen</h1></div>
+        <div class="seg" id="setTabs"><button data-t="firma" data-owner class="on">Unternehmen</button><button data-t="email" data-owner>E-Mail</button><button data-t="kalender" data-owner>Termine &amp; Video</button><button data-t="automatik" data-owner>Automatik</button><button data-t="vertrag" data-owner>Vertrag &amp; AVV</button><button data-t="ki" data-owner>KI-Assistent</button><button data-t="covered" data-owner>Nova</button><button data-t="betrieb" data-owner>Betrieb</button><button data-t="livegang" data-owner>Livegang</button><button data-t="konto">Mein Zugang</button></div></header>
+
+      <div data-set="automatik" hidden>
+        <div class="autogrid">
+          <form class="card autoform" id="autoForm"></form>
+          <div class="stack">
+            <div class="card"><h2>Status</h2><p id="autoStatus" style="margin:0 0 14px"></p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn--ghost btn--sm" id="autoRun" type="button">Jetzt prüfen</button><button class="btn btn--ghost btn--sm" id="autoWeekly" type="button">Wochenbericht ansehen</button></div></div>
+            <div class="card"><h2>Protokoll</h2><div id="autoLog" class="autolog"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div data-set="betrieb" hidden><div id="opsBody"></div></div>
+      <div data-set="livegang" hidden><div id="goBody"></div></div>
+      <div data-set="ki" hidden><div id="kiBody"></div></div>
+      <div data-set="covered" hidden><div id="covBody"></div></div>
+
+      <div data-set="vertrag" hidden>
+        <form class="card ctrform" id="contractForm">
+          <div><h2>Standard-Zahlungsplan</h2><p class="hint" style="margin:-6px 0 10px">Wird in jedes neue Angebot übernommen und lässt sich dort anpassen. „Fällig ab Phase“ heißt: Sobald das Projekt die Phase erreicht, liegt der Rechnungsentwurf im Cockpit zur Freigabe bereit.</p>
+            <div id="ctrPlan"></div><div class="fplan__foot"><button type="button" class="link" id="ctrAdd">+ Rate hinzufügen</button><span id="ctrSum"></span></div></div>
+          <div><h2>Vertragsbedingungen</h2><p class="hint" style="margin:-6px 0 10px">Muss der Kunde bei jeder Annahme bestätigen. Jede Änderung wird als neue Fassung gespeichert – bereits angenommene Angebote behalten ihre Fassung.</p>
+            <textarea name="terms" rows="16" class="mono"></textarea></div>
+          <div><h2>Vereinbarung zur Auftragsverarbeitung (AVV)</h2><p class="hint" style="margin:-6px 0 10px">Nur bei Angeboten mit Haken „AVV“ – also wenn wir personenbezogene Daten des Kunden verarbeiten oder hosten.</p>
+            <textarea name="avv" rows="12" class="mono"></textarea></div>
+          <p class="warnbox">Die mitgelieferten Texte sind ein sorgfältiger Entwurf, ersetzen aber keine Rechtsberatung. Bitte vor dem ersten echten Auftrag von einer Anwältin oder einem Anwalt prüfen lassen.</p>
+          <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><span class="hint" id="ctrVer"></span><button class="btn btn--grad" type="submit">Speichern</button></div>
+        </form>
+      </div>
+
+      <div data-set="firma">
+        <form class="card form-grid" id="companyForm">
+          <h2>Unternehmensdaten <small class="hint" style="font-weight:400;margin:0">– erscheinen auf Rechnungen, Angeboten und in E-Mails</small></h2>
+          <label class="span2">Firma<input name="name"></label>
+          <label class="span2">Straße &amp; Hausnummer<input name="street" autocomplete="street-address"></label>
+          <label>PLZ<input name="zip"></label><label>Ort<input name="city"></label>
+          <label>E-Mail<input name="email" type="email"></label><label>Telefon<input name="phone"></label>
+          <label>Website<input name="website"></label><label>Geschäftsführer<input name="managingDirector"></label>
+          <label>Handelsregister<input name="register" placeholder="z. B. HRB 12345, Amtsgericht …"></label><label>Steuernummer<input name="taxNumber"></label>
+          <label>USt-IdNr.<input name="vatId" placeholder="DE123456789"></label><label>Umsatzsteuer (%)<input name="vatRate" type="number" min="0" max="30"></label>
+          <h2 class="span2" style="margin-top:8px">Bankverbindung</h2>
+          <label class="span2">Bank<input name="bank"></label>
+          <label>IBAN<input name="iban"></label><label>BIC<input name="bic"></label>
+          <label>Zahlungsziel (Tage)<input name="paymentDays" type="number" min="0" max="365"></label>
+          <h2 class="span2" style="margin-top:8px">Steuer &amp; Steuerberater</h2>
+          <label>Versteuerung<select name="taxMethod"><option value="soll">Soll-Versteuerung (nach Rechnungsdatum)</option><option value="ist">Ist-Versteuerung (nach Zahlungseingang)</option></select></label>
+          <span></span>
+          <label>DATEV-Beraternummer<input name="datevBerater" inputmode="numeric"></label><label>DATEV-Mandantennummer<input name="datevMandant" inputmode="numeric"></label>
+          <div class="span2"><button class="btn btn--grad" type="submit">Speichern</button></div>
+        </form>
+      </div>
+
+      <div data-set="email" hidden>
+        <div class="grid2">
+          <form class="card form-grid" id="smtpForm">
+            <h2>Ihr E-Mail-Postfach (SMTP)</h2>
+            <p class="hint span2" style="margin:0" id="smtpInfo"></p>
+            <label class="span2">Server<input name="host" placeholder="z. B. smtp.ionos.de"></label>
+            <label>Port<input name="port" type="number" value="587"></label>
+            <label>Benutzer<input name="user" autocomplete="off" placeholder="hallo@reeder-software.de"></label>
+            <label class="span2">Passwort<input name="pass" type="password" autocomplete="new-password" placeholder="leer lassen = unverändert"></label>
+            <div class="span2" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn--grad" type="submit">Speichern</button><button class="btn btn--ghost" type="button" id="testMail">Testmail an mich senden</button></div>
+          </form>
+          <div class="stack">
+            <form class="card" id="mailForm"><h2>Absender</h2>
+              <label>Absendername<input name="fromName"></label>
+              <label>Absenderadresse<input name="fromAddress" type="email"></label>
+              <label>Benachrichtigungen ans Team an<input name="notifyAddress" type="email"></label>
+              <button class="btn" type="submit">Speichern</button>
+            </form>
+            <div class="card"><h2>Postausgang</h2><p class="hint">Alle E-Mails, die das System verschickt hat oder verschicken wollte.</p><div id="outbox" class="list outbox"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div data-set="kalender" hidden>
+        <form class="card form" id="meetForm" style="max-width:720px;display:grid;gap:12px;margin-bottom:18px"><h2 style="margin:0">Videogespräche</h2>
+          <p class="hint" style="margin:0">Jeder bestätigte Termin bekommt automatisch einen Video-Link in die Einladung und in den Kalendereintrag.</p>
+          <label>Video-Link<select name="mode"><option value="jitsi">Automatisch: eigener Raum je Termin (Jitsi – ohne Konto, ohne Installation)</option><option value="fixed">Immer mein fester Raum (Teams, Zoom, Google Meet …)</option></select></label>
+          <label hidden>Link zu Ihrem festen Raum<input name="url" placeholder="https://…"></label>
+          <button class="btn btn--sm" type="submit" style="justify-self:start">Speichern</button></form>
+        <div class="card" style="max-width:720px"><h2>Kalender-Abo</h2><p class="hint">Diese geheime Adresse in Outlook, Google Kalender oder auf dem iPhone abonnieren – alle Termine erscheinen dort automatisch.</p>
+          <div class="copy"><input id="calUrl" readonly><button class="btn" id="copyCal">Kopieren</button></div>
+          <button class="link" id="resetCal" style="margin-top:10px">Neue Adresse erzeugen (alte wird ungültig)</button>
+        </div>
+      </div>
+
+      <div data-set="konto" hidden>
+        <form class="card" id="pwForm" style="max-width:520px;display:grid;gap:14px"><h2>Passwort ändern</h2>
+          <label>Aktuelles Passwort<input type="password" name="current" autocomplete="current-password" required></label>
+          <label>Neues Passwort (mind. 10 Zeichen)<input type="password" name="next" autocomplete="new-password" minlength="10" required></label>
+          <button class="btn" type="submit" style="justify-self:start">Passwort ändern</button>
+        </form>
+        <div class="card" id="tfaCard" style="max-width:520px;margin-top:16px"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="clientModal" hidden>
+  <form class="card" id="clientForm"><h2>Neuer Kontakt</h2>
+    <p class="hint">Als Anfrage legen Sie zunächst nur den Kontakt an. Als Mandant bekommt er direkt einen Zugang zum Kundenportal.</p>
+    <label>Firma<input name="company" required maxlength="160"></label>
+    <label>Ansprechpartner<input name="name" required maxlength="120"></label>
+    <label>E-Mail<input name="email" type="email" required maxlength="160"></label>
+    <label>Telefon (optional)<input name="phone" maxlength="40"></label>
+    <div class="radiocards"><b>Anlegen als</b>
+      <label><input type="radio" name="stage" value="mandant" checked><span><b>Kunde (Mandant)</b><small>mit Zugang zum Kundenportal</small></span></label>
+      <label><input type="radio" name="stage" value="anfrage"><span><b>Anfrage</b><small>erst einmal nur Kontakt, im Vertrieb</small></span></label></div>
+    <label class="check" id="cfInvite" hidden><input type="checkbox" name="sendInvite" checked> Einladung zum Kundenportal per E-Mail senden</label>
+    <p class="err" id="clientErr" hidden></p>
+    <div class="row" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad" type="submit">Anlegen</button></div>
+  </form>
+  <div class="card" id="clientDone" hidden><h2>Zugang angelegt</h2>
+    <p class="hint" id="clientDoneInfo"></p>
+    <div class="copy"><input id="clientDoneLink" readonly><button class="btn" id="clientDoneCopy">Kopieren</button></div>
+    <div class="row" style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn btn--ghost" data-close>Fertig</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/portal/chat.js"></script>
+<script src="/portal/viewer.js"></script>
+<script src="/admin/admin.js"></script>
+<script src="/admin/kunden.js"></script>
+<script src="/admin/board.js"></script>
+<script src="/admin/kalender.js"></script>
+<script src="/admin/finance.js"></script>
+<script src="/admin/software.js"></script>
+<script src="/admin/work.js"></script>
+<script src="/admin/kpi.js"></script>
+<script src="/admin/support.js"></script>
+<script src="/admin/security.js"></script>
+<script src="/admin/stand.js"></script>
+<script src="/admin/assistant.js"></script>
+<script src="/admin/auftrag.js"></script>
+<script src="/admin/pruefung.js"></script>
+<script src="/admin/covered.js"></script>
+<script type="module" src="/admin/hardware/hardware.js"></script>
+</body>
+</html>

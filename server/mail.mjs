@@ -1,0 +1,62 @@
+// E-Mail-Versand über Ihr eigenes Postfach (SMTP). Ohne SMTP-Daten landen Mails nur im Postausgang des Admin-Boards.
+import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
+
+let transporter = null, smtpReady = false, smtpHost = null;
+// SMTP-Zugang: zuerst aus den Einstellungen im Admin-Board, sonst aus der .env
+export async function reloadSmtp() {
+  if (process.env.MAIL_DISABLED) { transporter = null; smtpReady = false; smtpHost = null; return false; }   // Demo-Board: niemals echte Mails
+  const st = getSetting("smtp", {});
+  const cfg = st.host ? st : { host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
+  transporter = null; smtpReady = false; smtpHost = cfg.host || null;
+  if (!(cfg.host && cfg.user && cfg.pass)) return false;
+  try {
+    const nodemailer = (await import("nodemailer")).default;
+    const port = Number(cfg.port || 587);
+    transporter = nodemailer.createTransport({ host: cfg.host, port, secure: port === 465, auth: { user: cfg.user, pass: cfg.pass } });
+    smtpReady = true;
+  } catch (e) { console.warn("E-Mail: Paket 'nodemailer' fehlt – bitte einmal 'npm install' ausführen. Mails werden nur gespeichert."); }
+  return smtpReady;
+}
+await reloadSmtp();
+export const mailStatus = () => ({ ready: smtpReady, host: smtpHost });
+/** Verbindung testen und eine Testmail schicken */
+export async function testSmtp(to) {
+  if (!smtpReady) return { ok: false, error: "Noch kein vollständiger SMTP-Zugang hinterlegt." };
+  try {
+    await transporter.verify();
+    const cfg = getSetting("mail", DEFAULT_MAIL);
+    await transporter.sendMail({ from: `"${cfg.fromName}" <${cfg.fromAddress}>`, to, subject: "Testmail aus dem Admin-Board", text: "Der E-Mail-Versand Ihres Admin-Boards funktioniert. 🎉" });
+    return { ok: true };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+}
+
+export async function sendMail({ to, subject, text, attachments }) {
+  const cfg = getSetting("mail", DEFAULT_MAIL);
+  const ins = db.prepare("INSERT INTO outbox(to_addr, subject, body, status) VALUES(?, ?, ?, ?)");
+  if (!smtpReady) { ins.run(to, subject, text, "nicht versendet – SMTP nicht eingerichtet"); return false; }
+  try {
+    await transporter.sendMail({ from: `"${cfg.fromName}" <${cfg.fromAddress}>`, to, subject, text, attachments });
+    ins.run(to, subject, text, "versendet");
+    return true;
+  } catch (e) {
+    db.prepare("INSERT INTO outbox(to_addr, subject, body, status, error) VALUES(?, ?, ?, ?, ?)").run(to, subject, text, "fehlgeschlagen", String(e.message || e));
+    return false;
+  }
+}
+
+export function icsFor(b, { method = "PUBLISH", title } = {}) {
+  const z = d => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const end = new Date(Date.parse(b.start) + b.minutes * 60000);
+  const esc = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
+  return [
+    "BEGIN:VEVENT", `UID:termin-${b.id}@reeder-software.de`, `DTSTAMP:${z(new Date())}`,
+    `DTSTART:${z(b.start)}`, `DTEND:${z(end)}`,
+    `SUMMARY:${esc(title || `${b.typeLabel || b.type}${b.product ? " · " + b.product : ""} – ${b.name}`)}`,
+    `DESCRIPTION:${esc([b.company && `Unternehmen: ${b.company}`, `E-Mail: ${b.email}`, b.phone && `Telefon: ${b.phone}`, b.channel && `Gespräch: ${b.channel}`, b.message].filter(Boolean).join("\n"))}`,
+    b.video_url ? `LOCATION:${esc(b.video_url)}` : null, b.video_url ? `URL:${b.video_url}` : null,
+    method === "CANCEL" ? "STATUS:CANCELLED" : `STATUS:${b.status === "bestaetigt" ? "CONFIRMED" : "TENTATIVE"}`,
+    "END:VEVENT",
+  ].filter(Boolean).join("\r\n");
+}
+export const icsCalendar = (events, name = "Reeder Software – Termine") =>
+  ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Reeder Software GmbH//Admin//DE", "CALSCALE:GREGORIAN", `X-WR-CALNAME:${name}`, "X-WR-TIMEZONE:Europe/Berlin", ...events, "END:VCALENDAR"].join("\r\n");

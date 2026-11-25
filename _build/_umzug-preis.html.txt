@@ -1,0 +1,27 @@
+<!-- ============ PREIS ============ -->
+<section class="section px" id="preise">
+  <div class="px__inner">
+    <p class="eyebrow reveal" style="justify-content:center">Preise</p>
+    <h2 class="h2 reveal">Ein fairer Preis. <span class="hl">Offen gerechnet.</span></h2>
+    <p class="px__sub reveal">Beispiel: eine Praxis-Website mit Online-Terminbuchung.</p>
+    <p class="px__total reveal"><b>4.000 €</b><span>netto · Festpreis</span></p>
+    <div class="pstack reveal" role="img" aria-label="Aufteilung von 4.000 Euro: Qualität und Prüfung 1.000 Euro, Design und Entwicklung 1.400 Euro, Projektleitung 500 Euro, Server und Dienste 400 Euro, Unternehmen und Gewinn 700 Euro">
+      <div class="pstack__bar">
+        <span class="hi" style="--w:25"></span><span style="--w:35"></span><span style="--w:12.5"></span><span style="--w:10"></span><span style="--w:17.5"></span>
+      </div>
+      <ul class="pstack__lbl">
+        <li class="hi" style="--w:25"><b>1.000 €</b><span>Qualität &amp; Prüfung</span></li>
+        <li style="--w:35"><b>1.400 €</b><span>Design &amp; Entwicklung</span></li>
+        <li style="--w:12.5"><b>500 €</b><span>Projekt&shy;leitung</span></li>
+        <li style="--w:10"><b>400 €</b><span>Server &amp; Dienste</span></li>
+        <li style="--w:17.5"><b>700 €</b><span>Unternehmen &amp; Gewinn</span></li>
+      </ul>
+    </div>
+    <p class="px__note reveal"><span class="grad">Ein Viertel fließt in Prüfung</span> – jede Version auf Smartphone, Tablet und Desktop getestet. Genau das fehlt, wenn man selbst mit KI baut.</p>
+    <div class="hero__ctas reveal" style="justify-content:center;align-items:center;gap:26px">
+      <a href="termin.html" class="btn btn--ink magnetic">Festpreis anfragen <span class="arr">→</span></a>
+      <a href="modelle.html" class="link">Oder: 0 € Entwicklung im Signature-Modell <span>→</span></a>
+    </div>
+    <p class="px__fine reveal">Beispielrechnung, netto. Ihr Festpreis steht schriftlich fest, bevor wir starten.</p>
+  </div>
+</section>

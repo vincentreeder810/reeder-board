@@ -1,0 +1,12 @@
+# Zugangsdaten und Daten gehören nie ins Repository
+.env
+data/
+data-demo/
+node_modules/
+*.db
+*.db-wal
+*.db-shm
+
+# Lokale Sicherungen und Werkzeug-Einstellungen bleiben auf dem Rechner
+_sicherung-*/
+.claude/

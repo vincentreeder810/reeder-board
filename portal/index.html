@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Kundenportal · Reeder Software</title>
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/portal/portal.css">
+<link rel="stylesheet" href="/portal/chat.css">
+<link rel="stylesheet" href="/portal/viewer.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f7cff"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+<symbol id="sail" viewBox="16.5 9 72 72"><path d="M52 10C66 30 75 54 78 80H52Z" fill="url(#g)"/><path d="M45 28C37 44 30 62 27 80H45Z" fill="currentColor"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="i-proj" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 8h18M8 21h8M12 18v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1" fill="currentColor"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M9 13h6M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<!-- ============ Anmeldung ============ -->
+<main class="gate" id="login" hidden>
+  <div class="gate__glow" aria-hidden="true"></div>
+  <form class="gate__card" id="loginForm">
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Software</em></span></div>
+    <h1>Schön, dass Sie da sind.</h1>
+    <p class="sub">Melden Sie sich an – Kunden finden hier ihre Projekte, Termine und Dokumente, unser Team gelangt automatisch ins Admin-Board.</p>
+    <label>E-Mail<input type="email" name="email" autocomplete="username" required></label>
+    <label>Passwort<input type="password" name="password" autocomplete="current-password" required></label>
+    <p class="err" id="loginErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Anmelden</button>
+    <button type="button" class="linkbtn" id="toForgot">Passwort vergessen?</button>
+  </form>
+  <form class="gate__card" id="forgotForm" hidden>
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Software</em></span></div>
+    <h1>Passwort vergessen</h1>
+    <p class="sub">Geben Sie Ihre E-Mail-Adresse ein – wir schicken Ihnen einen Link für ein neues Passwort (eine Stunde gültig).</p>
+    <label>E-Mail<input type="email" name="email" autocomplete="username" required></label>
+    <p class="ok" id="forgotOk" hidden></p>
+    <button class="btn btn--grad" type="submit">Link senden</button>
+    <button type="button" class="linkbtn" id="backLogin">Zurück zur Anmeldung</button>
+  </form>
+  <form class="gate__card" id="resetForm" hidden>
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Software</em></span></div>
+    <h1>Neues Passwort</h1>
+    <label>Neues Passwort (mind. 10 Zeichen)<input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+    <label>Passwort wiederholen<input type="password" name="password2" autocomplete="new-password" minlength="10" required></label>
+    <p class="err" id="resetErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Passwort speichern</button>
+  </form>
+  <p class="gate__foot"><a href="/">reeder-software.de</a></p>
+</main>
+
+<!-- ============ Einladung annehmen ============ -->
+<main class="gate" id="invite" hidden>
+  <div class="gate__glow" aria-hidden="true"></div>
+  <form class="gate__card" id="inviteForm">
+    <div class="brand"><svg><use href="#sail"/></svg><span>Reeder <em>Kundenportal</em></span></div>
+    <h1 id="inviteHello">Willkommen.</h1>
+    <p class="sub" id="inviteSub">Legen Sie Ihr Passwort fest – danach sind Sie direkt angemeldet.</p>
+    <label>E-Mail<input type="email" id="inviteEmail" autocomplete="username" readonly></label>
+    <label>Neues Passwort (mind. 10 Zeichen)<input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+    <label>Passwort wiederholen<input type="password" name="password2" autocomplete="new-password" minlength="10" required></label>
+    <p class="err" id="inviteErr" hidden></p>
+    <button class="btn btn--grad" type="submit">Zugang aktivieren</button>
+  </form>
+  <p class="gate__foot"><a href="/">reeder-software.de</a></p>
+</main>
+
+<!-- ============ Portal ============ -->
+<div class="shell" id="app" hidden>
+  <aside class="nav">
+    <a class="brand" href="#uebersicht"><svg><use href="#sail"/></svg><span>Reeder <em>Kundenportal</em></span></a>
+    <nav>
+      <a href="#uebersicht" data-v="uebersicht"><svg><use href="#i-home"/></svg><span>Übersicht</span></a>
+      <a href="#projekte" data-v="projekte"><svg><use href="#i-proj"/></svg><span>Projekte</span></a>
+      <a href="#support" data-v="support"><svg><use href="#i-help"/></svg><span>Support</span><b class="badge" id="bSupport" hidden></b></a>
+      <a href="#chat" data-v="chat"><svg><use href="#i-chat"/></svg><span>Chat</span><b class="badge" id="bChat" hidden></b></a>
+      <a href="#termine" data-v="termine"><svg><use href="#i-cal"/></svg><span>Termine</span></a>
+      <a href="#vertraege" data-v="vertraege" id="navVertraege" hidden><svg><use href="#i-doc"/></svg><span>Verträge</span></a>
+      <a href="#dokumente" data-v="dokumente"><svg><use href="#i-doc"/></svg><span>Dokumente</span></a>
+      <a href="#konto" data-v="konto"><svg><use href="#i-user"/></svg><span>Konto</span></a>
+    </nav>
+    <div class="nav__me"><span class="avatar" id="meAvatar"></span><div><b id="meName"></b><span id="meCo"></span></div></div>
+  </aside>
+
+  <main class="main" id="main">
+    <!-- Übersicht -->
+    <section data-view="uebersicht">
+      <header class="phead"><p class="kick" id="ovCo"></p><h1 id="ovHello">Willkommen.</h1></header>
+      <div id="ovQuotes"></div>
+      <div id="ovNews"></div>
+      <div class="tiles" id="ovTiles"></div>
+      <div class="cols">
+        <div id="ovProjCol"><h2 class="h2">Ihre Projekte</h2><div id="ovProjects" class="pgrid"></div>
+          <button class="glassmore glassmore--inline" id="projMore" hidden><span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div>
+        <div><h2 class="h2">Zuletzt passiert</h2><div class="card clip" id="evClip"><ol class="timeline" id="ovEvents"></ol>
+          <button class="glassmore" id="evMore" hidden><span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
+      </div>
+    </section>
+
+    <!-- Projekte -->
+    <section data-view="projekte" hidden>
+      <header class="phead"><p class="kick">Projekte</p><h1>Ihre Projekte</h1></header>
+      <div id="projList" class="pgrid pgrid--wide"></div>
+    </section>
+
+    <!-- Projektdetail -->
+    <section data-view="projekt" hidden>
+      <a href="#projekte" class="back">← Alle Projekte</a>
+      <div id="projDetail"></div>
+    </section>
+
+    <!-- Angebot ansehen & annehmen -->
+    <section data-view="angebot" hidden>
+      <a href="#uebersicht" class="back" id="quoteBack">← Zurück</a>
+      <div id="quoteView"></div>
+    </section>
+
+    <!-- Chat -->
+    <section data-view="chat" hidden>
+      <section class="chat chat--full" aria-label="Chat mit Reeder Software">
+        <div class="chat__head"><span class="chat__dot"></span><div><h2>Ihr Team bei Reeder Software</h2><p>Wir antworten in der Regel am selben Werktag.</p></div></div>
+        <div class="chat__log" id="log" aria-live="polite"></div>
+        <form class="composer" id="composer">
+          <textarea rows="1" placeholder="Nachricht an unser Team …" aria-label="Nachricht"></textarea>
+          <button type="submit" aria-label="Senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        </form>
+      </section>
+    </section>
+
+    <!-- Termine -->
+    <section data-view="termine" hidden>
+      <header class="phead phead--row"><div><p class="kick">Termine</p><h1>Ihre Termine</h1></div><button class="btn btn--grad" data-req="">Termin anfragen</button></header>
+      <div id="reqList"></div>
+      <div id="apptList"></div>
+    </section>
+
+    <!-- Support -->
+    <section data-view="support" hidden>
+      <div id="supView"></div>
+    </section>
+
+    <!-- Verträge -->
+    <section data-view="vertraege" hidden>
+      <header class="phead"><p class="kick">Verträge</p><h1>Ihre laufenden Verträge</h1></header>
+      <div id="vtList"></div>
+    </section>
+
+    <!-- Dokumente -->
+    <section data-view="dokumente" hidden>
+      <header class="phead"><p class="kick">Dokumente</p><h1>Angebote, Rechnungen &amp; Verträge</h1></header>
+      <div class="card" id="docList"></div>
+    </section>
+
+    <!-- Konto -->
+    <section data-view="konto" hidden>
+      <div class="ahero">
+        <span class="avatar ahero__av" id="acAvatar"></span>
+        <div class="ahero__txt"><p class="kick">Ihr Konto</p><h1 id="acName"></h1><p id="acSub"></p></div>
+        <button class="btn btn--ghost ahero__out" id="logout">Abmelden</button>
+      </div>
+
+      <div class="acols">
+        <div class="astack">
+          <div class="sgroup">
+            <h2 class="sgroup__title">Persönliche Daten</h2>
+            <details class="srow" id="rowName">
+              <summary><span class="srow__label">Name</span><span class="srow__val" id="vName"></span><span class="srow__act">Ändern</span></summary>
+              <form class="srow__form" data-field="name"><input name="v" maxlength="120" required autocomplete="name"><button class="btn btn--sm" type="submit">Speichern</button></form>
+            </details>
+            <div class="srow srow--static"><span class="srow__label">Unternehmen</span><span class="srow__val" id="vCo"></span></div>
+            <div class="srow srow--static"><span class="srow__label">E-Mail</span><span class="srow__val" id="vMail"></span></div>
+            <details class="srow" id="rowPhone">
+              <summary><span class="srow__label">Telefon</span><span class="srow__val" id="vPhone"></span><span class="srow__act">Ändern</span></summary>
+              <form class="srow__form" data-field="phone"><input name="v" type="tel" maxlength="40" autocomplete="tel" placeholder="Für Rückfragen"><button class="btn btn--sm" type="submit">Speichern</button></form>
+            </details>
+            <p class="sgroup__note">Unternehmen oder E-Mail-Adresse ändern? Kurze Nachricht im <a href="#chat">Chat</a> genügt.</p>
+          </div>
+
+          <div class="sgroup">
+            <h2 class="sgroup__title">Sicherheit</h2>
+            <details class="srow" id="rowPw">
+              <summary><span class="srow__label">Passwort</span><span class="srow__val">••••••••••</span><span class="srow__act">Ändern</span></summary>
+              <form class="srow__form srow__form--stack" id="pwForm">
+                <label>Aktuelles Passwort<input type="password" name="current" autocomplete="current-password" required></label>
+                <label>Neues Passwort<input type="password" name="next" autocomplete="new-password" minlength="10" required></label>
+                <div class="pwmeter"><i id="pwBar"></i></div><span class="pwhint" id="pwHint">Mindestens 10 Zeichen – am besten ein Satz, den Sie sich gut merken können.</span>
+                <p class="err" id="pwErr" hidden></p>
+                <div class="srow__btns"><button type="button" class="btn btn--ghost btn--sm" data-cancel>Abbrechen</button><button class="btn btn--sm" type="submit">Passwort ändern</button></div>
+              </form>
+            </details>
+            <div class="srow srow--static"><span class="srow__label">Angemeldet</span><span class="srow__val" id="vSessions"></span><button class="srow__act srow__act--btn" id="logoutOthers">Andere Geräte abmelden</button></div>
+          </div>
+        </div>
+
+        <div class="astack">
+          <div class="sgroup">
+            <h2 class="sgroup__title">Benachrichtigungen</h2>
+            <label class="srow srow--switch"><span><span class="srow__label">E-Mail bei neuen Nachrichten</span><small>Höchstens eine E-Mail pro halbe Stunde – nie Werbung.</small></span>
+              <input type="checkbox" class="switch" id="notifyEmail"></label>
+          </div>
+
+          <div class="contact">
+            <p class="kick">Ihr Ansprechpartner</p>
+            <div class="contact__who"><span class="avatar" id="ctAvatar"></span><div><b id="ctName"></b><span>Reeder Software GmbH</span></div></div>
+            <div class="contact__btns"><a class="btn btn--grad btn--sm" href="#chat">Nachricht schreiben</a><button class="btn btn--sm contact__ghost" data-req="">Termin anfragen</button></div>
+          </div>
+
+          <div class="sgroup">
+            <h2 class="sgroup__title">Datenschutz &amp; Rechtliches</h2>
+            <a class="srow srow--link" href="/datenschutz.html" target="_blank" rel="noopener"><span class="srow__label">Datenschutzerklärung</span><span class="srow__chev">↗</span></a>
+            <a class="srow srow--link" href="/impressum.html" target="_blank" rel="noopener"><span class="srow__label">Impressum</span><span class="srow__chev">↗</span></a>
+            <a class="srow srow--link" href="#chat" id="deleteReq"><span class="srow__label">Zugang löschen lassen</span><span class="srow__chev">›</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ Terminanfrage ============ -->
+<div class="sheet" id="reqSheet" hidden>
+  <form class="sheet__card" id="reqForm">
+    <header class="sheet__head"><div><p class="kick">Termin anfragen</p><h2>Wann sollen wir sprechen?</h2></div><button type="button" class="sheet__x" data-close aria-label="Schließen">✕</button></header>
+    <div class="sheet__body">
+      <section><h3><b>1</b> Worum geht es?</h3><div class="rtypes" id="rTypes"></div>
+        <label id="rProjWrap" class="rproj">Zu welchem Projekt?<select name="project_id" id="rProj"></select></label></section>
+      <section><h3><b>2</b> Ihre Wunschtermine <span>bis zu 3 auswählen</span></h3>
+        <div class="rdays" id="rDays"></div>
+        <label class="rflex"><input type="checkbox" name="flexible" class="switch"> <span>Ich bin flexibel – schlagen Sie mir gern einen Termin vor.</span></label></section>
+      <section><h3><b>3</b> Möchten Sie uns vorab etwas mitteilen? <span>optional</span></h3>
+        <textarea name="message" rows="3" maxlength="2000" placeholder="z. B. Wir möchten über die Farben und die Terminbuchung sprechen."></textarea></section>
+    </div>
+    <footer class="sheet__foot"><div id="rSummary"></div><button class="btn btn--grad" type="submit" id="rSend">Anfrage senden</button></footer>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/portal/chat.js"></script>
+<script src="/portal/viewer.js"></script>
+<script src="/portal/portal.js"></script>
+</body>
+</html>

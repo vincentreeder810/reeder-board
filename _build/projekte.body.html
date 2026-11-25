@@ -1,0 +1,52 @@
+<section class="phero dark">
+  <div class="grid-bg" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div><div class="phero__glow" aria-hidden="true"></div>
+  <div class="phero__inner">
+    <div>
+      <p class="eyebrow reveal">Projekte &amp; Referenzen</p>
+      <h1 class="reveal">Was wir <em class="serif">gebaut haben.</em></h1>
+    </div>
+    <div class="reveal" style="--d:.15s">
+      <p>Kundenprojekte, eigene Produkte und Leistungen – mit Beschreibung und Funktionen. Aus Rücksicht auf unsere Kunden zeigen wir Kundenprojekte ohne Namen.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section section--paper">
+  <div class="shead">
+    <h2 class="h3 reveal" style="margin:0">Alle Projekte</h2>
+    <div class="filters reveal" role="tablist" aria-label="Projekte filtern">
+      <button class="filter is-active" data-filter="alle" role="tab" aria-selected="true">Alle</button>
+      <button class="filter" data-filter="kunde" role="tab" aria-selected="false">Kundenprojekte</button>
+      <button class="filter" data-filter="produkt" role="tab" aria-selected="false">Eigene Produkte</button>
+      <button class="filter" data-filter="leistung" role="tab" aria-selected="false">Leistungen</button>
+    </div>
+  </div>
+  <div class="cards" id="projectCards"></div>
+</section>
+
+<section class="final dark">
+  <div class="grid-bg" aria-hidden="true"></div><div class="final__glow" aria-hidden="true"></div>
+  <h2 class="final__title reveal">Ihr Projekt <em class="serif">könnte das nächste sein.</em></h2>
+  <div class="hero__ctas reveal" style="--d:.15s">
+    <a href="termin.html?modus=auftrag" class="btn btn--lime magnetic">Projekt anfragen <span class="arr">→</span></a>
+    <a href="termin.html" class="btn btn--ghost magnetic">Erstgespräch buchen <span class="arr">→</span></a>
+  </div>
+</section>
+
+<div class="modal" id="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__sheet">
+    <button class="modal__close" data-close aria-label="Schließen">✕</button>
+    <div class="modal__hero" id="modalHero"></div>
+    <div class="modal__body">
+      <p class="tag" id="modalTag"></p>
+      <h3 id="modalTitle"></h3>
+      <p class="modal__lead" id="modalLead"></p>
+      <div class="modal__cols">
+        <div><h4>Funktionen</h4><ul class="checks" id="modalFeatures"></ul></div>
+        <div><h4>Technik</h4><div class="stack" id="modalStack"></div></div>
+      </div>
+      <div class="product__ctas"><a class="btn btn--ink" id="modalDemo" href="termin.html">Demo vereinbaren <span class="arr">→</span></a></div>
+    </div>
+  </div>
+</div>

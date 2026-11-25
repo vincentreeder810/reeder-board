@@ -1,0 +1,23 @@
+{
+  "name": "reeder-software-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Website und Admin-Board der Reeder Software GmbH",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/server.mjs",
+    "dev": "node --watch --env-file-if-exists=.env server/server.mjs",
+    "build": "python _build/build.py .",
+    "passwort": "node --env-file-if-exists=.env server/set-password.mjs",
+    "demo": "node --env-file-if-exists=.env server/demo.mjs",
+    "stand": "node server/stand-cli.mjs"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.17.2"
+  }
+}

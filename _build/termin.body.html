@@ -1,0 +1,123 @@
+
+
+<section class="section section--paper termin-sec">
+  <div class="booking-wrap">
+    <div class="booker" id="booker">
+      <div class="booker__panel is-active" data-panel="termin">
+        <div class="booker__progress"><span class="is-on">1 · Was</span><span>2 · Datum &amp; Zeit</span><span>3 · Ihre Daten</span></div>
+
+        <div class="bstep is-active" data-step="1">
+          <div class="bsub" id="topicField">
+          <h1 class="bstep__title">Worum geht es?</h1>
+          <p class="worum__sub">Wählen Sie, was am besten passt. Mehreres ist möglich.</p>
+          <div class="worum" id="topics">
+            <label class="worum__card"><input type="checkbox" name="thema" value="Website"><span class="worum__in"><i class="worum__ico" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="20" rx="3"/><path d="M4 12h24"/><path class="w-a" d="M9 17h9M9 21h14"/></svg></i><b>Website &amp; Web-App</b><em>Alles, was man im Browser aufruft</em><small><span>Internetseite</span><span>Online-Shop</span><span>Termine &amp; Buchungen</span><span>Kundenbereich mit Anmeldung</span><span>Formulare &amp; Anfragen</span></small></span></label>
+            <label class="worum__card"><input type="checkbox" name="thema" value="Software"><span class="worum__in"><i class="worum__ico" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="10" y="4" width="12" height="24" rx="3"/><path class="w-a" d="M3 12c2-2 2 2 4 0M3 18c2-2 2 2 4 0M25 12c2-2 2 2 4 0M25 18c2-2 2 2 4 0"/></svg></i><b>Software &amp; KI</b><em>Programme und KI, die Ihnen Arbeit abnehmen</em><small><span>App fürs Handy</span><span>Programm für Ihren Betrieb</span><span>Telefonassistent</span><span>KI-Assistent</span><span>Abläufe automatisieren</span><span>Vorhandene Software verbessern</span></small></span></label>
+            <label class="worum__card"><input type="checkbox" name="thema" value="Hardware"><span class="worum__in"><i class="worum__ico" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 4 27 10v12l-11 6-11-6V10z"/><path class="w-a" d="M5 10l11 6 11-6M16 16v12"/></svg></i><b>Hardware</b><em>Von der ersten Idee bis zum fertigen Gerät</em><small><span>Idee prüfen lassen</span><span>Entwicklungskonzept</span><span>Prototyp</span></small></span></label>
+          </div>
+          <p class="worum__hilfe">Nicht sicher? Wählen Sie, was am nächsten kommt – wir sortieren das im Gespräch.</p>
+          <p class="worum__fehler" id="worumErr" hidden>Bitte wählen Sie zuerst, worum es geht.</p>
+          <div class="bstep__nav"><span></span><button class="btn btn--ink" type="button" id="worumWeiter">Weiter <span class="arr">→</span></button></div>
+          </div>
+          <div class="bsub" id="terminWahl" hidden>
+          <h2 class="bstep__title">Welchen Termin möchten Sie?</h2>
+          <div class="types">
+            <p class="types__h" data-b="software">Website &amp; Software</p>
+            <label class="type" data-b="software"><input type="radio" name="typ" value="erstgespraech" data-label="Kostenloses Erstgespräch" data-min="30" checked><span><b>Kostenloses Erstgespräch</b><small>30 Min · kostenlos · Sie erzählen uns von Ihrem Vorhaben, wir zeigen Ihnen Wege und Kosten.</small></span></label>
+            <label class="type" data-b="software"><input type="radio" name="typ" value="produktdemo" data-label="Produktdemo" data-min="30"><span><b>Produktdemo</b><small>30 Min · kostenlos · Wir führen Ihnen eines unserer Produkte live vor.</small></span></label>
+            <label class="type" data-b="software"><input type="radio" name="typ" value="beratung" data-label="Beratung: Wo Software &amp; KI Ihnen helfen" data-min="60" data-price="100"><span><b>Beratung: Wo Software &amp; KI Ihnen helfen</b><small>60 Min · 100 € zzgl. MwSt. · Wir schauen auf Ihre Abläufe und sagen ehrlich, was sich lohnt – und was nicht.</small></span></label>
+            <p class="types__h" data-b="hardware">Hardware</p>
+            <label class="type" data-b="hardware"><input type="radio" name="typ" value="hw_erstgespraech" data-label="Kostenloses Erstgespräch Hardware" data-min="30"><span><b>Kostenloses Erstgespräch Hardware</b><small>30 Min · kostenlos · Sie beschreiben Ihre Produktidee, wir sagen Ihnen, ob und wie sie technisch umsetzbar ist.</small></span></label>
+            <label class="type" data-b="hardware"><input type="radio" name="typ" value="hw_konzept" data-label="Entwicklungskonzept anfragen" data-min="45"><span><b>Entwicklungskonzept anfragen</b><small>45 Min · kostenlos · Wir besprechen, was ein ausgearbeitetes Entwicklungskonzept für Ihr Produkt umfasst.</small></span></label>
+          </div>
+
+          <div class="field field--product" id="demoProductField">
+            <label for="demoProduct">Welches Produkt?</label>
+            <select id="demoProduct"><option>Covered</option><option>BusinessCat</option><option>Lernpass</option><option>Perspektive</option><option>Patientenverwaltung (Referenz)</option><option>KI-Telefonassistent</option></select>
+          </div>
+          <div class="field topic__text"><label for="bMsg" id="bMsgLabel">Erzählen Sie kurz von Ihrem Vorhaben (optional)</label><textarea id="bMsg" rows="3" placeholder="Zum Beispiel: Wir brauchen eine neue Website mit Online-Terminbuchung."></textarea></div>
+          <p class="price-note" id="priceNote" hidden>Die Beratung kostet 100 € zzgl. MwSt. Die Rechnung bekommen Sie nach dem Termin.</p>
+          <div class="bstep__nav"><button class="btn btn--line btn--plain" type="button" id="worumZurueck">Zurück</button><button class="btn btn--ink" data-next>Weiter <span class="arr">→</span></button></div>
+          </div>
+        </div>
+
+        <div class="bstep" data-step="2">
+          <h2 class="bstep__title">Wann passt es Ihnen?</h2>
+          <div class="cal">
+            <div class="cal__month">
+              <div class="cal__head">
+                <button class="cal__arrow" id="calPrev" aria-label="Vorheriger Monat">‹</button>
+                <b id="calTitle"></b>
+                <button class="cal__arrow" id="calNext" aria-label="Nächster Monat">›</button>
+              </div>
+              <div class="cal__dow"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+              <div class="cal__grid" id="calGrid"></div>
+            </div>
+            <div class="cal__slots">
+              <p class="cal__day" id="calDay">Bitte wählen Sie einen Tag.</p>
+              <div class="slots" id="slots"></div>
+            </div>
+          </div>
+          <div class="bstep__nav"><button class="btn btn--line btn--plain" data-prev>Zurück</button><button class="btn btn--ink" data-next id="toStep3" disabled>Weiter <span class="arr">→</span></button></div>
+        </div>
+
+        <form class="bstep" data-step="3" id="bookingForm" novalidate>
+          <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+          <h2 class="bstep__title">Fast geschafft.</h2>
+          <p class="summary" id="summary"></p>
+          <div class="grid2">
+            <div class="field"><label for="bName">Name *</label><input id="bName" name="name" required autocomplete="name"></div>
+            <div class="field"><label for="bFirma">Unternehmen</label><input id="bFirma" name="firma" autocomplete="organization"></div>
+            <div class="field"><label for="bMail">E-Mail *</label><input id="bMail" name="email" type="email" required autocomplete="email"></div>
+            <div class="field"><label for="bTel">Telefon</label><input id="bTel" name="telefon" type="tel" autocomplete="tel"></div>
+            <div class="field field--full"><label>Wie möchten Sie sprechen?</label>
+              <div class="seg"><label><input type="radio" name="kanal" value="Video" checked><span>Video</span></label><label><input type="radio" name="kanal" value="Telefon"><span>Telefon</span></label><label><input type="radio" name="kanal" value="Vor Ort"><span>Vor Ort</span></label></div>
+            </div>
+          </div>
+          <label class="consent"><input type="checkbox" required id="bConsent"> <span>Ich bin einverstanden, dass meine Angaben zur Vorbereitung und Durchführung des Termins verwendet werden (<a href="datenschutz.html">Datenschutz</a>). *</span></label>
+          <div class="bstep__nav"><button type="button" class="btn btn--line btn--plain" data-prev>Zurück</button><button type="submit" class="btn btn--ink">Termin verbindlich buchen <span class="arr">→</span></button></div>
+        </form>
+
+        <div class="bstep bdone" data-step="4">
+          <div class="bdone__check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div>
+          <h2 class="bstep__title" id="doneTitle">Ihr Termin ist gebucht.</h2>
+          <p id="doneText"></p>
+          <div class="bstep__nav bstep__nav--center"><button class="btn btn--line btn--plain" id="icsBtn">In Kalender eintragen</button><button class="btn btn--ink btn--plain" id="restart">Weiteren Termin buchen</button></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="aside">
+      <div class="aside__box aside__box--grad">
+        <div data-fuer="start">
+          <h3>Das Erstgespräch ist kostenlos</h3>
+          <p>Wir hören zu, stellen Fragen und sagen Ihnen ehrlich, was sich lohnt. Unverbindlich und ohne Vertrag.</p>
+        </div>
+        <div data-fuer="digital" hidden>
+          <h3>Ihr Prototyp – kostenlos</h3>
+          <p>Nach dem Erstgespräch bauen wir Ihnen einen klickbaren Prototyp. Beim zweiten Termin sehen Sie Ihre eigene Software – ohne Vertrag, ohne Kosten.</p>
+        </div>
+        <div data-fuer="hardware" hidden>
+          <h3>Erst prüfen, dann bauen</h3>
+          <p>Im Erstgespräch klären wir, ob und wie Ihre Idee technisch umsetzbar ist. Danach entsteht auf Wunsch ein Entwicklungskonzept mit 3D-Modell.</p>
+        </div>
+        <div data-fuer="beides" hidden>
+          <h3>Software und Hardware aus einer Hand</h3>
+          <p>Für die Software bauen wir Ihnen einen kostenlosen Prototyp, für das Gerät klären wir zuerst die Machbarkeit. Beides besprechen wir im selben Termin.</p>
+        </div>
+      </div>
+      <div class="aside__box">
+        <h3>So geht es weiter</h3>
+        <ol><li>Sie wählen, worum es geht, und suchen sich einen freien Termin aus.</li><li>Sie bekommen sofort die Bestätigung mit Videolink und Kalendereintrag.</li><li>Vor dem Gespräch schicken wir Ihnen ein paar Fragen zu Ihrem Vorhaben. Das dauert etwa fünf Minuten und hilft uns, gut vorbereitet zu sein.</li></ol>
+      </div>
+      <div class="aside__box aside__box--dark">
+        <h3>Lieber direkt?</h3>
+        <p>Schreiben Sie uns an<br><a href="mailto:kontakt@reeder-software.de" class="js-mail">kontakt@reeder-software.de</a></p>
+      </div>
+      <div class="aside__box">
+        <h3>Ihre Daten sind sicher</h3>
+        <p>Wir nutzen Ihre Angaben ausschließlich für Ihren Termin. Keine Weitergabe, kein Newsletter ohne Ihre Zustimmung.</p>
+      </div>
+    </aside>
+  </div>
+</section>
