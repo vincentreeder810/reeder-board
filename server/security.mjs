@@ -64,7 +64,7 @@ export function createSecurity({ json, readJson, clean, limited, ipOf, hashPw, c
       const d = await readJson(req), email = clean(d.email, 160).toLowerCase(), generic = { ok: true, message: "Falls es zu dieser Adresse einen Zugang gibt, ist eine E-Mail mit einem Link unterwegs. Er ist eine Stunde gültig." };
       if (limited("forgot:" + ipOf(req), 5, 15 * 60000) || limited("forgot:" + email, 3, 60 * 60000)) return json(res, 200, generic);   // keine Auskunft, ob gedrosselt oder unbekannt
       const u = db.prepare("SELECT id, name, email FROM users WHERE email = ? AND active = 1").get(email);
-      const c = !u && db.prepare("SELECT id, name, email FROM clients WHERE email = ? AND active = 1 AND stage = 'mandant'").get(email);
+      const c = !u && db.prepare("SELECT id, name, email FROM clients WHERE email = ? AND active = 1 AND pw_hash IS NOT NULL").get(email);   // jeder Kontakt mit Konto – auch Interessenten, die es beim Fragebogen angelegt haben
       const who = u || c; if (!who) return json(res, 200, generic);
       const token = randomBytes(32).toString("hex"), kind = u ? "team" : "client";
       db.prepare("DELETE FROM password_resets WHERE kind = ? AND ref_id = ? AND used_at IS NULL").run(kind, who.id);
