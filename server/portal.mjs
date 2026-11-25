@@ -248,6 +248,41 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
       if (stage === "mandant" && c.stage !== "mandant") projects.logEvent(c.id, null, "projekt", "Willkommen als Mandant", "", false);
       return json(res, 200, { client: publicClient(db.prepare("SELECT * FROM clients WHERE id = ?").get(c.id)), inviteLink, mailed });
     }
+    // Kontakt endgültig löschen (Datenschutz: Recht auf Löschung). Nur für Kontakte ohne Auftrag:
+    // Sobald es ein verschicktes Angebot, eine Rechnung oder einen Vertrag gibt, müssen die Unterlagen aufbewahrt werden – dann bleibt nur „Archivieren“.
+    if (sub === "/endgueltig" && m === "DELETE") {
+      if (clientIdsFor(user) !== null) return json(res, 403, { error: "Nur für Inhaber." });
+      if (c.stage === "mandant") return json(res, 409, { error: "Das ist ein Kunde mit Auftrag. Kunden lassen sich nur archivieren, nicht löschen." });
+      const fest = db.prepare("SELECT COUNT(*) n FROM invoices WHERE client_id = ? AND locked = 1").get(c.id).n;
+      const vertraege = db.prepare("SELECT COUNT(*) n FROM contracts WHERE client_id = ?").get(c.id).n;
+      if (fest || vertraege) return json(res, 409, { error: "Zu diesem Kontakt gibt es ein verschicktes Angebot, eine Rechnung oder einen Vertrag. Diese Unterlagen müssen aufbewahrt werden – bitte archivieren statt löschen." });
+      const protos = db.prepare("SELECT id, token FROM prototypes WHERE client_id = ?").all(c.id);
+      const docs = db.prepare("SELECT file_token FROM documents WHERE client_id = ?").all(c.id);
+      const buchungen = db.prepare("SELECT id FROM bookings WHERE client_id = ? OR lower(email) = ?").all(c.id, String(c.email || "").toLowerCase()).map(r => r.id);
+      const frageb = db.prepare(`SELECT id FROM onboarding WHERE client_id = ?${buchungen.length ? ` OR booking_id IN (${buchungen.join(",")})` : ""}`).all(c.id).map(r => r.id);
+      const inB = buchungen.length ? `(${buchungen.join(",")})` : "(NULL)";
+      db.exec("BEGIN");
+      try {
+        db.prepare("DELETE FROM invoices WHERE client_id = ? AND locked = 0").run(c.id);                 // Entwürfe; Positionen gehen mit
+        db.prepare(`DELETE FROM vorab WHERE client_id = ? OR booking_id IN ${inB}`).run(c.id);
+        db.prepare(`DELETE FROM onboarding WHERE client_id = ? OR booking_id IN ${inB}`).run(c.id);
+        db.prepare("DELETE FROM requests WHERE client_id = ?").run(c.id);
+        for (const t of ["nudges", "job_log"]) db.prepare(`DELETE FROM ${t} WHERE client_id = ?`).run(c.id);
+        db.prepare("DELETE FROM password_resets WHERE kind = 'client' AND ref_id = ?").run(c.id);
+        db.prepare("DELETE FROM login_log WHERE kind = 'client' AND ref_id = ?").run(c.id);
+        for (const pr of protos) for (const t of ["test_shots", "test_cells"]) { try { db.prepare(`DELETE FROM ${t} WHERE prototype_id = ?`).run(pr.id); } catch {} }
+        db.prepare(`DELETE FROM bookings WHERE id IN ${inB}`).run();
+        db.prepare("DELETE FROM clients WHERE id = ?").run(c.id);                                        // Projekte, Termine, Nachrichten, Entwürfe, Dokumente gehen mit
+        db.exec("COMMIT");
+      } catch (e) { db.exec("ROLLBACK"); return json(res, 500, { error: "Der Kontakt ließ sich nicht löschen: " + e.message }); }
+      // Dateien zu den gelöschten Einträgen entfernen
+      const DATA = path.resolve(process.env.DATA_DIR || "data");
+      for (const pr of protos) await rm(path.join(PROTO_DIR, pr.token), { recursive: true, force: true }).catch(() => {});
+      for (const d of docs) if (d.file_token) await rm(path.join(DATA, "documents", d.file_token), { force: true }).catch(() => {});
+      for (const id of frageb) await rm(path.join(DATA, "onboarding", String(id)), { recursive: true, force: true }).catch(() => {});
+      console.log(`Kontakt ${c.id} endgültig gelöscht (durch ${user?.name || "Inhaber"})`);
+      return json(res, 200, { ok: true });
+    }
     if (sub === "/invite" && m === "POST") {
       const d = await readJson(req), link = newInvite(c.id);
       const mailed = d.send ? await inviteMail(c, link) : null;

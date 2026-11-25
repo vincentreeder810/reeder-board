@@ -94,7 +94,7 @@
     const c = current, lead = c.stage !== "mandant", ap = activeProjects(c);
     if (lead && ["chat", "anmerkungen", "dokumente"].includes(tab)) tab = "ueberblick";
     const back = lead && c.stage !== "archiv" ? ["#anfragen", "Vertrieb"] : ["#kunden", "Alle Kunden"];
-    const more = !ME.owner ? [] : lead ? [{ v: "invite", l: "Neuen Zugangslink (Passwort neu setzen)" }, { v: "makeClient", l: "Nur Portalzugang freischalten" }, c.stage !== "archiv" ? { v: "archive", l: "Archivieren" } : { v: "unarchive", l: "Reaktivieren" }]
+    const more = !ME.owner ? [] : lead ? [{ v: "invite", l: "Neuen Zugangslink (Passwort neu setzen)" }, { v: "makeClient", l: "Nur Portalzugang freischalten" }, c.stage !== "archiv" ? { v: "archive", l: "Archivieren" } : { v: "unarchive", l: "Reaktivieren" }, { v: "loeschen", l: "Endgültig löschen", danger: true }]
       : [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, { v: "billing", l: "Rechnungsadresse" }, { v: "invite", l: c.status === "aktiv" ? "Neuen Zugangslink senden" : "Einladungslink senden" }, { v: "toggle", l: c.active ? "Portalzugang sperren" : "Portalzugang aktivieren", danger: c.active }, { v: "archive", l: "Archivieren" }];
     const facts = lead ? [["Status", STAGE[c.stage][0]], ["Kontakt kam über", quelle(c) || "–"], ["Erster Kontakt", day(c.created_at)], ["Nächster Termin", c.next ? dayShort(c.next.start) : "–"]]
       : [["Kunde seit", day(c.created_at)], ["Aktive Projekte", String(ap.length)], ...(ME.owner ? [["Offen (netto)", c.open_net ? moneyR(c.open_net) : "–"]] : []), ["Nächster Termin", c.next ? dayShort(c.next.start) : "–"], ["Kundenportal", c.active ? (STATUS_LABEL[c.status] || c.status) : "gesperrt"]];
@@ -802,6 +802,14 @@
       if (r.inviteLink) UI.link("Willkommen als Kunde", send ? (r.mailed ? "Die Einladung ist verschickt. Zur Sicherheit hier der Link:" : "Die Einladung liegt im Postausgang (E-Mail noch nicht eingerichtet). Schicken Sie den Link bis dahin selbst:") : "Schicken Sie diesen Link (14 Tage gültig):", r.inviteLink);
     },
     async archive() { if (!(await UI.confirm("Der Kontakt verschwindet aus der Liste, bleibt aber unter „Archiv“ erhalten.", { title: `${current.company} archivieren?`, ok: "Archivieren" }))) return; await api(`/clients/${current.id}/stage`, { method: "PATCH", body: { stage: "archiv" } }); toast("Archiviert"); location.hash = current.stage === "mandant" ? "#kunden" : "#anfragen"; },
+    // Kontakt ohne Auftrag samt Konto, Terminen, Fragebögen, Entwürfen und Anfrage-Projekten entfernen
+    async loeschen() {
+      if (!(await UI.confirm(`Gelöscht werden das Konto, alle Termine, Fragebögen, Entwürfe, Nachrichten und Projekte von ${current.company}. Das lässt sich nicht rückgängig machen.
+
+Danach kann sich die Person mit derselben E-Mail-Adresse ganz neu anmelden.`, { title: `${current.company} endgültig löschen?`, ok: "Endgültig löschen", danger: true }))) return;
+      try { await api(`/clients/${current.id}/endgueltig`, { method: "DELETE", body: {} }); } catch (e) { return toast(e.message); }
+      toast("Kontakt gelöscht"); current = null; await loadClients(); location.hash = "#anfragen"; window.updateBadges?.();
+    },
     async unarchive() { await api(`/clients/${current.id}/stage`, { method: "PATCH", body: { stage: "interessent" } }); await loadClients(); openClient(current.id); },
     "tab:termine": () => showTab("termine"),
     newInvoice: () => window.FIN.editor({ kind: "rechnung", client_id: current.id }),
