@@ -28,7 +28,7 @@ import { createSecurity } from "./security.mjs";
 import { createHardware } from "./hardware.mjs";
 import { DEFAULT_HARDWARE } from "./firmen.mjs";
 import { createVereinbarungen } from "./vereinbarungen.mjs";
-import { createOnboarding, fragebogenStand } from "./onboarding.mjs";
+import { createOnboarding, fragebogenStand, setVorabEinladen } from "./onboarding.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
 
@@ -129,6 +129,7 @@ const pruefung = createPruefung({ json, readJson, clean, base: `http://127.0.0.1
 automation.extend(() => pruefung.housekeeping());
 const vorab = createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient: portal.currentClient, clientLogin: portal.clientLogin });
 onBooked.add(b => vorab.invite(b));
+setVorabEinladen(b => vorab.invite(b));
 const covered = createCovered({ json, readJson, SITE_URL });
 automation.extend(() => covered.sync());
 const typeLabel = key => (getSetting("availability", DEFAULT_AVAILABILITY).types[key] || {}).label || key;

@@ -139,6 +139,10 @@ export function antwortenView(bereich, a) {
   }).filter(Boolean) })).filter(g => g.rows.length);
 }
 
+// Der Website-Fragebogen liegt in vorab.mjs und wird beim Start des Servers hier eingehängt
+let vorabEinladen = null;
+export const setVorabEinladen = fn => { vorabEinladen = fn; };
+
 export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient, clientLogin }) {
   const out = o => o && ({ id: o.id, status: o.status, kinds: JSON.parse(o.kinds), invited_at: o.invited_at, answered_at: o.answered_at,
     link: `${SITE_URL}/portal/onboarding.html#${o.token}` });
@@ -292,8 +296,23 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
         text: `Hallo ${c.name},\n\ndamit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Antworten auf ein paar Fragen. Das dauert etwa fünf Minuten:\n\n${link}\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
       return { mailed: !!mailed, link };
     }
-    if (db.prepare("SELECT 1 FROM onboarding o LEFT JOIN bookings b ON b.id = o.booking_id WHERE o.client_id = ? OR b.client_id = ?").get(clientId, clientId)) return { error: "Der Fragebogen ist schon ausgefüllt." };
+    // Website-Buchung: Dazu gehört der bildhafte Website-Fragebogen (vorab.mjs), nicht die Software-Fragen.
+    // Ist er noch offen, geht die Erinnerung an genau diesen Fragebogen.
+    const offenWeb = db.prepare("SELECT v.token FROM vorab v JOIN bookings bb ON bb.id = v.booking_id WHERE bb.client_id = ? AND v.answered_at IS NULL ORDER BY v.id DESC LIMIT 1").get(clientId);
+    if (offenWeb) {
+      const link = `${SITE_URL}/portal/fragebogen.html#${offenWeb.token}`;
+      const mailed = await sendMail({ to: c.email, subject: "Kurze Erinnerung: Ihr Fragebogen zur Website",
+        text: `Hallo ${c.name},\n\ndamit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Angaben zur Website. Sie klicken einfach an, was Ihnen gefällt – das dauert etwa sechs Minuten:\n\n${link}\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
+      return { mailed: !!mailed, link };
+    }
     const b = db.prepare("SELECT * FROM bookings WHERE client_id = ? ORDER BY id DESC LIMIT 1").get(clientId);
+    // Wurde bei der Buchung nur „Website“ gewählt, wird nie der Software-Fragebogen verschickt
+    const themen = (String(b?.message || "").match(/^Themen: (.*)$/m) || [])[1] || "";
+    if (b && /website/i.test(themen) && !/software|hardware/i.test(themen)) {
+      const t = vorabEinladen ? await vorabEinladen(b) : null;
+      return t ? { mailed: null, link: `${SITE_URL}/portal/fragebogen.html#${t}` } : { error: "Der Website-Fragebogen zu dieser Buchung ist schon ausgefüllt." };
+    }
+    if (db.prepare("SELECT 1 FROM onboarding o LEFT JOIN bookings b ON b.id = o.booking_id WHERE o.client_id = ? OR b.client_id = ?").get(clientId, clientId)) return { error: "Der Fragebogen ist schon ausgefüllt." };
     if (!b) return { error: "Zu diesem Kontakt gibt es keine Buchung, an die der Fragebogen angehängt werden kann." };
     const token = await invite(b, (kinds || []).filter(k => FRAGEN[k]).length ? kinds : ["software"]);
     return token ? { mailed: null, link: `${SITE_URL}/portal/onboarding.html#${token}` } : { error: "Der Fragebogen ließ sich nicht verschicken." };
