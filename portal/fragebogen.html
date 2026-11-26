@@ -25,7 +25,7 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased;line-height:1.5}
-button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;padding:0}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;padding:0;-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 input,textarea{font:inherit;color:inherit}
 /* ---------- Rahmen ---------- */
 .top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
@@ -166,6 +166,11 @@ textarea.inp{min-height:100px;resize:vertical}
 @media (prefers-reduced-motion:reduce){.pg *,.pg{animation-duration:0s!important;animation-iteration-count:1!important}}
 @media (max-width:900px){.grid--4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid--3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:620px){.grid--2,.grid--3,.grid--4{grid-template-columns:1fr}.two{grid-template-columns:1fr}main{padding-top:30px}.bar__mid{display:none}.top__in{gap:12px}.brand span{display:none}}
+/* Kleine Handys: nichts ragt heraus, Knöpfe bleiben einzeilig und gut zu treffen */
+.acc__mail{min-width:0}.acc__mail>*{min-width:0;overflow-wrap:anywhere}
+.btn{white-space:nowrap}
+@media (max-width:380px){main{padding-left:16px;padding-right:16px}.acc{padding:22px 18px}.bar__in{padding:12px 16px}.btn{padding:0 18px;gap:8px}.top__in{padding:12px 16px}.stepno{font-size:12px}.card.sel::after{top:12px;right:12px}.chip{padding:10px 14px}.seg button{padding:9px 14px}}
+@media (hover:none){.card:hover{transform:none}}
 </style>
 </head>
 <body>
@@ -401,8 +406,21 @@ textarea.inp{min-height:100px;resize:vertical}
   const ro = new ResizeObserver(scaleAll);
   function counters() {
     timers.forEach(clearInterval); timers = [];
-    $$(".cnt").forEach(el => { const n = +el.dataset.n, s = el.dataset.s; let t = 0;
-      timers.push(setInterval(() => { t = (t + 1) % 90; const p = Math.min(1, t / 45), v = Math.round(n * (1 - Math.pow(1 - p, 3))); el.textContent = v.toLocaleString("de-DE") + s; }, 60)); });
+    $$(".cnt").forEach(el => { const n = +el.dataset.n, s = el.dataset.s; el._t = 0; el.textContent = "0" + s;
+      timers.push(setInterval(() => { if (!el.closest(".scr")?.classList.contains("an")) return; el._t = (el._t + 1) % 90; const p = Math.min(1, el._t / 45), v = Math.round(n * (1 - Math.pow(1 - p, 3))); el.textContent = v.toLocaleString("de-DE") + s; }, 60)); });
+  }
+  /* Vorschauen laufen erst, wenn sie im Bild sind – und beginnen dann von vorn, etwas zügiger als vorher.
+     Außerhalb des Bildes stehen sie still (spart Akku auf dem Handy). */
+  const TEMPO = 1.4;
+  const io = new IntersectionObserver(eintraege => { for (const e of eintraege) {
+    const scr = e.target, anims = scr.getAnimations({ subtree: true });
+    if (e.isIntersecting) { scr.classList.add("an"); scr.querySelectorAll(".cnt").forEach(c => { c._t = 0; });
+      for (const a of anims) { try { a.currentTime = 0; a.playbackRate = TEMPO; a.play(); } catch {} } }
+    else { scr.classList.remove("an"); for (const a of anims) { try { a.pause(); } catch {} } }
+  } }, { threshold: .35 });
+  function beobachten() {
+    io.disconnect();
+    for (const scr of $$(".scr")) { scr.classList.remove("an"); for (const a of scr.getAnimations({ subtree: true })) { try { a.pause(); a.currentTime = 0; } catch {} } io.observe(scr); }
   }
   function render(scroll) {
     steps = plan(); if (at >= steps.length) at = steps.length - 1;
@@ -412,7 +430,7 @@ textarea.inp{min-height:100px;resize:vertical}
     $("#back").style.visibility = at ? "visible" : "hidden";
     $("#next").innerHTML = at === steps.length - 1 ? "Absenden <i>→</i>" : "Weiter <i>→</i>";
     $("#barmid").textContent = at === steps.length - 1 ? "Danach bereiten wir Ihren Entwurf vor." : "";
-    ro.disconnect(); $$(".scr").forEach(x => ro.observe(x)); scaleAll(); counters(); sync(); save();
+    ro.disconnect(); $$(".scr").forEach(x => ro.observe(x)); scaleAll(); counters(); beobachten(); sync(); save();
     if (scroll) scrollTo({ top: 0, behavior: "instant" });
   }
   const sync = () => { $("#next").disabled = !STEP[steps[at]].ok(); };

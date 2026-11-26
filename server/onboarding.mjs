@@ -29,87 +29,167 @@ export const BEREICHE = { software: "Software", hardware: "Hardware" };
 
 /* Jeder Eintrag ist ein Bildschirm mit einem oder mehreren Feldern.
    art: text | lang | wahl (eine Antwort) | mehr (mehrere, optional max) | datei
-   schau: Name einer animierten Darstellung auf der Seite (groesse, geraete, inhalt)
+   thema: kurzes Stichwort über der Frage · warum: Text für „Warum fragen wir das?“
+   stil: "karten" = große Auswahlkarten mit Symbol (sonst Chips) · allein: Antworten, die alle anderen abwählen
+   optionen: [Wert, Text, kurze Erklärung (nur für Karten, freiwillig)] – Werte nie umbenennen, gespeicherte Antworten hängen daran
+   schau: Name einer Vorschau auf der Seite (groesse, geraete, nutzer, umgebung, verbindung, stueck)
    wenn:  Bildschirm erscheint nur, wenn das genannte Feld einen der Werte hat */
 export const FRAGEN = {
   hardware: [
-    { frage: "Ihre Idee in zwei, drei Sätzen", hilfe: "So, wie Sie es einem Freund erzählen würden.",
-      felder: [{ id: "idee", art: "lang", pflicht: true, platz: "Zum Beispiel: Eine Matratzenauflage, die im Sommer mit Wasser kühlt." }] },
-    { frage: "Was gibt es schon?", hilfe: "Jeder Stand ist in Ordnung.",
-      felder: [{ id: "stand", art: "wahl", optionen: [["idee", "Nur die Idee"], ["skizze", "Eine Skizze oder Zeichnung"], ["muster", "Ein selbstgebautes Muster"], ["produkt", "Ein Produkt, das besser werden soll"]] },
+    { thema: "Ihre Idee", frage: "Ihre Idee in zwei, drei Sätzen", hilfe: "So, wie Sie es einem Freund erzählen würden.",
+      warum: "Mit Ihren eigenen Worten verstehen wir am schnellsten, worum es geht. Fachbegriffe brauchen Sie nicht.",
+      felder: [{ id: "idee", art: "lang", pflicht: true, platz: "Zum Beispiel: Eine Matratzenauflage, die im Sommer mit Wasser kühlt." },
+        { id: "funktion", art: "mehr", label: "Was soll das Gerät vor allem tun?", optionen: [["messen", "Messen und überwachen"], ["steuern", "Steuern und regeln"], ["bewegen", "Etwas bewegen"], ["anzeigen", "Etwas anzeigen"], ["temperieren", "Kühlen oder wärmen"], ["schuetzen", "Schützen oder sichern"], ["senden", "Daten senden"], ["halten", "Halten, tragen, aufbewahren"], ["anderes", "Etwas anderes"]] }] },
+    { thema: "Ausgangslage", frage: "Was gibt es schon?", hilfe: "Jeder Stand ist in Ordnung.",
+      warum: "So wissen wir, ob wir bei null anfangen oder auf etwas aufbauen können.",
+      felder: [{ id: "stand", art: "wahl", stil: "karten", optionen: [["idee", "Nur die Idee", "Noch nichts Greifbares"], ["skizze", "Eine Skizze oder Zeichnung", "Auf Papier oder am Computer"], ["muster", "Ein selbstgebautes Muster", "Ein erster Versuch zum Anfassen"], ["produkt", "Ein Produkt, das besser werden soll", "Gibt es schon, soll weiterentwickelt werden"]] },
         { id: "datei", art: "datei", label: "Skizze oder Foto hochladen (freiwillig)" }] },
-    { frage: "Wer benutzt es, und wo?", hilfe: "Mehrere Antworten möglich.",
-      felder: [{ id: "ort", art: "mehr", optionen: [["drinnen", "Drinnen"], ["draussen", "Draußen"], ["werkstatt", "Werkstatt oder Industrie"], ["koerper", "Am Körper"], ["medizin", "Im medizinischen Umfeld"]] },
-        { id: "nutzer", art: "text", label: "Wer benutzt es?", platz: "Zum Beispiel: Privatkunden, jede Nacht im Schlafzimmer." }] },
-    { frage: "Wie groß ungefähr?", hilfe: "Eine grobe Vorstellung reicht.", schau: "groesse",
-      felder: [{ id: "groesse", art: "wahl", optionen: [["hand", "Passt in die Hand"], ["tisch", "Passt auf den Tisch"], ["moebel", "So groß wie ein Möbelstück"], ["gross", "Größer"]] },
+    { thema: "Nutzer", frage: "Wer benutzt es?", hilfe: "Mehrere Antworten möglich.",
+      warum: "Ein Gerät für Kinder, für Pflegekräfte oder für die Werkstatt muss jeweils ganz anders gebaut und bedient werden.",
+      felder: [{ id: "nutzergruppe", art: "mehr", label: "Für wen ist es gedacht?", optionen: [["privat", "Privatleute"], ["fach", "Fachleute und Handwerk"], ["firmen", "Firmen und Büros"], ["kinder", "Kinder"], ["senioren", "Ältere Menschen"], ["pflege", "Pflege und Medizin"], ["industrie", "Industrie und Produktion"]] },
+        { id: "nutzer", art: "text", label: "Wer benutzt es, und wie oft?", platz: "Zum Beispiel: Privatkunden, jede Nacht im Schlafzimmer." }] },
+    { thema: "Einsatzort", frage: "Wo wird es eingesetzt?", hilfe: "Tippen Sie alles an, was zutrifft – die Vorschau zeigt es mit.", schau: "umgebung",
+      warum: "Wasser, Staub, Hitze oder Kälte entscheiden über Material, Dichtungen und Elektronik – und damit auch über die Kosten.",
+      felder: [{ id: "ort", art: "mehr", stil: "karten", optionen: [["drinnen", "Drinnen"], ["draussen", "Draußen"], ["werkstatt", "Werkstatt oder Industrie"], ["koerper", "Am Körper"], ["medizin", "Im medizinischen Umfeld"], ["fahrzeug", "Im Fahrzeug"]] },
+        { id: "umgebung", art: "mehr", label: "Was muss es aushalten?", allein: ["normal"], optionen: [["nass", "Nässe oder Regen"], ["wasser", "Untertauchen"], ["staub", "Staub und Schmutz"], ["hitze", "Hitze"], ["kaelte", "Kälte und Frost"], ["sonne", "Pralle Sonne"], ["stoesse", "Stöße und Erschütterungen"], ["chemie", "Reinigungsmittel oder Chemikalien"], ["normal", "Nichts Besonderes"]] },
+        { id: "temperatur", art: "text", label: "Temperaturbereich, falls bekannt", platz: "Zum Beispiel: −10 bis +40 °C." }] },
+    { thema: "Größe", frage: "Wie groß ungefähr?", hilfe: "Eine grobe Vorstellung reicht.", schau: "groesse",
+      warum: "Größe und Gewicht bestimmen, welche Technik hineinpasst und wie es transportiert und verpackt wird.",
+      felder: [{ id: "groesse", art: "wahl", stil: "karten", optionen: [["hand", "Passt in die Hand"], ["tisch", "Passt auf den Tisch"], ["moebel", "So groß wie ein Möbelstück"], ["gross", "Größer"]] },
+        { id: "gewicht", art: "wahl", label: "Wie schwer darf es sein?", optionen: [["leicht", "unter 500 g"], ["bis5", "bis 5 kg"], ["bis25", "bis 25 kg"], ["schwer", "schwerer"], ["egal", "Egal"]] },
         { id: "masse", art: "text", label: "Genaue Maße, falls bekannt", platz: "Zum Beispiel: 90 × 200 cm, höchstens 2 cm dick." }] },
-    { frage: "Was steckt drin?", hilfe: "Tippen Sie an, was vermutlich dazugehört.", schau: "inhalt",
-      felder: [{ id: "inhalt", art: "mehr", optionen: [["mechanik", "Mechanik"], ["elektronik", "Elektronik und Sensoren"], ["motor", "Motoren, Bewegung"], ["medien", "Wasser, Luft oder Wärme"], ["strom", "Akku oder Stromanschluss"], ["app", "App oder Software"], ["unklar", "Weiß ich noch nicht"]] }] },
-    { frage: "Was ist am wichtigsten?", hilfe: "Höchstens drei.",
-      felder: [{ id: "wichtig", art: "mehr", max: 3, optionen: [["guenstig", "Günstig"], ["leise", "Leise"], ["robust", "Robust"], ["klein", "Klein und leicht"], ["schoen", "Schön"], ["sicher", "Sicher"], ["einfach", "Einfach zu bedienen"], ["langlebig", "Langlebig"]] }] },
-    { frage: "Was darf auf keinen Fall passieren?", hilfe: "Das hilft uns, Risiken früh zu sehen.",
+    { thema: "Technik", frage: "Was steckt drin?", hilfe: "Tippen Sie an, was vermutlich dazugehört.",
+      warum: "Daran sehen wir, welche Fachgebiete wir zusammenbringen – Mechanik, Elektronik, Software.",
+      felder: [{ id: "inhalt", art: "mehr", stil: "karten", allein: ["unklar"], optionen: [["mechanik", "Mechanik"], ["elektronik", "Elektronik und Sensoren"], ["motor", "Motoren, Bewegung"], ["medien", "Wasser, Luft oder Wärme"], ["strom", "Akku oder Stromanschluss"], ["app", "App oder Software"], ["unklar", "Weiß ich noch nicht"]] }] },
+    { thema: "Strom", frage: "Woher bekommt es seinen Strom?", hilfe: "Mehrere Antworten möglich.",
+      warum: "Akku oder Steckdose verändern Größe, Gewicht und Preis eines Geräts deutlich.",
+      felder: [{ id: "strom", art: "mehr", stil: "karten", allein: ["keiner", "unklar"], optionen: [["steckdose", "Steckdose", "Immer am Netz"], ["akku", "Akku zum Aufladen", "Unterwegs ohne Kabel"], ["batterie", "Wechselbatterien", "Einfach austauschen"], ["solar", "Sonne", "Lädt sich selbst auf"], ["kabel", "Über ein anderes Gerät", "USB, Fahrzeug, Maschine"], ["keiner", "Braucht keinen Strom", "Rein mechanisch"], ["unklar", "Weiß ich noch nicht", ""]] },
+        { id: "laufzeit", art: "text", label: "Wie lange soll es ohne Steckdose durchhalten?", platz: "Zum Beispiel: eine Nacht, eine Woche." }] },
+    { thema: "Bedienung", frage: "Wie wird es bedient – und womit verbunden?", hilfe: "Die Vorschau zeigt, was Sie wählen.", schau: "verbindung",
+      warum: "Ein Knopf, ein Display oder eine App: Davon hängt ab, wie einfach es für Ihre Nutzer wird – und ob wir Funk oder eine App mitentwickeln.",
+      felder: [{ id: "bedienung", art: "mehr", label: "Bedienung", optionen: [["tasten", "Tasten oder Schalter"], ["display", "Display oder Touch"], ["app", "Über eine App"], ["sprache", "Per Sprache"], ["fernbedienung", "Fernbedienung"], ["automatisch", "Läuft von selbst"]] },
+        { id: "verbindung", art: "mehr", label: "Verbindung", allein: ["keine"], optionen: [["keine", "Keine – es arbeitet für sich"], ["bluetooth", "Bluetooth zum Handy"], ["wlan", "WLAN"], ["mobilfunk", "Mobilfunk (SIM)"], ["kabel", "Kabel oder USB"], ["cloud", "Daten online abrufbar"]] }] },
+    { thema: "Prioritäten", frage: "Was ist am wichtigsten?", hilfe: "Höchstens drei.",
+      warum: "Alles gleichzeitig geht selten. Ihre drei Punkte sind unser Maßstab bei jeder Entscheidung.",
+      felder: [{ id: "wichtig", art: "mehr", max: 3, optionen: [["guenstig", "Günstig"], ["leise", "Leise"], ["robust", "Robust"], ["klein", "Klein und leicht"], ["schoen", "Schön"], ["sicher", "Sicher"], ["einfach", "Einfach zu bedienen"], ["langlebig", "Langlebig"], ["reparierbar", "Nachhaltig und reparierbar"], ["reinigen", "Leicht zu reinigen"]] }] },
+    { thema: "Risiken", frage: "Was darf auf keinen Fall passieren?", hilfe: "Das hilft uns, Risiken früh zu sehen.",
+      warum: "Wer die schlimmsten Fälle kennt, kann sie von Anfang an ausschließen – statt später teuer nachzubessern.",
       felder: [{ id: "nogo", art: "lang", platz: "Zum Beispiel: Es darf kein Wasser ins Bett laufen." }] },
-    { frage: "Wie viele sollen es werden?", hilfe: "",
-      felder: [{ id: "stueckzahl", art: "wahl", optionen: [["eins", "Ein Einzelstück"], ["kleinserie", "Erst ein Prototyp, dann eine Kleinserie"], ["serie", "Eine Serie"], ["offen", "Weiß ich noch nicht"]] }] },
-    { frage: "In welchem Rahmen bewegen wir uns?", hilfe: "Grobe Angaben genügen.",
+    { thema: "Stückzahl", frage: "Wie viele sollen es werden?", hilfe: "", schau: "stueck",
+      warum: "Ein Einzelstück bauen wir anders als eine Serie – Material, Fertigung und Werkzeuge hängen an der Stückzahl.",
+      felder: [{ id: "stueckzahl", art: "wahl", stil: "karten", optionen: [["eins", "Ein Einzelstück", "Für Sie oder einen Kunden"], ["kleinserie", "Erst ein Prototyp, dann eine Kleinserie", "Erst testen, dann in kleiner Stückzahl"], ["serie", "Eine Serie", "In größerer Stückzahl"], ["offen", "Weiß ich noch nicht", "Das klären wir gemeinsam"]] },
+        { id: "zielpreis", art: "text", label: "Was dürfte ein Stück später ungefähr kosten?", platz: "Zum Beispiel: höchstens 150 € im Verkauf." }] },
+    { thema: "Vorschriften", frage: "Muss es bestimmte Vorschriften erfüllen?", hilfe: "Wenn Sie es nicht wissen, ist das völlig in Ordnung – wir prüfen das.",
+      warum: "Zulassungen wie CE oder Medizinprodukt beeinflussen Zeitplan und Kosten. Je früher wir sie kennen, desto besser.",
+      felder: [{ id: "zertifizierung", art: "mehr", label: "Was trifft vermutlich zu?", allein: ["unklar"], optionen: [["ce", "CE-Kennzeichnung"], ["mdr", "Medizinprodukt"], ["ip", "Wasser- und Staubschutz (IP)"], ["lebensmittel", "Kontakt mit Lebensmitteln"], ["funk", "Funkzulassung"], ["spielzeug", "Spielzeug-Sicherheit"], ["ex", "Explosionsschutz"], ["unklar", "Weiß ich nicht – bitte prüfen"]] },
+        { id: "patent", art: "wahl", label: "Gibt es ein Patent oder Gebrauchsmuster?", optionen: [["ja", "Ja"], ["angemeldet", "Angemeldet"], ["geplant", "Geplant"], ["nein", "Nein"], ["unklar", "Weiß ich nicht"]] }] },
+    { thema: "Zeitrahmen", frage: "Wann soll es so weit sein?", hilfe: "Grobe Angaben genügen.",
+      warum: "So planen wir realistisch – und sagen Ihnen ehrlich, was in Ihrem Zeitraum machbar ist.",
+      felder: [{ id: "dringlichkeit", art: "wahl", label: "Wie eilig ist es?", optionen: [["sofort", "So bald wie möglich"], ["halbjahr", "Innerhalb eines halben Jahres"], ["jahr", "Innerhalb eines Jahres"], ["offen", "Kein fester Zeitplan"]] },
+        { id: "zeit", art: "text", label: "Gibt es einen festen Termin?", platz: "Zum Beispiel: Prototyp bis zur Messe im Mai." }] },
+    { thema: "Budget", frage: "In welchem Rahmen bewegen wir uns?", hilfe: "Grobe Angaben genügen.",
+      warum: "Mit einem Rahmen schlagen wir den passenden Weg vor – vom schlanken Funktionsmuster bis zum fertigen Prototyp.",
       felder: [{ id: "budget", art: "wahl", label: "Budget für Konzept und Prototyp", optionen: [["bis1", "bis 1.000 €"], ["bis5", "1.000 – 5.000 €"], ["bis20", "5.000 – 20.000 €"], ["mehr", "mehr als 20.000 €"], ["offen", "noch offen"]] },
-        { id: "zeit", art: "text", label: "Bis wann?", platz: "Zum Beispiel: Prototyp bis zum Sommer." }] },
-    { frage: "Was brauchen Sie von uns?", hilfe: "",
-      felder: [{ id: "bedarf", art: "wahl", optionen: [["machbarkeit", "Klären, ob es machbar ist"], ["konzept", "Ein ausgearbeitetes Entwicklungskonzept"], ["prototyp", "Den Prototyp bauen"], ["alles", "Alles zusammen"]] },
+        { id: "finanzierung", art: "mehr", label: "Wie soll es finanziert werden?", optionen: [["eigen", "Aus eigenen Mitteln"], ["foerderung", "Mit Fördermitteln"], ["investor", "Mit Investoren"], ["crowd", "Über Crowdfunding"], ["offen", "Noch offen"]] }] },
+    { thema: "Zum Schluss", frage: "Was brauchen Sie von uns?", hilfe: "",
+      warum: "Manche brauchen erst eine ehrliche Einschätzung, andere einen fertigen Prototyp. Beides ist ein guter Anfang.",
+      felder: [{ id: "bedarf", art: "wahl", stil: "karten", optionen: [["machbarkeit", "Klären, ob es machbar ist", "Technisch und wirtschaftlich"], ["konzept", "Ein ausgearbeitetes Entwicklungskonzept", "Technik, Bauteile, Kosten und Plan"], ["prototyp", "Den Prototyp bauen", "Ein funktionierendes Muster"], ["alles", "Alles zusammen", "Von der Idee bis zum Prototyp"]] },
         { id: "sonst", art: "lang", label: "Möchten Sie uns noch etwas mitgeben?", platz: "" }] },
   ],
   software: [
-    { frage: "Was soll entstehen?", hilfe: "Wählen Sie, was am besten passt.",
-      felder: [{ id: "art", art: "wahl", pflicht: true, optionen: [["webapp", "Web-App oder Kundenportal"], ["app", "App fürs Smartphone"], ["praxis", "Praxis- oder Patientensystem"], ["telefon", "Telefonassistent, der Anrufe annimmt"], ["ki", "KI, die uns Arbeit abnimmt"], ["anpassen", "Bestehende Software verbessern"], ["offen", "Weiß ich noch nicht"]] }] },
-    { frage: "Was soll sie können?", hilfe: "Zwei, drei Sätze reichen.",
-      felder: [{ id: "kann", art: "lang", pflicht: true, platz: "Zum Beispiel: Patienten sollen online Termine buchen und vorab einen Fragebogen ausfüllen." }] },
-    { frage: "Wie läuft es heute?", hilfe: "",
-      felder: [{ id: "heute", art: "wahl", optionen: [["papier", "Auf Papier"], ["excel", "Mit Excel oder Listen"], ["software", "Mit einer anderen Software"], ["garnicht", "Noch gar nicht"]] },
-        { id: "nervt", art: "text", label: "Was nervt daran am meisten?", platz: "Zum Beispiel: Wir tippen alles doppelt ab." }] },
-    { frage: "Wer benutzt sie?", hilfe: "",
-      felder: [{ id: "nutzer", art: "wahl", optionen: [["team", "Wir im Team"], ["kunden", "Unsere Kunden oder Patienten"], ["beide", "Beide"]] },
-        { id: "anzahl", art: "wahl", label: "Wie viele Personen ungefähr?", optionen: [["5", "1 – 5"], ["20", "6 – 20"], ["100", "21 – 100"], ["mehr", "mehr"]] }] },
-    { frage: "Auf welchen Geräten?", hilfe: "Mehrere Antworten möglich.", schau: "geraete",
-      felder: [{ id: "geraete", art: "mehr", optionen: [["computer", "Computer"], ["tablet", "Tablet"], ["handy", "Smartphone"]] }] },
-    { frage: "Was ist besonders wichtig?", hilfe: "Tippen Sie an, was dabei sein soll.",
-      felder: [{ id: "funktionen", art: "mehr", optionen: [["termine", "Termine buchen"], ["konto", "Kundenkonto mit Anmeldung"], ["zahlung", "Bezahlen"], ["dokumente", "Dokumente hochladen"], ["nachrichten", "Nachrichten"], ["auswertung", "Auswertungen"], ["assistent", "KI-Assistent"], ["hinweise", "Erinnerungen"]] },
-        { id: "funktionen_frei", art: "text", label: "Etwas anderes?", platz: "" }] },
-    { frage: "Womit muss sie zusammenarbeiten?", hilfe: "Programme, die Sie schon nutzen.",
-      felder: [{ id: "systeme", art: "mehr", optionen: [["kalender", "Kalender"], ["buchhaltung", "Buchhaltung"], ["praxissoftware", "Praxissoftware"], ["shop", "Online-Shop"], ["telefon", "Telefonanlage"], ["nichts", "Mit nichts"]] },
-        { id: "systeme_frei", art: "text", label: "Welche genau?", platz: "Zum Beispiel: Outlook, DATEV." }] },
-    { frage: "Welche Daten sind im Spiel?", hilfe: "Davon hängt ab, wie wir sie schützen.",
-      felder: [{ id: "daten", art: "mehr", optionen: [["gesundheit", "Gesundheitsdaten"], ["zahlung", "Zahlungsdaten"], ["kunden", "Kundendaten"], ["keine", "Nichts Sensibles"]] }] },
+    { thema: "Ihr Vorhaben", frage: "Was soll entstehen?", hilfe: "Wählen Sie, was am besten passt – Details klären wir im Gespräch.",
+      warum: "Danach richten sich die weiteren Fragen: Zu einem Telefonassistenten fragen wir anderes als zu einer App.",
+      felder: [{ id: "art", art: "wahl", pflicht: true, stil: "karten", optionen: [
+        ["webapp", "Web-App oder Kundenportal", "Läuft im Browser – Kundenbereich, Verwaltung, Abläufe"],
+        ["app", "App fürs Smartphone", "Für iPhone und Android"],
+        ["praxis", "Praxis- oder Patientensystem", "Termine, Kartei und Abläufe in der Praxis"],
+        ["telefon", "Telefonassistent, der Anrufe annimmt", "Nimmt ab, beantwortet Fragen, vergibt Termine"],
+        ["ki", "KI, die uns Arbeit abnimmt", "Wiederkehrende Aufgaben automatisch erledigen"],
+        ["verwaltung", "Internes Werkzeug für Ihr Team", "Aufträge, Lager, Personal, Planung"],
+        ["buchung", "Buchungs- oder Bestellsystem", "Reservieren, bestellen, abrechnen"],
+        ["anpassen", "Bestehende Software verbessern", "Erweitern, modernisieren, Fehler beheben"],
+        ["offen", "Weiß ich noch nicht", "Wir finden es gemeinsam heraus"]] }] },
+    { thema: "Ziel", frage: "Was soll sie können?", hilfe: "Zwei, drei Sätze reichen – so, wie Sie es einem Kollegen erklären würden.",
+      warum: "Das Ziel entscheidet, was in die erste Version gehört und was warten kann.",
+      felder: [{ id: "kann", art: "lang", pflicht: true, platz: "Zum Beispiel: Patienten sollen online Termine buchen und vorab einen Fragebogen ausfüllen." },
+        { id: "ziel", art: "mehr", label: "Was soll dadurch besser werden?", optionen: [["zeit", "Zeit sparen"], ["fehler", "Weniger Fehler"], ["ueberblick", "Besserer Überblick"], ["service", "Besserer Service für Kunden"], ["umsatz", "Mehr Umsatz"], ["papierlos", "Weg vom Papier"], ["wachstum", "Wachsen ohne mehr Personal"], ["neu", "Ein neues Angebot"]] }] },
+    { thema: "Heute", frage: "Wie läuft es heute?", hilfe: "Jeder Stand ist in Ordnung.",
+      warum: "Wenn wir wissen, was heute hakt, setzen wir genau dort an – und übernehmen, was schon gut funktioniert.",
+      felder: [{ id: "heute", art: "wahl", stil: "karten", optionen: [["papier", "Auf Papier", "Zettel, Ordner, Karteikarten"], ["excel", "Mit Excel oder Listen", "Tabellen, von Hand gepflegt"], ["software", "Mit einer anderen Software", "Die nicht mehr richtig passt"], ["garnicht", "Noch gar nicht", "Es entsteht etwas Neues"]] },
+        { id: "nervt", art: "text", label: "Was nervt daran am meisten?", platz: "Zum Beispiel: Wir tippen alles doppelt ab." },
+        { id: "aufwand", art: "wahl", label: "Wie viel Zeit kostet das pro Woche?", optionen: [["2", "unter 2 Stunden"], ["5", "2 – 5 Stunden"], ["10", "5 – 10 Stunden"], ["mehr", "mehr als 10 Stunden"], ["unklar", "Schwer zu sagen"]] }] },
+    { thema: "Nutzer", frage: "Wer benutzt sie?", hilfe: "", schau: "nutzer",
+      warum: "Für Ihr Team gelten andere Anforderungen als für Kunden – bei Anmeldung, Bedienung und Datenschutz.",
+      felder: [{ id: "nutzer", art: "wahl", stil: "karten", optionen: [["team", "Wir im Team", "Mitarbeiterinnen und Mitarbeiter"], ["kunden", "Unsere Kunden oder Patienten", "Von außen, mit eigenem Zugang"], ["beide", "Beide", "Team und Kunden gemeinsam"]] },
+        { id: "anzahl", art: "wahl", label: "Wie viele Personen ungefähr?", optionen: [["5", "1 – 5"], ["20", "6 – 20"], ["100", "21 – 100"], ["mehr", "mehr"]] },
+        { id: "rollen", art: "wahl", label: "Sehen alle dasselbe?", optionen: [["gleich", "Ja, alle sehen dasselbe"], ["rechte", "Nein, es gibt unterschiedliche Rechte"], ["unklar", "Weiß ich noch nicht"]] }] },
+    { thema: "Geräte", frage: "Auf welchen Geräten?", hilfe: "Mehrere Antworten möglich.", schau: "geraete",
+      warum: "Ob am Schreibtisch oder unterwegs auf dem Handy – das bestimmt Aufbau, Bedienung und Technik.",
+      felder: [{ id: "geraete", art: "mehr", stil: "karten", optionen: [["computer", "Computer"], ["tablet", "Tablet"], ["handy", "Smartphone"]] },
+        { id: "plattform", art: "mehr", label: "Gibt es Vorgaben?", allein: ["egal"], optionen: [["ios", "iPhone und iPad"], ["android", "Android"], ["windows", "Windows"], ["mac", "Mac"], ["browser", "Nur im Browser"], ["egal", "Keine Vorgaben"]] },
+        { id: "offline", art: "wahl", label: "Muss sie auch ohne Internet funktionieren?", optionen: [["ja", "Ja, auch ohne Netz"], ["nein", "Nein, Internet ist immer da"], ["unklar", "Weiß ich nicht"]] }] },
+    { thema: "Funktionen", frage: "Was soll alles dabei sein?", hilfe: "Tippen Sie alles an, was Ihnen wichtig ist.",
+      warum: "So sehen wir früh den Umfang – und können einschätzen, was in die erste Version gehört.",
+      felder: [{ id: "funktionen", art: "mehr", optionen: [["termine", "Termine buchen"], ["konto", "Kundenkonto mit Anmeldung"], ["zahlung", "Bezahlen"], ["dokumente", "Dokumente hochladen"], ["nachrichten", "Nachrichten"], ["auswertung", "Auswertungen"], ["assistent", "KI-Assistent"], ["hinweise", "Erinnerungen"],
+          ["formulare", "Formulare und Fragebögen"], ["kartei", "Kunden- oder Patientenkartei"], ["angebote", "Angebote und Rechnungen"], ["aufgaben", "Aufgaben und Planung"], ["zeiterfassung", "Zeiterfassung"], ["lager", "Lager und Bestand"], ["suche", "Suche und Filter"], ["export", "Export nach Excel oder PDF"], ["unterschrift", "Digitale Unterschrift"], ["karte", "Karte und Standorte"], ["sprachen", "Mehrere Sprachen"], ["rechte", "Rollen und Rechte"]] },
+        { id: "funktionen_frei", art: "text", label: "Etwas anderes?", platz: "" },
+        { id: "erste_version", art: "text", label: "Was muss die erste Version unbedingt können?", platz: "Zum Beispiel: Termine buchen – alles andere kann warten." }] },
+    { thema: "Schnittstellen", frage: "Womit muss sie zusammenarbeiten?", hilfe: "Programme, die Sie schon nutzen.",
+      warum: "Gut verbundene Programme ersparen doppeltes Abtippen. Jede Verbindung planen wir von Anfang an mit ein.",
+      felder: [{ id: "systeme", art: "mehr", allein: ["nichts"], optionen: [["kalender", "Kalender"], ["email", "E-Mail"], ["buchhaltung", "Buchhaltung"], ["praxissoftware", "Praxissoftware"], ["shop", "Online-Shop"], ["telefon", "Telefonanlage"], ["excel", "Excel-Listen"], ["crm", "Kundenverwaltung (CRM)"], ["warenwirtschaft", "Warenwirtschaft"], ["zahlungsanbieter", "Zahlungsanbieter"], ["website", "Unsere Website"], ["nichts", "Mit nichts"]] },
+        { id: "systeme_frei", art: "text", label: "Welche genau?", platz: "Zum Beispiel: Outlook, DATEV." },
+        { id: "datenuebernahme", art: "wahl", label: "Sollen vorhandene Daten übernommen werden?", optionen: [["ja", "Ja, alles"], ["teilweise", "Teilweise"], ["nein", "Nein, wir fangen neu an"], ["unklar", "Weiß ich nicht"]] }] },
+    { thema: "Daten", frage: "Welche Daten sind im Spiel?", hilfe: "Davon hängt ab, wie wir sie schützen.",
+      warum: "Gesundheits- oder Zahlungsdaten brauchen besonderen Schutz. Das planen wir von Anfang an ein – nicht erst hinterher.",
+      felder: [{ id: "daten", art: "mehr", allein: ["keine"], optionen: [["gesundheit", "Gesundheitsdaten"], ["zahlung", "Zahlungsdaten"], ["kunden", "Kundendaten"], ["personal", "Daten von Mitarbeitern"], ["vertraulich", "Vertrauliche Geschäftsdaten"], ["keine", "Nichts Sensibles"]] },
+        { id: "datenmenge", art: "wahl", label: "Wie viele Einträge kommen ungefähr zusammen?", optionen: [["wenig", "Einige Hundert"], ["mittel", "Einige Tausend"], ["viel", "Sehr viele"], ["unklar", "Weiß ich nicht"]] },
+        { id: "hosting", art: "wahl", label: "Wo sollen die Daten liegen?", optionen: [["de", "Auf Servern in Deutschland"], ["eigen", "Auf unserem eigenen Server"], ["egal", "Beraten Sie mich"]] }] },
     // Zusatzfragen je nach Antwort auf "Was soll entstehen?"
-    { wenn: { feld: "art", ist: ["telefon"] }, frage: "Zu Ihrem Telefonassistenten", hilfe: "",
+    { wenn: { feld: "art", ist: ["telefon"] }, thema: "Telefonassistent", frage: "Zu Ihrem Telefonassistenten", hilfe: "",
+      warum: "Anrufmenge und Aufgaben bestimmen, wie wir den Assistenten aufsetzen und an Ihre Abläufe anbinden.",
       felder: [{ id: "tel_anrufe", art: "wahl", label: "Wie viele Anrufe am Tag?", optionen: [["10", "bis 10"], ["50", "10 – 50"], ["mehr", "mehr als 50"]] },
         { id: "tel_aufgaben", art: "mehr", label: "Was soll er erledigen?", optionen: [["termine", "Termine vergeben"], ["fragen", "Fragen beantworten"], ["weiter", "Weiterleiten"], ["rueckruf", "Rückruf notieren"]] },
         { id: "tel_zeiten", art: "text", label: "Zu welchen Zeiten?", platz: "Zum Beispiel: rund um die Uhr, oder nur außerhalb der Sprechzeiten." }] },
-    { wenn: { feld: "art", ist: ["ki"] }, frage: "Zu Ihrem Ablauf", hilfe: "",
+    { wenn: { feld: "art", ist: ["ki"] }, thema: "Ihr Ablauf", frage: "Zu Ihrem Ablauf", hilfe: "",
+      warum: "KI lohnt sich dort am meisten, wo ein Ablauf oft vorkommt und viel Zeit kostet.",
       felder: [{ id: "ki_ablauf", art: "lang", label: "Welcher Ablauf kostet am meisten Zeit?", platz: "Zum Beispiel: Angebote aus E-Mails zusammenstellen." },
         { id: "ki_oft", art: "wahl", label: "Wie oft kommt er vor?", optionen: [["taeglich", "Täglich"], ["woche", "Mehrmals pro Woche"], ["selten", "Seltener"]] },
         { id: "ki_daten", art: "text", label: "Mit welchen Dokumenten oder Daten?", platz: "Zum Beispiel: PDFs, E-Mails, Tabellen." }] },
-    { wenn: { feld: "art", ist: ["praxis"] }, frage: "Zu Ihrer Praxis", hilfe: "",
+    { wenn: { feld: "art", ist: ["praxis"] }, thema: "Ihre Praxis", frage: "Zu Ihrer Praxis", hilfe: "",
+      warum: "Fachrichtung und Praxisgröße bestimmen, welche Abläufe und welche Praxissoftware wir berücksichtigen.",
       felder: [{ id: "px_fach", art: "text", label: "Welche Fachrichtung?", platz: "Zum Beispiel: Physiotherapie." },
         { id: "px_behandler", art: "wahl", label: "Wie viele Behandler?", optionen: [["1", "1"], ["5", "2 – 5"], ["mehr", "mehr als 5"]] },
         { id: "px_software", art: "text", label: "Welche Praxissoftware nutzen Sie heute?", platz: "" }] },
-    { wenn: { feld: "art", ist: ["anpassen"] }, frage: "Zur bestehenden Software", hilfe: "",
+    { wenn: { feld: "art", ist: ["app"] }, thema: "Ihre App", frage: "Zu Ihrer App", hilfe: "",
+      warum: "Ob die App öffentlich in die Stores kommt und welche Handy-Funktionen sie nutzt, verändert Aufwand und Prüfungen deutlich.",
+      felder: [{ id: "app_store", art: "wahl", label: "Soll sie im App Store und bei Google Play erscheinen?", optionen: [["ja", "Ja, für alle"], ["intern", "Nur für unser Team"], ["unklar", "Weiß ich nicht"]] },
+        { id: "app_funktionen", art: "mehr", label: "Was soll die App vom Handy nutzen?", allein: ["nichts"], optionen: [["kamera", "Kamera"], ["standort", "Standort"], ["push", "Mitteilungen aufs Handy"], ["bluetooth", "Bluetooth-Geräte"], ["offline", "Arbeiten ohne Netz"], ["nichts", "Nichts Besonderes"]] }] },
+    { wenn: { feld: "art", ist: ["anpassen"] }, thema: "Bestehende Software", frage: "Zur bestehenden Software", hilfe: "",
+      warum: "Ob wir auf dem Vorhandenen aufbauen können, hängt vor allem am Zugriff auf den Quelltext.",
       felder: [{ id: "an_welche", art: "text", label: "Welche Software ist es?", platz: "" },
         { id: "an_wer", art: "text", label: "Wer hat sie gebaut?", platz: "Zum Beispiel: eine Agentur, ein früherer Mitarbeiter." },
         { id: "an_code", art: "wahl", label: "Haben Sie Zugriff auf den Quelltext?", optionen: [["ja", "Ja"], ["nein", "Nein"], ["unklar", "Weiß ich nicht"]] }] },
-    { frage: "In welchem Rahmen bewegen wir uns?", hilfe: "Grobe Angaben genügen.",
+    { thema: "Zeitrahmen", frage: "Wann soll es losgehen?", hilfe: "Grobe Angaben genügen.",
+      warum: "So planen wir realistisch – und sagen Ihnen ehrlich, was bis zu Ihrem Termin machbar ist.",
+      felder: [{ id: "start", art: "wahl", label: "Start", optionen: [["sofort", "So bald wie möglich"], ["quartal", "In den nächsten drei Monaten"], ["spaeter", "Später"], ["offen", "Noch offen"]] },
+        { id: "zeit", art: "text", label: "Bis wann soll es fertig sein?", platz: "Zum Beispiel: Start im Januar, fertig zur Saison im Mai." }] },
+    { thema: "Budget", frage: "In welchem Rahmen bewegen wir uns?", hilfe: "Grobe Angaben genügen.",
+      warum: "Mit einem Rahmen schlagen wir den passenden Weg vor – vom schlanken Start bis zur großen Lösung.",
       felder: [{ id: "budget", art: "wahl", label: "Budget", optionen: [["bis5", "bis 5.000 €"], ["bis15", "5.000 – 15.000 €"], ["bis50", "15.000 – 50.000 €"], ["mehr", "mehr als 50.000 €"], ["offen", "noch offen"]] },
         { id: "modell", art: "wahl", label: "Welches Modell interessiert Sie?", optionen: [["festpreis", "Festpreis"], ["signature", "Signature – ohne Entwicklungskosten"], ["offen", "Beraten Sie mich"]] },
-        { id: "zeit", art: "text", label: "Bis wann?", platz: "Zum Beispiel: Start im Januar." }] },
-    { frage: "Vorbilder und Unterlagen", hilfe: "Alles, was uns ein Bild gibt.",
+        { id: "betreuung", art: "wahl", label: "Wer kümmert sich danach um Pflege und Updates?", optionen: [["reeder", "Das übernehmen Sie für uns"], ["selbst", "Wir selbst"], ["offen", "Beraten Sie mich"]] },
+        { id: "entscheidung", art: "wahl", label: "Wer entscheidet mit?", optionen: [["ich", "Ich entscheide allein"], ["gemeinsam", "Wir entscheiden gemeinsam"], ["andere", "Jemand anderes entscheidet"]] }] },
+    { thema: "Zum Schluss", frage: "Vorbilder und Unterlagen", hilfe: "Alles, was uns ein Bild gibt. Alles freiwillig.",
+      warum: "Ein Beispiel, das Ihnen gefällt – oder eines, das Sie auf keinen Fall möchten – sagt oft mehr als lange Beschreibungen.",
       felder: [{ id: "vorbild", art: "text", label: "Gibt es etwas, das Ihnen gefällt?", platz: "Zum Beispiel: ein Link oder der Name einer App." },
+        { id: "nogo", art: "text", label: "Was möchten Sie auf keinen Fall?", platz: "Zum Beispiel: keine App, die man erst installieren muss." },
         { id: "datei", art: "datei", label: "Datei hochladen (freiwillig)" },
         { id: "sonst", art: "lang", label: "Möchten Sie uns noch etwas mitgeben?", platz: "" }] },
   ],
 };
 
 /** Kurze Namen für Projekttitel und Projektart */
-const ART_KURZ = { webapp: "Web-App", app: "App", praxis: "Praxissystem", telefon: "Telefonassistent", ki: "KI-Automatisierung", anpassen: "Software-Anpassung", offen: "Software" };
+const ART_KURZ = { webapp: "Web-App", app: "App", praxis: "Praxissystem", telefon: "Telefonassistent", ki: "KI-Automatisierung", anpassen: "Software-Anpassung", verwaltung: "Verwaltungssoftware", buchung: "Buchungssystem", offen: "Software" };
 const felder = bereich => FRAGEN[bereich].flatMap(s => s.felder);
 const optionsText = (f, wert) => (f.optionen.find(o => o[0] === wert) || [])[1] || "";
 /** Antwort eines Feldes als lesbarer Text ("" wenn leer) */
@@ -162,7 +242,7 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     const link = `${SITE_URL}/portal/onboarding.html#${token}`;
     const cfg = getSetting("mail", DEFAULT_MAIL);
     await sendMail({ to: b.email, subject: "Damit wir uns gut vorbereiten können – ein paar Fragen zu Ihrem Vorhaben",
-      text: `Hallo ${b.name},\n\nwir freuen uns auf unser Gespräch! Damit wir die Zeit bestmöglich nutzen, haben wir ein paar Fragen zu Ihrem Vorhaben vorbereitet (${kinds.map(k => BEREICHE[k]).join(" und ")}). Das dauert etwa fünf Minuten – das meiste tippen Sie einfach an.\n\n${link}\n\nZuerst legen Sie dort mit einem Passwort Ihren persönlichen Bereich an. Dort finden Sie später auch Termine, Unterlagen und unser Angebot.\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
+      text: `Hallo ${b.name},\n\nwir freuen uns auf unser Gespräch! Damit wir die Zeit bestmöglich nutzen, haben wir ein paar Fragen zu Ihrem Vorhaben vorbereitet (${kinds.map(k => BEREICHE[k]).join(" und ")}). Das dauert etwa acht Minuten – das meiste tippen Sie einfach an.\n\n${link}\n\nZuerst legen Sie dort mit einem Passwort Ihren persönlichen Bereich an. Dort finden Sie später auch Termine, Unterlagen und unser Angebot.\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
     return token;
   }
 
@@ -193,11 +273,12 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
         // Die Antworten füllen den Steckbrief in Schritt 1 des Hardware-Projekts
         const zeilen = (...paare) => paare.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("\n");
         hardwareKonzeptAnlegen(pid, { name: titel, kurzbeschreibung: kurz, steckbrief: {
-          zweck: [kurz, zeilen(["Schon vorhanden", t("stand")], ["Enthält vermutlich", t("inhalt")], ["Gewünscht von uns", t("bedarf")], ["Außerdem", t("sonst")])].filter(Boolean).join("\n\n"),
-          nutzer: zeilen(["Wer", t("nutzer")], ["Wo", t("ort")]),
-          groesse: [t("groesse"), t("masse")].filter(Boolean).join(" – "),
-          budget: zeilen(["Budget", t("budget")], ["Zeitrahmen", t("zeit")]),
-          stueckzahl: t("stueckzahl"),
+          zweck: [kurz, zeilen(["Soll vor allem", t("funktion")], ["Schon vorhanden", t("stand")], ["Enthält vermutlich", t("inhalt")], ["Strom", [t("strom"), t("laufzeit")].filter(Boolean).join(" – ")],
+            ["Bedienung", t("bedienung")], ["Verbindung", t("verbindung")], ["Vorschriften", t("zertifizierung")], ["Patent", t("patent")], ["Gewünscht von uns", t("bedarf")], ["Außerdem", t("sonst")])].filter(Boolean).join("\n\n"),
+          nutzer: zeilen(["Für", t("nutzergruppe")], ["Wer", t("nutzer")], ["Wo", t("ort")], ["Muss aushalten", t("umgebung")], ["Temperatur", t("temperatur")]),
+          groesse: [t("groesse"), t("masse"), t("gewicht") && `Gewicht: ${t("gewicht")}`].filter(Boolean).join(" – "),
+          budget: zeilen(["Budget", t("budget")], ["Finanzierung", t("finanzierung")], ["Wie eilig", t("dringlichkeit")], ["Zeitrahmen", t("zeit")]),
+          stueckzahl: [t("stueckzahl"), t("zielpreis") && `Zielpreis: ${t("zielpreis")}`].filter(Boolean).join(" – "),
           wichtig: zeilen(["Am wichtigsten", t("wichtig")], ["Darf nicht passieren", t("nogo")]),
         } });
         for (const d of eigene) { try { fs.mkdirSync(hardwareDateiOrdner(pid), { recursive: true }); fs.copyFileSync(path.join(DIR, String(o.id), d.datei), path.join(hardwareDateiOrdner(pid), d.name)); } catch { /* Datei fehlt – Projekt entsteht trotzdem */ } }
@@ -222,7 +303,9 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
   async function publicRoute(req, res, url) {
     const m = url.pathname.match(/^\/api\/onboarding\/([a-f0-9]{48})(\/datei|\/konto|\/anmelden)?$/);
     if (!m) return null;
-    if (limited("ob:" + ipOf(req), 120, 3600000)) return json(res, 429, { error: "Zu viele Anfragen – bitte später erneut versuchen." });
+    // Jedes „Weiter“ speichert den Zwischenstand (bis zu ~27 Schritte, auch vor und zurück): Grenze je Fragebogen großzügig,
+    // je Anschluss (z. B. mehrere Leute im selben Büro) noch großzügiger – gegen Missbrauch reicht das.
+    if (limited("ob:" + ipOf(req), 600, 3600000) || limited("obt:" + m[1], 300, 3600000)) return json(res, 429, { error: "Zu viele Anfragen – bitte später erneut versuchen." });
     const o = db.prepare("SELECT * FROM onboarding WHERE token = ?").get(m[1]);
     if (!o) return json(res, 404, { error: "Dieser Link ist nicht gültig." });
     const kinds = JSON.parse(o.kinds);
@@ -307,7 +390,7 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     if (o) {
       const link = `${SITE_URL}/portal/onboarding.html#${o.token}`;
       const mailed = await sendMail({ to: c.email, subject: "Kurze Erinnerung: ein paar Fragen zu Ihrem Vorhaben",
-        text: `Hallo ${c.name},\n\ndamit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Antworten auf ein paar Fragen. Das dauert etwa fünf Minuten:\n\n${link}\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
+        text: `Hallo ${c.name},\n\ndamit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Antworten auf ein paar Fragen. Das dauert etwa acht Minuten:\n\n${link}\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
       return { mailed: !!mailed, link };
     }
     // Website-Buchung: Dazu gehört der bildhafte Website-Fragebogen (vorab.mjs), nicht die Software-Fragen.
