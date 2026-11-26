@@ -177,7 +177,10 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
       const a = antworten[bereich] || {}, f = Object.fromEntries(felder(bereich).map(x => [x.id, x])), t = id => lesbar(f[id], a);
       const kurz = (bereich === "hardware" ? t("idee") : t("kann")) || "";
       const art = ART_KURZ[a.art] || "Software";
-      const titel = clean(bereich === "hardware" ? (kurz.split(/[.!?\n]/)[0] || "Hardware-Anfrage") : `${art} für ${wer}`, 110) || "Anfrage";
+      // Vorläufiger Titel, bis die KI einen Namen vergibt. Nicht an Punkten mitten im Satz trennen („1. Auflage“, „z. B.“);
+      // bleibt nur ein Bruchstück, heißt das Projekt so lange „Hardware für <Kunde>“.
+      const ersterSatz = kurz.split(/[!?\n]|\.(?=\s+[A-ZÄÖÜ])/)[0].trim();
+      const titel = clean(bereich === "hardware" ? (ersterSatz.length >= 12 ? ersterSatz : `Hardware für ${wer}`) : `${art} für ${wer}`, 110) || "Anfrage";
       // Das Projekt gibt es seit der Buchung schon (anfragen.mjs). Der Fragebogen füllt es mit Titel und Beschreibung.
       const da = o.booking_id ? db.prepare("SELECT id FROM projects WHERE booking_id = ? AND anfrage_art = ? AND status = 'anfrage'").get(o.booking_id, bereich) : null;
       let pid;

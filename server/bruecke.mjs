@@ -59,8 +59,7 @@ export function createBruecke({ json, send, readJson }) {
       // Deshalb vorher für einen ordentlichen Projektnamen sorgen: Hat die KI das Projekt noch nie benannt, tut sie es jetzt.
       const stand0 = db.prepare("SELECT name_ki, description FROM projects WHERE id = ?").get(x.id);
       if (!stand0.name_ki) {
-        const k0 = hwIntern.konzeptLesen(x.id), text = [stand0.description, k0.steckbrief?.zweck].filter(Boolean).join("
-");
+        const k0 = hwIntern.konzeptLesen(x.id), text = [stand0.description, k0.steckbrief?.zweck].filter(Boolean).join("\n");
         const r = await anfrageBeschreiben(x.id, text).catch(() => null);
         if (r) { hwIntern.konzeptSchreiben(x.id, { ...hwIntern.konzeptLesen(x.id), name: r.name, ...(r.zusammenfassung ? { kurzbeschreibung: r.zusammenfassung } : {}) }); x = projekt(x.id); }
       }
