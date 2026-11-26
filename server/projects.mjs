@@ -440,7 +440,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
     if (mm) {
       const a = db.prepare("SELECT * FROM appointments WHERE id = ?").get(+mm[1]);
       if (!a) return json(res, 404, { error: "Termin nicht gefunden" });
-      if (m === "GET") return json(res, 200, { id: a.id, notes_intern: a.notes_intern || "" });
+      if (m === "GET") return json(res, 200, { id: a.id, notes_intern: a.notes_intern || "", summary: a.summary || "", next_steps: a.next_steps || "", start: a.start, title: a.title });
       if (m === "PATCH") {
         const d = await readJson(req);
         if (d.notes_intern !== undefined) db.prepare("UPDATE appointments SET notes_intern = ? WHERE id = ?").run(clean(d.notes_intern, 12000), a.id);

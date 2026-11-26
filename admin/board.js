@@ -54,7 +54,7 @@
         const heuteT = new Date(v.termin.start).toDateString() === new Date().toDateString();
         stand = `Gespräch ${tagZeit(v.termin.start)}`; naechstes = heuteT ? "Gespräch führen" : "Nichts zu tun bis zum Termin";
         if (heuteT) { wer = "ich"; haupt = knopf("held", "Gespräch geführt", { aid: v.termin.id }); }
-        neben = [video, heuteT ? "" : klein("held", "Schon geführt", { aid: v.termin.id }), klein("move", "Verschieben", { aid: v.termin.id, start: v.termin.start })];
+        neben = [video, klein("prep", "Notizen", { aid: v.termin.id }), heuteT ? "" : klein("held", "Schon geführt", { aid: v.termin.id }), klein("move", "Verschieben", { aid: v.termin.id, start: v.termin.start })];
       } else if (schritt === 2) {     // Gespräch war, Angebot fehlt
         stand = `Gespräch ${tagZeit(v.letztes.start)} geführt`; naechstes = bereich === "hardware" ? "Angebot für das Konzept schreiben" : "Angebot schreiben";
         haupt = knopf("offer", v.entwurf ? "Angebot fertigstellen" : "Angebot erstellen", { notiz: v.letztes.notiz, entwurf: v.entwurf ? 1 : "" });
@@ -107,15 +107,8 @@
     try {
       if (x.va === "offer") { if (x.entwurf) { location.hash = "#finanzen/angebote"; return toast("Der Entwurf steht bei den Angeboten – dort fertigstellen und versenden."); }
         return window.angebotErstellen?.({ client_id: cid, project_id: +x.pid || null, title: x.ptitle, bereich: x.bereich, notizen: x.notiz || "" }); }
-      if (x.va === "notes") { const alt = await api(`/appointments/${x.aid}`); if (await notizen(x.aid, alt.notes_intern || "")) { toast("Notizen gespeichert"); nachher(); } return; }
-      if (x.va === "held") {
-        const jetzt = new Date(Date.now() - 60000).toISOString();
-        const text = await UI.prompt(`Gespräch geführt · ${x.firma}`, { label: "Das Gespräch wird mit dem heutigen Datum als geführt eingetragen. Deine Stichpunkte dazu (optional, sieht der Kunde nicht):", value: "", multiline: true, ok: "Als geführt eintragen" });
-        if (text === null) return;
-        if (x.aid) await api(`/appointments/${x.aid}`, { method: "PATCH", body: { start: jetzt, notes_intern: text || undefined, notify: false } });
-        else await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", start: jetzt, minutes: 30, kind: "Erstgespräch", notes_intern: text, project_id: +x.pid || null, notify: false } });
-        toast("Eingetragen – als Nächstes das Angebot."); return nachher();
-      }
+      // Notizen, Zusammenfassung und nächste Schritte in einem Dialog – vor, während und nach dem Gespräch
+      if (x.va === "notes" || x.va === "prep" || x.va === "held") return window.KUNDEN.gespraech({ cid, aid: +x.aid || null, pid: +x.pid || null, firma: x.firma, gefuehrt: x.va === "held", danach: nachher });
       if (x.va === "move") { const d0 = new Date(x.start), p2 = n => String(n).padStart(2, "0");
         const neu = await UI.prompt(`Termin verschieben · ${x.firma}`, { label: "Neue Zeit. Heute geht auch. Der Kunde bekommt die Änderung per E-Mail.", type: "datetime-local", value: `${d0.getFullYear()}-${p2(d0.getMonth() + 1)}-${p2(d0.getDate())}T${p2(d0.getHours())}:${p2(d0.getMinutes())}`, ok: "Verschieben" });
         if (!neu) return; await api(`/appointments/${x.aid}`, { method: "PATCH", body: { start: new Date(neu).toISOString(), notify: true } }); toast("Termin verschoben"); return nachher(); }

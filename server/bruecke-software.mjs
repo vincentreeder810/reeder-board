@@ -11,6 +11,7 @@ import { hwIntern } from "./hardware.mjs";
 import { answersText } from "./vorab.mjs";
 import { antwortenView } from "./onboarding.mjs";
 import { PROTO_MIME, safeRel } from "./portal.mjs";
+import { workspaceSpeichern, workspaceLesen } from "./workspace.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
 const MAX_BYTES = 60 * 1024 * 1024, MAX_FILES = 600;
@@ -56,11 +57,12 @@ Software- bzw. Website-Projekt im Reeder Board (Projekt ${x.id}, Kunde: ${x.comp
 - \`anfrage.md\` – die Angaben des Kunden aus Terminbuchung und Fragebogen. Wird vom Board geschrieben, nicht bearbeiten.
 - \`website/\` – die Website bzw. der Prototyp: statische Dateien (HTML, CSS, JS, Bilder), Einstieg ist \`index.html\`. Hier wird gearbeitet. Liegt schon etwas darin, ist das der bisherige Entwurf oder der letzte veröffentlichte Stand.
 - \`notizen/\` – Gesprächsnotizen des Inhabers. Lesen erlaubt, nicht verändern.
+- \`arbeitsstand.json\` – dein Arbeitsstand für das Board (siehe unten). Diese Datei pflegst du.
 
 ## Wer ist wer
 
 - Du sprichst mit dem Inhaber von Reeder Software. Er entwickelt die Website im Auftrag des Kunden. Sprich ihn mit „du“ an.
-- \`anfrage.md\` stammt vom Kunden. Der Kunde liest hier nicht mit. Was nur der Kunde beantworten kann, kläre zuerst mit dem Inhaber und halte den Rest in \`notizen/fragen-an-den-kunden.md\` fest.
+- \`anfrage.md\` stammt vom Kunden. Der Kunde liest hier nicht mit. Was nur der Kunde beantworten kann, kläre zuerst mit dem Inhaber und trage den Rest als Frage in \`arbeitsstand.json\` ein.
 
 ## Gespräch zuerst
 
@@ -77,9 +79,36 @@ Der Inhaber entwickelt seine Ideen am liebsten im Gespräch und spricht seine Na
 - Auf dem Handy zuerst prüfen: gut lesbar, nichts ragt seitlich heraus, Schaltflächen gut zu treffen. Bilder klein halten.
 - Keine Zugangsdaten, Schlüssel oder persönlichen Daten in die Dateien schreiben.
 
-## Neuen Stand zeigen
+## Arbeitsstand für das Board (arbeitsstand.json)
 
-Ist ein Stand fertig, sag dem Inhaber Bescheid. Er drückt im Board auf der Projektseite auf „Neuen Stand hochladen“: Die Brücke lädt den Inhalt von \`website/\` hoch, das Board vergleicht mit der letzten Version und zeigt dem Kunden die neue Version mit Änderungsliste. Gib ihm dafür in ein, zwei Sätzen mit, was sich für den Kunden geändert hat – das trägt er beim Hochladen ein.
+Der Inhaber sieht im Board auf der Projektseite den Bereich „Arbeitsbereich“. Er zeigt, was in \`arbeitsstand.json\` steht – die Brücke überträgt die Datei wenige Sekunden nach jedem Speichern. Der Kunde sieht davon nichts; nur die offenen Fragen kann der Inhaber mit einem Knopf an den Kunden schicken.
+
+Halte die Datei aktuell: am Ende jeder Sitzung, nach jedem größeren Schritt und immer, wenn der Inhaber darum bittet („aktualisiere den Stand“). Aufbau (gültiges JSON, nur diese Felder):
+
+\`\`\`json
+{
+  "stand": "Wo steht das Projekt insgesamt? Drei bis sechs Sätze, ohne Fachwörter.",
+  "letzteSitzung": "Was wurde in der letzten Sitzung gemacht und was ist als Nächstes dran?",
+  "notizen": ["Entscheidungen, Wünsche des Inhabers, Dinge zum Merken – je ein kurzer Eintrag"],
+  "fragen": [
+    { "id": "f1", "text": "Frage an den Kunden, so formuliert, dass man sie ihm unverändert schicken kann (Sie-Form)", "status": "offen", "antwort": "" }
+  ]
+}
+\`\`\`
+
+- Fragen: nur was wirklich der Kunde beantworten muss. Jede Frage bekommt eine feste \`id\` (f1, f2 …), die sich nie ändert.
+- Ist eine Frage geklärt (der Inhaber nennt dir die Antwort oder sie hat sich erledigt): \`status\` auf \`"geklaert"\` setzen und die Antwort in \`antwort\` eintragen. Sie verschwindet dann im Board aus den offenen Fragen. Alte geklärte Fragen darfst du nach einiger Zeit ganz löschen.
+- Keine Zugangsdaten und nichts Vertrauliches hineinschreiben.
+
+## Neuen Stand hochladen
+
+Sagt der Inhaber ausdrücklich, dass du den Stand hochladen sollst („lade den aktuellen Stand hoch“), dann:
+
+1. \`arbeitsstand.json\` aktualisieren.
+2. Im Projektordner die Datei \`hochladen.json\` anlegen: \`{ "aenderungen": "Ein, zwei Sätze für den Kunden: Was ist neu?", "kundeBenachrichtigen": false }\`
+3. Die Brücke lädt den Inhalt von \`website/\` innerhalb weniger Sekunden als neue Version hoch, löscht \`hochladen.json\` und schreibt das Ergebnis in \`hochladen-ergebnis.json\`. Lies diese Datei nach etwa zehn Sekunden und sag dem Inhaber, welche Version jetzt online ist (oder was nicht geklappt hat).
+
+Wichtig: Eine hochgeladene Version ist für den Kunden im Kundenportal sichtbar. \`kundeBenachrichtigen\` nur auf \`true\` setzen, wenn der Inhaber sagt, dass der Kunde eine Nachricht dazu bekommen soll. Nie von dir aus hochladen. Der Inhaber kann auch selbst im Board auf „Neuen Stand hochladen“ drücken.
 `;
 
 export function createBrueckeSoftware({ json, send, readJson, clean, publish }) {
@@ -103,7 +132,7 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish }) 
     if (mm && m === "GET") {
       const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
       const st = letzterStand(x.id);
-      return json(res, 200, { id: x.id, titel: x.title, ordner: hwIntern.ordnerName(x.title) || `Projekt ${x.id}`, anleitung: anleitung(x), anfrage: anfrageText(x),
+      return json(res, 200, { id: x.id, titel: x.title, ordner: hwIntern.ordnerName(x.title) || `Projekt ${x.id}`, anleitung: anleitung(x), anfrage: anfrageText(x), arbeitsstand: (w => w ? { stand: w.stand, letzteSitzung: w.letzteSitzung, notizen: w.notizen, fragen: w.fragen.map(f => ({ id: f.id, text: f.text, status: f.status, antwort: f.antwort })) } : null)(workspaceLesen(x.id)),
         stand: st ? { id: st.id, version: st.version, titel: st.title, einstieg: st.entry, veroeffentlicht: st.state === null, dateien: dateienVon(st.token) } : null });
     }
     mm = p.match(/^\/(\d+)\/datei\/(\d+)$/);
@@ -129,6 +158,13 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish }) 
       }
       const r = await publish(db.prepare("SELECT * FROM projects WHERE id = ?").get(x.id), files, { changes: d.changes, announce: d.announce !== false, source: "bruecke", author: clean(d.author, 80) || "Team Reeder" });
       return json(res, r.published ? 201 : 200, r);
+    }
+    // Arbeitsstand aus arbeitsstand.json: Stand, letzte Sitzung, Notizen, Fragen an den Kunden
+    mm = p.match(/^\/(\d+)\/arbeitsstand$/);
+    if (mm && m === "POST") {
+      const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
+      const s = workspaceSpeichern(x.id, await readJson(req, 512 * 1024));
+      return json(res, 200, { ok: true, fragen: s.fragen.filter(f => f.status === "offen").length });
     }
     return json(res, 404, { error: "Unbekannt" });
   }

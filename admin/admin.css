@@ -1438,3 +1438,25 @@ label.auf__item{cursor:pointer}
 #pStand .stand .acts{grid-column:2;justify-content:flex-start;margin-top:2px}
 #pStand .stand+.stand{margin-top:0}
 @media (max-width:560px){#pStand .stand .acts{grid-column:1/-1}}
+
+/* Arbeitsbereich auf der Projektseite: Stand, letzte Sitzung, Notizen und Fragen an den Kunden aus der Arbeit mit Claude */
+.ws__zwei{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ws__b{padding:12px 14px;border-radius:14px;background:var(--paper);margin-top:10px;min-width:0}
+.ws__zwei .ws__b{margin-top:0}
+.ws__b>b{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.ws__b>b em{font-style:normal;display:inline-block;min-width:18px;padding:0 6px;border-radius:999px;background:var(--grad);color:#fff;text-align:center;letter-spacing:0}
+.ws__b p{margin:0;font-size:14px;line-height:1.55;color:var(--ink2);overflow-wrap:anywhere}
+.ws__b ul{margin:0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink2)}
+.ws__b li+li{margin-top:4px}
+.ws__fragen{background:#f6f4ff}
+.ws__f{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start;padding:7px 0;font-size:14px;line-height:1.5;color:var(--ink);cursor:pointer}
+.ws__f+.ws__f{border-top:1px solid rgba(139,92,246,.14)}
+.ws__f input{margin-top:3px}
+.ws__f small{display:block;color:#16774f;font-size:12px}
+.ws__klar{margin-top:10px;font-size:13px;color:var(--muted)}
+.ws__klar summary{cursor:pointer}
+.ws__klar p{margin:8px 0 0;font-size:13px}
+.ws__leer{margin:0;font-size:14px;line-height:1.55;color:var(--ink2)}
+.ws__vorschau{padding:12px 14px;border-radius:14px;background:var(--paper);font-size:14px;line-height:1.5}
+.ws__vorschau p{margin:0 0 6px}
+@media (max-width:760px){.ws__zwei{grid-template-columns:1fr}}

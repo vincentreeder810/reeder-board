@@ -154,5 +154,43 @@
     const item = e.target.closest('.dd[data-dd^="stand-"] .dd__menu [data-v]'); if (!item) return;
     Promise.resolve(actions[item.dataset.v]?.()).catch(err => toast(err.message));
   }, true);
-  window.STAND = { projectCard };
+  /* ---------- Arbeitsbereich: was Claude im Projektordner in arbeitsstand.json festhält ---------- */
+  let W = null;
+  const absatz = t => esc(t).replace(/\n+/g, "<br>");
+  async function workspace(p) {
+    const box = $("#pWs"); if (!box || !p || p.bereich === "hardware") return;
+    W = await api(`/projects/${p.id}/workspace`).catch(() => null); if (!W) return;
+    box.dataset.pid = p.id; box.hidden = false;
+    const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div>
+      <div class="acts">${$('[data-act="openProto"]') ? `<button class="btn btn--ghost btn--sm" data-ws="website">Website ansehen</button>` : ""}</div></div>`;
+    if (W.leer) { box.innerHTML = kopf("Stand, Notizen und offene Fragen aus der Arbeit mit Claude") + `<p class="ws__leer">Noch nichts da. Öffne das Projekt unten mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Wenige Sekunden später steht hier, wo das Projekt steht, was zuletzt gemacht wurde und welche Fragen an den Kunden offen sind.</p>`; return; }
+    const offen = W.fragen.filter(f => f.status === "offen"), klar = W.fragen.filter(f => f.status !== "offen");
+    const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
+    box.innerHTML = kopf(`Von Claude aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `
+      <div class="ws__zwei"><div class="ws__b"><b>Aktueller Stand</b><p>${W.stand ? absatz(W.stand) : "<i>Noch nicht beschrieben.</i>"}</p></div>
+        <div class="ws__b"><b>Letzte Sitzung</b><p>${W.letzteSitzung ? absatz(W.letzteSitzung) : "<i>Noch nichts eingetragen.</i>"}</p></div></div>
+      ${W.notizen.length ? `<div class="ws__b"><b>Notizen</b><ul>${W.notizen.map(n => `<li>${absatz(n)}</li>`).join("")}</ul></div>` : ""}
+      <div class="ws__b ws__fragen"><b>Offene Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
+        ${offen.length ? offen.map(f => `<label class="ws__f"><input type="checkbox" value="${esc(f.id)}" ${f.gesendet ? "" : "checked"}><span>${absatz(f.text)}${f.gesendet ? `<small>an den Kunden geschickt am ${tag(f.gesendet)}</small>` : ""}</span></label>`).join("")
+          + (S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen an den Kunden senden</button></div>` : "")
+          : `<p>Keine offenen Fragen.</p>`}
+        ${klar.length ? `<details class="ws__klar"><summary>${klar.length} geklärt</summary>${klar.map(f => `<p><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}</p>`).join("")}</details>` : ""}</div>`;
+  }
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-ws]"); if (!b) return;
+    if (b.dataset.ws === "website") return $('[data-act="openProto"]')?.click();
+    const box = $("#pWs"), pid = +box.dataset.pid, ids = $$(".ws__f input:checked", box).map(i => i.value);
+    if (!ids.length) return toast("Bitte mindestens eine Frage ankreuzen.");
+    const fragen = W.fragen.filter(f => ids.includes(f.id));
+    const d = modal(`<h2 class="span2">Fragen an den Kunden senden</h2>
+      <p class="hint span2" style="margin:0">Der Kunde bekommt die Fragen als Nachricht im Kundenportal und per E-Mail. Seine Antwort landet im Chat.</p>
+      <label class="span2">Einleitung<textarea name="einleitung" rows="2">für Ihr Projekt haben wir noch ${fragen.length === 1 ? "eine Frage" : "ein paar Fragen"}:</textarea></label>
+      <div class="span2 ws__vorschau">${fragen.map((f, i) => `<p>${fragen.length > 1 ? `${i + 1}. ` : ""}${absatz(f.text)}</p>`).join("")}</div>
+      <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Senden</button></div>`);
+    d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"); k.disabled = true;
+      try { const r = await api(`/projects/${pid}/workspace/fragen-senden`, { method: "POST", body: { ids, einleitung: d.f.einleitung.value } });
+        d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Chat des Kunden${r.mailed ? " und per E-Mail" : ""}.`); workspace({ id: pid }); }
+      catch (err) { d.fail(err.message); k.disabled = false; } });
+  });
+  window.STAND = { projectCard, workspace };
 })();

@@ -142,7 +142,7 @@
         ${e.tentative ? `<button class="btn btn--danger btn--sm" data-a="cancel">Absagen</button><button class="btn btn--grad btn--sm" data-a="confirm">✓ Bestätigen &amp; Einladung senden</button>` : ""}
         ${e.video_url && en > new Date() ? `<a class="btn btn--ghost btn--sm" href="${esc(e.video_url)}" target="_blank" rel="noopener">Video beitreten</a>` : ""}
         ${e.kind === "termin" && en > new Date() && ME.owner ? `<button class="btn btn--danger btn--sm" data-a="tabsage">Absagen</button><button class="btn btn--ghost btn--sm" data-a="tverschieben">Verschieben</button>` : ""}
-        ${e.kind === "termin" ? `<button class="btn btn--grad btn--sm" data-a="edit">${en < new Date() && !e.summary ? "Zusammenfassung eintragen" : "Bearbeiten"}</button>` : ""}
+        ${e.kind === "termin" ? `<button class="btn btn--ghost btn--sm" data-a="edit">Bearbeiten</button><button class="btn btn--grad btn--sm" data-a="gespraech">${en < new Date() && !e.summary ? "Zusammenfassung eintragen" : "Notizen &amp; Zusammenfassung"}</button>` : ""}
       </div></div>`;
     document.body.appendChild(m);
     m.addEventListener("click", async ev => {
@@ -156,6 +156,7 @@
       const a = ev.target.closest("[data-a]")?.dataset.a; if (!a) return;
       try {
         if (a === "edit") { m.remove(); return window.KUNDEN.editAppt(e.id, e.client.id); }
+        if (a === "gespraech") { m.remove(); return window.KUNDEN.gespraech({ cid: e.client.id, aid: e.id, firma: e.client.company || e.client.name || "", danach: () => load() }); }
         // Bestätigten Termin absagen oder verschieben – der Kontakt bekommt jeweils sofort eine E-Mail
         const mailHinweis = r => r.ohneAdresse ? " Für den Kontakt ist keine E-Mail-Adresse hinterlegt – bitte selbst Bescheid geben." : r.mailed ? " Der Kontakt ist per E-Mail informiert." : " Die E-Mail liegt im Postausgang (Versand nicht eingerichtet oder fehlgeschlagen).";
         if (a === "tabsage") {

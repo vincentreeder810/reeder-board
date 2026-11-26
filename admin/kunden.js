@@ -170,7 +170,7 @@
       const notizK = c.last?.id ? k("notes", c.last.notiz ? "Notizen bearbeiten" : "Notizen") : "";
       const [h, neben, raus] = step === "neu" ? [open ? haupt("confirm", "✓ Termin bestätigen", `data-bid="${bk.id}"`) : haupt("schedule", "Erstgespräch vereinbaren"),
             (open ? k("schedule", "Andere Zeit") : "") + k("held", "Gespräch geführt") + angebotKnopf("") + fbK, weg("archive", "Kein Interesse")]
-        : step === "geplant" ? [haupt("held", "✓ Gespräch geführt"), k("move", "Verschieben") + k("schedule", "Weiterer Termin") + angebotKnopf("") + fbK, weg("archive", "Kein Interesse")]
+        : step === "geplant" ? [haupt("held", "✓ Gespräch geführt"), k("prep", "Notizen") + k("move", "Verschieben") +k("schedule", "Weiterer Termin") + angebotKnopf("") + fbK, weg("archive", "Kein Interesse")]
         : step === "angebot" ? [haupt("won", "✓ Zusage erhalten", `data-oid="${c.offer.id}"`), k("offerOpen", "Angebot ansehen") + notizK, weg("lost", "Angebot abgelehnt", `data-oid="${c.offer.id}"`)]
         : [angebotKnopf("ibtn--ok lead__haupt"), notizK + k("schedule", "Folgetermin") + k("start", "Ohne Angebot starten"), weg("archive", "Kein Auftrag")];
       const acts = `${h}<div class="lead__neben">${neben}</div>${raus}`;
@@ -223,18 +223,11 @@
       }
       if (b.dataset.lact === "held") {
         // Das Gespräch hat stattgefunden – auch spontan am Telefon, vor dem geplanten Termin oder ganz ohne Termin
-        const jetzt = new Date(Date.now() - 60000).toISOString();
-        const frage = K.next ? `Der Termin am ${C.fmt(K.next.start, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} Uhr wird auf jetzt gesetzt und gilt als geführt.` : "Es wird ein Gespräch mit dem heutigen Datum eingetragen.";
-        const notiz = await UI.prompt(`Gespräch geführt · ${current.company}`, { label: `${frage} Ihre Stichpunkte dazu (optional, sieht der Kunde nicht):`, value: "", multiline: true, ok: "Als geführt eintragen" });
-        if (notiz === null) return;
-        if (K.next) await api(`/appointments/${K.next.id}`, { method: "PATCH", body: { start: jetzt, notes_intern: notiz || undefined, notify: false } });
-        else await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", start: jetzt, minutes: 30, kind: "Erstgespräch", notes_intern: notiz, notify: false, project_id: K._p?.id || undefined } });
-        toast("Eingetragen – jetzt können Sie das Angebot erstellen."); window.loadVertrieb(); return window.updateBadges?.();
+        return gespraechDialog({ cid, aid: K.next?.id || null, pid: K._p?.id || null, firma: current.company, gefuehrt: true, danach: () => { window.loadVertrieb(); window.updateBadges?.(); } });
       }
+      if (b.dataset.lact === "prep") return gespraechDialog({ cid, aid: K.next.id, pid: K._p?.id || null, firma: current.company, danach: () => window.loadVertrieb() });
       if (b.dataset.lact === "notes") {
-        const t = await UI.prompt(`Gesprächsnotizen · ${current.company}`, { label: "Interne Stichpunkte aus dem Gespräch – der Kunde sieht sie nicht. Sie stehen beim Erstellen des Angebots daneben.", value: K.last.notiz || "", multiline: true, ok: "Speichern" });
-        if (t === null) return;
-        await api(`/appointments/${K.last.id}`, { method: "PATCH", body: { notes_intern: t, notify: false } }); toast("Notizen gespeichert"); return window.loadVertrieb();
+        return gespraechDialog({ cid, aid: K.last.id, pid: K._p?.id || null, firma: current.company, danach: () => window.loadVertrieb() });
       }
       if (b.dataset.lact === "offerOpen") { location.hash = "#finanzen/angebote"; return; }
       if (b.dataset.lact === "won") {
@@ -421,6 +414,7 @@
       </div>
       <div class="pgrid">
         <div class="stack p-main">
+          <div class="card ws" id="pWs" hidden></div>
           <div class="card" id="pTasks"></div>
           <div class="card">
             <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Prototypen &amp; Anmerkungen</h2><p>${openAnns.length ? `<b class="warn">${openAnns.length} offene Anmerkung${openAnns.length === 1 ? "" : "en"}</b> vom Kunden` : "Keine offenen Anmerkungen."}</p></div>
@@ -459,7 +453,7 @@
         </div>
       </div>`;
     window.WORK?.projectCards(p);
-    window.STAND?.projectCard(p).then(() => window.AUFTRAG?.load(p));
+    window.STAND?.projectCard(p).then(() => { window.AUFTRAG?.load(p); window.STAND.workspace(p); });
     window.PRUEF?.load(p);
     window.BOARD?.arbeitsstand?.(p);
     window.BOARD?.vereinbarungen?.(p);
@@ -629,6 +623,29 @@
       if (!(await UI.confirm("Der Termin verschwindet auch beim Kunden.", { title: "Termin löschen?", ok: "Löschen", danger: true }))) return;
       await api(`/appointments/${e.target.dataset.delappt}`, { method: "DELETE", body: {} }); e.target.closest(".modal").remove(); toast("Gelöscht"); refreshCurrent();
     });
+  }
+  /* Gespräch: interne Notizen, Zusammenfassung für den Kunden und nächste Schritte – vor, während und nach dem Termin.
+     Mit „Gespräch hat stattgefunden“ wird der Termin zugleich als geführt eingetragen. */
+  async function gespraechDialog({ cid, aid = null, pid = null, firma = "", gefuehrt = false, danach = null } = {}) {
+    const a = aid ? await api(`/appointments/${aid}`) : {};
+    const kuenftig = !aid || Date.parse(a.start) > Date.now();
+    const wann = aid ? C.fmt(a.start, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+    const klein = t => `<small class="muted" style="font-weight:400">– ${t}</small>`;
+    dialog(`<h2 class="span2">Gespräch${firma ? " · " + esc(firma) : ""}</h2>
+      <p class="hint span2" style="margin:-6px 0 0">${aid ? `Termin ${wann} Uhr. ` : "Noch kein Termin eingetragen. "}Du kannst schon vor und während des Gesprächs mitschreiben und jederzeit speichern.</p>
+      <label class="span2">Interne Notizen ${klein("sieht der Kunde nicht. Grundlage für das Angebot.")}<textarea name="notes_intern" rows="6" placeholder="z. B. will nur ein Konzept, Budget ca. …, Entscheidung bis …">${esc(a.notes_intern || "")}</textarea></label>
+      <label class="span2">Zusammenfassung für den Kunden ${klein("steht nach dem Speichern im Kundenportal beim Termin")}<textarea name="summary" rows="5" placeholder="Was wurde besprochen? Was möchte der Kunde?">${esc(a.summary || "")}</textarea></label>
+      <label class="span2">Nächste Schritte ${klein("sieht der Kunde ebenfalls")}<textarea name="next_steps" rows="3" placeholder="z. B. Wir schicken bis Freitag das Angebot.">${esc(a.next_steps || "")}</textarea></label>
+      ${kuenftig ? `<label class="check span2"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}> Gespräch hat stattgefunden <small>(${aid ? "der Termin wird auf jetzt gesetzt und gilt als geführt" : "wird mit dem heutigen Datum eingetragen"})</small></label>` : ""}
+      <label class="check span2"><input type="checkbox" name="notify"> Kunden per E-Mail über die Zusammenfassung informieren</label>`,
+      async f => {
+        const held = !!f.held?.checked, body = { notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: f.notify.checked };
+        if (held) body.start = new Date(Date.now() - 60000).toISOString();
+        if (aid) await api(`/appointments/${aid}`, { method: "PATCH", body });
+        else if (held) await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", minutes: 30, kind: "Erstgespräch", project_id: pid || undefined, ...body } });
+        else throw new Error("Es gibt noch keinen Termin. Bitte „Gespräch hat stattgefunden“ ankreuzen oder zuerst einen Termin eintragen.");
+        toast(held ? "Eingetragen – als Nächstes das Angebot." : "Gespeichert"); danach?.();
+      });
   }
   async function docDialog() {
     await ensureProjects();
@@ -802,7 +819,7 @@
       async f => { const cid = +f.client.value; if (!cid) throw new Error("Bitte auswählen, mit wem der Termin ist."); current = clients.find(c => c.id === cid); setTimeout(() => scheduleDialog(cid, startIso ? { start: startIso } : {}), 0); });
     const b = document.querySelector(".modal:last-of-type [type=submit]"); if (b) b.textContent = "Weiter";
   }
-  window.KUNDEN = { schedule: scheduleDialog, openProjectPage, refreshAfter, editAppt, newAppt };
+  window.KUNDEN = { schedule: scheduleDialog, openProjectPage, refreshAfter, editAppt, newAppt, gespraech: gespraechDialog };
 
   const actions = {
     schedule: () => scheduleDialog(current.id),
