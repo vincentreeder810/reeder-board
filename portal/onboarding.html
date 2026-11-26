@@ -90,16 +90,16 @@ h1{font-size:clamp(30px,4.4vw,48px);letter-spacing:-.045em;line-height:1.06;marg
 .card--glanz.sel::before{z-index:3;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 12.5l3.2 3.2L17 9' fill='none' stroke='%238b5cf6' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/18px no-repeat}
 .card--glanz.sel .ico{background:rgba(255,255,255,.28)}
 /* i-Knopf im Titel und das aufploppende Info-Feld */
-.card__info{display:inline-grid;place-items:center;width:24px;height:24px;margin-left:6px;vertical-align:2px;border-radius:50%;background:rgba(255,255,255,.95);color:#6d28d9;font-size:13px;font-weight:800;font-style:normal;line-height:1;cursor:pointer;box-shadow:0 2px 8px -2px rgba(0,0,0,.25);transition:transform .2s var(--ease)}
-.card__info{position:relative}
-.card__info::before{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
-.grid:has(.infopop){grid-auto-rows:auto}
-/* Mehrspaltig: Das Info-Feld steht unter der ganzen Kartenreihe, damit die Karten nebeneinander bleiben */
-@media (min-width:621px){.infopop{order:99}}
-.card__info:hover,.card__info.auf{transform:scale(1.1)}
+.card__info{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 12px 6px 6px;border-radius:999px;background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:600;line-height:1.2;cursor:pointer;transition:background .2s}
+.card__info i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#fff;color:#6d28d9;font-size:12.5px;font-weight:800;font-style:normal}
+.card__info::before{content:"";position:absolute;inset:-8px -4px}
+.card__info:hover,.card__info.auf{background:rgba(255,255,255,.3)}
 .card__info:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.infopop{grid-column:1/-1;position:relative;margin-top:-4px;padding:18px 20px;border-radius:20px;background:#fff;box-shadow:0 0 0 1.5px rgba(139,92,246,.35),0 22px 50px -22px rgba(76,29,149,.45);font-size:14.5px;line-height:1.55;color:var(--ink2);animation:aufploppen .28s var(--ease)}
-.infopop::before{content:"";position:absolute;top:-7px;left:34px;width:14px;height:14px;background:#fff;transform:rotate(45deg);box-shadow:-1.5px -1.5px 0 0 rgba(139,92,246,.35)}
+.grid:has(.infopop){position:relative}
+.infopop{position:absolute;z-index:6;padding:20px 22px 20px;border-radius:20px;background:#fff;box-shadow:0 0 0 1.5px rgba(139,92,246,.35),0 26px 60px -20px rgba(76,29,149,.5);font-size:14.5px;line-height:1.55;color:var(--ink2);animation:aufploppen .28s var(--ease)}
+.infopop::before{content:"";position:absolute;top:-7px;left:var(--pfeil,34px);width:14px;height:14px;background:#fff;transform:rotate(45deg);box-shadow:-1.5px -1.5px 0 0 rgba(139,92,246,.35)}
+.infopop__zu{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;background:var(--paper);color:var(--ink2);font-size:13px;display:grid;place-items:center}
+.infopop b{padding-right:34px}
 .infopop b{display:block;margin:0 0 6px;font-size:15.5px;color:var(--ink);background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content;max-width:100%}
 .infopop p{margin:0 0 12px}
 .infopop a{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:999px;background:var(--grad);color:#fff;font-weight:600;font-size:14px;text-decoration:none}
@@ -420,9 +420,10 @@ textarea.inp{min-height:120px;resize:vertical}
       const an = gew.includes(v), ic = ICON[`${f.id}:${v}`];
       // Hervorgehobene Option (z. B. Signature): Karte im Verlaufs-Look, im Titel ein kleiner i-Knopf; das Info-Feld ploppt direkt darunter auf
       const glanz = f.info?.zu === v;
-      const iKnopf = glanz ? ` <span class="card__info" data-info="${esc(f.id)}" role="button" tabindex="0" aria-expanded="false" aria-controls="info-${esc(f.id)}" aria-label="${esc(f.info.titel)}">i</span>` : "";
-      const pop = glanz ? `<div class="infopop" id="info-${esc(f.id)}" hidden><b>${esc(f.info.titel)}</b><p>${esc(f.info.text)}</p>${f.info.link ? `<a href="${esc(f.info.link)}" target="_blank" rel="noopener">${esc(f.info.linkText || "Mehr erfahren")} <span aria-hidden="true">↗</span></a>` : ""}</div>` : "";
-      return `<button type="button" class="card ${glanz ? "card--glanz" : ""} ${multi ? "card--multi" : ""} ${ic ? "" : "card--ohne"} ${an ? "sel" : ""} ${voll && !an ? "voll" : ""}" data-v="${esc(v)}" aria-pressed="${an}">${ic ? `<span class="ico">${svg(ic)}</span>` : ""}<span class="card__t"><b>${esc(l)}${iKnopf}</b>${d ? `<small>${esc(d)}</small>` : ""}</span></button>${pop}`; }).join("")}</div>`;
+      // Info-Knopf mit festem Platz unten in der Karte; das Info-Feld hängt als Pop-up direkt unter genau dieser Karte
+      const iKnopf = glanz ? `<span class="card__info" data-info="${esc(f.id)}" role="button" tabindex="0" aria-expanded="false" aria-controls="info-${esc(f.id)}"><i aria-hidden="true">i</i>${esc(f.info.titel)}</span>` : "";
+      const pop = glanz ? `<div class="infopop" id="info-${esc(f.id)}" role="dialog" aria-label="${esc(f.info.titel)}" hidden><button type="button" class="infopop__zu" data-info-zu="${esc(f.id)}" aria-label="Schließen">✕</button><b>${esc(f.info.titel)}</b><p>${esc(f.info.text)}</p>${f.info.link ? `<a href="${esc(f.info.link)}" target="_blank" rel="noopener">${esc(f.info.linkText || "Mehr erfahren")} <span aria-hidden="true">↗</span></a>` : ""}</div>` : "";
+      return `<button type="button" class="card ${glanz ? "card--glanz" : ""} ${multi ? "card--multi" : ""} ${ic ? "" : "card--ohne"} ${an ? "sel" : ""} ${voll && !an ? "voll" : ""}" data-v="${esc(v)}" aria-pressed="${an}" ${glanz ? `data-info-karte="${esc(f.id)}"` : ""}>${ic ? `<span class="ico">${svg(ic)}</span>` : ""}<span class="card__t"><b>${esc(l)}</b>${d ? `<small>${esc(d)}</small>` : ""}${iKnopf}</span></button>${pop}`; }).join("")}</div>`;
     return `<div class="chips" ${attr}>${f.optionen.map(([v, l]) => { const an = gew.includes(v);
       return `<button type="button" class="chip ${an ? "sel" : ""} ${voll && !an ? "voll" : ""}" data-v="${esc(v)}" aria-pressed="${an}">${esc(l)}</button>`; }).join("")}</div>`;
   }
@@ -475,14 +476,30 @@ textarea.inp{min-height:120px;resize:vertical}
   }
 
   /* ---------- Eingaben in den Zustand übernehmen ---------- */
+  /* Info-Pop-up: hängt immer direkt unter seiner Karte (egal ob eine, zwei oder drei Spalten), der Pfeil zeigt auf den Info-Knopf */
+  function infoSetzen(pop) {
+    const id = pop.id.slice(5), karte = $(`[data-info-karte="${id}"]`, app), knopf = $(`[data-info="${id}"]`, app), grid = pop.parentElement;
+    if (!karte || !grid) return;
+    const breit = Math.min(grid.clientWidth, Math.max(karte.offsetWidth, 380));
+    const links = Math.max(0, Math.min(karte.offsetLeft, grid.clientWidth - breit));
+    pop.style.width = breit + "px"; pop.style.left = links + "px"; pop.style.top = (karte.offsetTop + karte.offsetHeight + 12) + "px";
+    if (knopf) pop.style.setProperty("--pfeil", Math.max(16, Math.min(breit - 30, knopf.getBoundingClientRect().left - grid.getBoundingClientRect().left - links + 12)) + "px");
+  }
+  function infoUmschalten(id, soll = null) {
+    const pop = document.getElementById("info-" + id), knopf = $(`[data-info="${id}"]`, app); if (!pop) return;
+    const auf = soll === null ? pop.hidden : soll; pop.hidden = !auf; knopf?.setAttribute("aria-expanded", auf); knopf?.classList.toggle("auf", auf);
+    if (auf) { infoSetzen(pop); pop.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" }); }
+  }
+  addEventListener("resize", () => $$(".infopop:not([hidden])", app).forEach(infoSetzen));
+  // Klick daneben oder Escape schließt das Pop-up
+  document.addEventListener("click", e => { if (e.target.closest(".infopop,[data-info]")) return; $$(".infopop:not([hidden])", app).forEach(p => infoUmschalten(p.id.slice(5), false)); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") $$(".infopop:not([hidden])", app).forEach(p => infoUmschalten(p.id.slice(5), false)); });
   // i-Knopf auch mit der Tastatur bedienbar (Enter/Leertaste), ohne die Karte auszuwählen
   app.addEventListener("keydown", e => { const ik = e.target.closest?.("[data-info]"); if (ik && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); ik.click(); } }, true);
   app.addEventListener("click", e => {
     // i-Knopf auf einer Karte: nur das Info-Feld auf- bzw. zuklappen, die Karte dabei nicht auswählen
-    const ik = e.target.closest("[data-info]");
-    if (ik) { e.preventDefault(); e.stopPropagation(); const pop = document.getElementById("info-" + ik.dataset.info); if (!pop) return;
-      const auf = pop.hidden; pop.hidden = !auf; ik.setAttribute("aria-expanded", auf); ik.classList.toggle("auf", auf);
-      if (auf) pop.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" }); return; }
+    const ik = e.target.closest("[data-info],[data-info-zu]");
+    if (ik) { e.preventDefault(); e.stopPropagation(); const id = ik.dataset.info || ik.dataset.infoZu; infoUmschalten(id, ik.dataset.infoZu ? false : null); return; }
     const o = e.target.closest("[data-v]"); if (!o) return;
     const box = o.closest("[data-feld]"), s = liste()[pos]; if (!box || !s) return;
     const id = box.dataset.feld, a = (antworten[s.bereich] ||= {}), v = o.dataset.v, knoepfe = $$("[data-v]", box);
