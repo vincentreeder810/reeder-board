@@ -137,7 +137,8 @@ const views = {
 const OWNER_VIEWS = ["anfragen", "team", "finanzen", "kennzahlen"];
 /* ---------- Software und Hardware in einem Board ---------- */
 // Es gibt nur eine Projektliste. Jedes Projekt trägt seinen Bereich; Listen zeigen ihn als kleines Schild.
-const bereichTag = p => `<span class="bereich bereich--${p.bereich === "hardware" ? "hw" : "sw"}">${p.bereich === "hardware" ? "Hardware" : "Software"}</span>`;
+// Website-Anfragen tragen das Schild „Website“ (technisch gehören sie zum Bereich Software)
+const bereichTag = p => `<span class="bereich bereich--${p.bereich === "hardware" ? "hw" : "sw"}">${p.bereich === "hardware" ? "Hardware" : p.anfrage_art === "website" || p.kind === "Website" ? "Website" : "Software"}</span>`;
 window.bereichTag = bereichTag;
 /** Schilder für alle Bereiche, in denen ein Kunde Projekte hat */
 const bereicheTags = c => ["software", "hardware"].filter(b => (c.projects || []).some(p => (p.bereich || "software") === b)).map(b => bereichTag({ bereich: b })).join(" ");

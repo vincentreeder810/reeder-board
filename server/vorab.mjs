@@ -11,6 +11,7 @@ import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL, upsertLead } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
 import { assistantStatus } from "./assistant.mjs";
+import { projektZurAnfrage, projekteFuerBuchung } from "./anfragen.mjs";
 import { withBrowser, loadPage, browserPath } from "./browser.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
@@ -387,7 +388,7 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
       const cid = v.client_id || b.client_id;
       const r = db.prepare("INSERT INTO prototypes(client_id, title, note, token, entry, files, bytes, version, changes, source, active, state) VALUES(?,?,?,?,?,?,?,?,?,?,0,'kandidat')")
         .run(cid, `Vorab-Entwurf – ${a.company || b.company || b.name}`.slice(0, 140), "Automatisch aus dem Fragebogen erstellt – zum Zeigen im Erstgespräch. Für den Kunden erst nach Freigabe sichtbar.", token, "index.html", 1 + images.length, Buffer.byteLength(final) + images.reduce((n, i) => n + (i.bytes || 0), 0), 1, "Vorab-Entwurf aus dem Fragebogen", "vorab");
-      db.prepare("UPDATE prototypes SET group_id = id WHERE id = ?").run(r.lastInsertRowid);
+      db.prepare("UPDATE prototypes SET group_id = id, project_id = ? WHERE id = ?").run(projektZurAnfrage(v.booking_id, "website")?.id || null, r.lastInsertRowid);
       db.prepare("UPDATE vorab SET status = 'fertig', prototype_id = ?, cost = ?, built_at = datetime('now') WHERE id = ?").run(r.lastInsertRowid, cost + extra, v.id);
       const url = `${SITE_URL}/p/${token}/index.html`;
       const cfg = getSetting("mail", DEFAULT_MAIL);
@@ -428,6 +429,16 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
     if (v.answered_at) return json(res, 409, { error: "Vielen Dank – Ihre Angaben liegen uns schon vor." });
     const a = cleanAnswers(await readJson(req, 40 * 1024));
     db.prepare("UPDATE vorab SET answers = ?, status = 'beantwortet', answered_at = datetime('now') WHERE id = ?").run(JSON.stringify(a), v.id);
+    // Die Antworten beschreiben das Website-Projekt der Buchung (für ältere Buchungen entsteht es hier)
+    try {
+      let pj = projektZurAnfrage(v.booking_id, "website");
+      if (!pj && b.id) { projekteFuerBuchung({ ...b, client_id: c.id }, ["website"]); pj = projektZurAnfrage(v.booking_id, "website"); }
+      if (pj) {
+        const art = { website: "Website", webapp: "Web-App", app: "App" }[a.kind] || "Website";
+        db.prepare("UPDATE projects SET title = ?, kind = ?, description = ?, updated_at = datetime('now') WHERE id = ? AND status = 'anfrage'").run(`${art} für ${a.company || c.company || c.name}`.slice(0, 110), art, answersText(a).slice(0, 4000), pj.id);
+        db.prepare("INSERT INTO events(client_id, project_id, kind, title, detail, notify) VALUES(?, ?, 'projekt', 'Fragebogen ausgefüllt', ?, 0)").run(c.id, pj.id, art);
+      }
+    } catch (e) { console.warn("Website-Projekt:", e.message); }
     // Entwurf nur für Projekte mit Oberfläche und wenn die KI verfügbar ist – im Hintergrund
     const canBuild = ["website", "webapp", "app"].includes(a.kind) && (assistantStatus().key || MOCK());
     if (canBuild) setTimeout(() => build(db.prepare("SELECT * FROM vorab WHERE id = ?").get(v.id)), 10);

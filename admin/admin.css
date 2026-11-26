@@ -1390,3 +1390,19 @@ label.auf__item{cursor:pointer}
 .vrn__m b{font-size:13px;margin-left:auto}
 .vrn--faellig{background:#fff7ed;align-items:center}
 @media (max-width:640px){.vrn{flex-direction:column}.vrn__k{flex-direction:row;align-items:center}}
+
+/* ===================== Eine Anfrage ist ein Projekt: Vertriebskarte, Fragebögen, Verlauf ===================== */
+.lead__was{display:flex;align-items:center;gap:8px;margin:2px 0 4px;padding:9px 11px;border-radius:12px;background:var(--paper);text-decoration:none;color:var(--ink);min-width:0;transition:background .2s}
+.lead__was:hover{background:#ece9ff}
+.lead__was b{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btag--web{background:#e8f1ff;color:#1d4ed8}
+.fballe{margin-top:10px}
+.fballe>summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--paper);font-size:13.5px;font-weight:600;color:var(--ink2)}
+.fballe>summary::-webkit-details-marker{display:none}
+.fballe>summary::after{content:"";width:7px;height:7px;border:solid currentColor;border-width:0 1.6px 1.6px 0;transform:rotate(45deg) translateY(-2px);transition:transform .25s}
+.fballe[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
+.fballe[open]>summary{margin-bottom:10px}
+/* Verlauf: Symbole sitzen mittig in ihrem Feld (die allgemeine Regel für Textzeilen hat sie verschoben) */
+.ctl .ctl__ico{display:grid;place-items:center;width:36px;height:36px;font-size:16px;line-height:1;color:var(--ink2)}
+.ctl .ctl__ico svg{width:18px;height:18px;display:block}
+.ctl--future .ctl__ico{color:#fff}

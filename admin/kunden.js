@@ -137,13 +137,22 @@
     if (notizen) pre.notizen = notizen;
     sessionStorage.setItem("rs-new-invoice", JSON.stringify(pre)); location.hash = "#finanzen/angebote";
   };
+  let KARTEN = [];
   window.loadVertrieb = async () => {
-    clients = await api("/clients");
+    const [cl, alleProjekte] = await Promise.all([api("/clients"), api("/projects").catch(() => [])]); clients = cl;
     const leads = clients.filter(c => c.stage === "anfrage" || c.stage === "interessent");
+    // Eine Karte je Anfrage: Jedes Projekt im Status „anfrage“ bringt seinen eigenen Termin, Fragebogen und sein eigenes Angebot mit.
+    // Kontakte ganz ohne Projekt (z. B. von Hand angelegt) bekommen wie bisher eine Karte für den Kontakt.
+    const jeKunde = new Map();
+    for (const p of alleProjekte) if (p.status === "anfrage" && p.vorgang) { if (!jeKunde.has(p.client.id)) jeKunde.set(p.client.id, []); jeKunde.get(p.client.id).push(p); }
+    KARTEN = leads.flatMap(c => { const ps = jeKunde.get(c.id) || [];
+      return ps.length ? ps.map(p => ({ ...c, _p: p, _fb: p.fragebogen, next: p.vorgang.termin, last: p.vorgang.letztes, offer: p.vorgang.angebot, offerDraft: p.vorgang.entwurf ? {} : null }))
+        : [{ ...c, _p: null, _fb: c.lead?.fragebogen || null }]; });
+    KARTEN.forEach((k, i) => { k._i = i; });
     const time = iso => `${dayShort(iso)}, ${C.fmt(iso, { hour: "2-digit", minute: "2-digit" })} Uhr`;
     const card = c => {
       const L = c.lead || {}, bk = L.booking, open = bk && bk.status === "neu" && !c.next, step = leadStep(c);
-      const anfr = (c.projects || []).find(p => p.status === "anfrage") || (c.projects || [])[0];
+      const anfr = c._p || (c.projects || []).find(p => p.status === "anfrage") || (c.projects || [])[0];
       const status = step === "geplant" ? `<p class="lead__bk lead__bk--ok">${ICO("termin")}${esc(c.next.title)} · ${time(c.next.start)}</p>`
         : step === "gefuehrt" ? `<p class="lead__bk">${ICO("summary")}<span>${esc(c.last.title)} am ${dayShort(c.last.start)}${c.last.notiz ? "" : ` · <em>noch keine Notizen</em>`}</span></p>`
         : step === "angebot" ? `<p class="lead__bk lead__bk--ok">${ICO("summary")}Angebot ${esc(c.offer.number || "")} · ${money(c.offer.gross)}${c.offer.valid_until ? ` · gültig bis ${dayShort(c.offer.valid_until)}` : ""}</p>`
@@ -154,7 +163,7 @@
       const k = (act, text, extra = "") => `<button class="ibtn" data-lact="${act}" ${extra}>${text}</button>`;
       const haupt = (act, text, extra = "") => `<button class="ibtn ibtn--ok lead__haupt" data-lact="${act}" ${extra}>${text}</button>`;
       const weg = (act, text, extra = "") => `<button class="lead__weg" data-lact="${act}" ${extra}>${text}</button>`;
-      const fbK = L.fragebogen !== "ausgefuellt" ? k("fbSend", L.fragebogen === "offen" ? "Fragebogen erinnern" : "Fragebogen senden", `data-bereich="${anfr?.bereich || ""}"`) : "";
+      const fbK = c._fb !== "ausgefuellt" ? k("fbSend", c._fb === "offen" ? "Fragebogen erinnern" : "Fragebogen senden", `data-bereich="${anfr?.bereich || ""}"`) : "";
       const notizK = c.last?.id ? k("notes", c.last.notiz ? "Notizen bearbeiten" : "Notizen") : "";
       const [h, neben, raus] = step === "neu" ? [open ? haupt("confirm", "✓ Termin bestätigen", `data-bid="${bk.id}"`) : haupt("schedule", "Erstgespräch vereinbaren"),
             (open ? k("schedule", "Andere Zeit") : "") + k("held", "Gespräch geführt") + angebotKnopf("") + fbK, weg("archive", "Kein Interesse")]
@@ -162,17 +171,18 @@
         : step === "angebot" ? [haupt("won", "✓ Zusage erhalten", `data-oid="${c.offer.id}"`), k("offerOpen", "Angebot ansehen") + notizK, weg("lost", "Angebot abgelehnt", `data-oid="${c.offer.id}"`)]
         : [angebotKnopf("ibtn--ok lead__haupt"), notizK + k("schedule", "Folgetermin") + k("start", "Ohne Angebot starten"), weg("archive", "Kein Auftrag")];
       const acts = `${h}<div class="lead__neben">${neben}</div>${raus}`;
-      return `<div class="lead" data-cid="${c.id}">
+      return `<div class="lead" data-cid="${c.id}" data-k="${c._i}">
         <a class="lead__top" href="#kunden/${c.id}"><span class="avatar avatar--${STAGE[c.stage][1]}">${esc(initials(c.company))}</span><span><b>${esc(c.company)}</b><small>${esc(c.name)}${c.source ? " · " + esc(quelle(c)) : ""} · seit ${ago(c.created_at)}</small></span></a>
-        ${L.kinds || L.budget ? `<p class="lead__tags">${L.kinds ? L.kinds.split(/,\s*/).map(k => `<span>${esc(k)}</span>`).join("") : ""}${L.budget ? `<span class="lead__budget">${esc(L.budget)}</span>` : ""}</p>` : ""}
-        ${L.fragebogen || (c.projects || []).length ? `<p class="lead__tags">${L.fragebogen === "ausgefuellt" ? `<span class="lead__fb lead__fb--ok">✓ Fragebogen ausgefüllt</span>` : L.fragebogen === "offen" ? `<span class="lead__fb">Fragebogen noch offen</span>` : ""}${(c.projects || []).slice(0, 3).map(p => `<a class="lead__proj" href="${projektHref(p)}" title="Zum Projekt">${esc(p.title.length > 34 ? p.title.slice(0, 32) + " …" : p.title)} · ${p.bereich === "hardware" ? "Hardware" : "Software"}</a>`).join("")}</p>` : ""}
-        ${L.text && L.fragebogen !== "ausgefuellt" ? `<p class="lead__txt">${esc(L.text.slice(0, 160))}${L.text.length > 160 ? " …" : ""}</p>` : ""}
+        ${c._p ? `<a class="lead__was" href="${projektHref(c._p)}" title="Zum Projekt">${bereichTag(c._p)}<b>${esc(c._p.title)}</b></a>` : ""}
+        ${!c._p && (L.kinds || L.budget) ? `<p class="lead__tags">${L.kinds ? L.kinds.split(/,\s*/).map(k => `<span>${esc(k)}</span>`).join("") : ""}${L.budget ? `<span class="lead__budget">${esc(L.budget)}</span>` : ""}</p>` : ""}
+        ${c._fb || (!c._p && (c.projects || []).length) ? `<p class="lead__tags">${c._fb === "ausgefuellt" ? `<span class="lead__fb lead__fb--ok">✓ Fragebogen ausgefüllt</span>` : c._fb === "offen" ? `<span class="lead__fb">Fragebogen noch offen</span>` : ""}${(c._p ? [] : c.projects || []).slice(0, 3).map(p => `<a class="lead__proj" href="${projektHref(p)}" title="Zum Projekt">${esc(p.title.length > 34 ? p.title.slice(0, 32) + " …" : p.title)} · ${p.bereich === "hardware" ? "Hardware" : "Software"}</a>`).join("")}</p>` : ""}
+        ${!c._p && L.text && c._fb !== "ausgefuellt" ? `<p class="lead__txt">${esc(L.text.slice(0, 160))}${L.text.length > 160 ? " …" : ""}</p>` : ""}
         ${status}${c.last?.notiz ? `<p class="lead__notiz"><b>Notizen:</b> ${esc(c.last.notiz.slice(0, 220))}${c.last.notiz.length > 220 ? " …" : ""}</p>` : ""}
         <div class="lead__acts">${acts}</div></div>`;
     };
     const col = (key, title, hint) => {
       // In "Gespräch geplant" stehen zuerst die Kontakte ohne Termin (bestätigen oder vereinbaren), dann die Termine nach Datum
-      const l = leads.filter(c => leadStep(c) === key || (key === "geplant" && leadStep(c) === "neu"))
+      const l = KARTEN.filter(c => leadStep(c) === key || (key === "geplant" && leadStep(c) === "neu"))
         .sort((a, b) => key === "geplant" ? (a.next ? 1 : 0) - (b.next ? 1 : 0) || (a.next && b.next ? a.next.start.localeCompare(b.next.start) : String(b.created_at).localeCompare(String(a.created_at))) : String(b.created_at).localeCompare(String(a.created_at)));
       return `<div class="pipe__col pipe__col--${key}"><div class="pipe__h"><b>${title}</b><em>${l.length}</em><small>${hint}</small></div>${l.map(card).join("") || `<div class="pipe__empty">Nichts offen.</div>`}</div>`;
     };
@@ -188,12 +198,13 @@
     if (e.target.closest("[data-arch]")) { listMode = "archiv"; return; }
     const b = e.target.closest("[data-lact]"); if (!b) return;
     const cid = +b.closest(".lead").dataset.cid; current = clients.find(c => c.id === cid);
+    const K = KARTEN[+b.closest(".lead").dataset.k] || current;   // die Karte: Kontakt mit Termin, Notizen und Angebot genau dieser Anfrage
     try {
-      if (b.dataset.lact === "schedule") return scheduleDialog(cid);
+      if (b.dataset.lact === "schedule") return scheduleDialog(cid, K._p ? { project_id: K._p.id } : {});
       if (b.dataset.lact === "start") return window.BOARD.startOrder(current);
       if (b.dataset.lact === "offer") {
-        if (current.offerDraft) { location.hash = "#finanzen/angebote"; return toast("Der Entwurf steht bei den Angeboten – dort fertigstellen und versenden."); }
-        return window.angebotErstellen({ client_id: cid, project_id: +b.dataset.pid || null, title: b.dataset.ptitle, bereich: b.dataset.bereich, notizen: current.last?.notiz || "" });
+        if (K.offerDraft) { location.hash = "#finanzen/angebote"; return toast("Der Entwurf steht bei den Angeboten – dort fertigstellen und versenden."); }
+        return window.angebotErstellen({ client_id: cid, project_id: +b.dataset.pid || null, title: b.dataset.ptitle, bereich: b.dataset.bereich, notizen: K.last?.notiz || "" });
       }
       if (b.dataset.lact === "fbSend") {
         b.disabled = true;
@@ -202,25 +213,25 @@
       }
       if (b.dataset.lact === "move") {
         // Den bestehenden Termin wirklich verlegen (auch auf heute) – kein zweiter Termin
-        const neu = await UI.prompt(`Termin verschieben · ${current.company}`, { label: "Neue Zeit. Heute geht auch. Der Kunde bekommt die Änderung per E-Mail.", type: "datetime-local", value: localDT(current.next.start), ok: "Verschieben" });
+        const neu = await UI.prompt(`Termin verschieben · ${current.company}`, { label: "Neue Zeit. Heute geht auch. Der Kunde bekommt die Änderung per E-Mail.", type: "datetime-local", value: localDT(K.next.start), ok: "Verschieben" });
         if (!neu) return;
-        await api(`/appointments/${current.next.id}`, { method: "PATCH", body: { start: new Date(neu).toISOString(), notify: true } });
+        await api(`/appointments/${K.next.id}`, { method: "PATCH", body: { start: new Date(neu).toISOString(), notify: true } });
         toast("Termin verschoben"); window.loadVertrieb(); return window.updateBadges?.();
       }
       if (b.dataset.lact === "held") {
         // Das Gespräch hat stattgefunden – auch spontan am Telefon, vor dem geplanten Termin oder ganz ohne Termin
         const jetzt = new Date(Date.now() - 60000).toISOString();
-        const frage = current.next ? `Der Termin am ${C.fmt(current.next.start, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} Uhr wird auf jetzt gesetzt und gilt als geführt.` : "Es wird ein Gespräch mit dem heutigen Datum eingetragen.";
+        const frage = K.next ? `Der Termin am ${C.fmt(K.next.start, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} Uhr wird auf jetzt gesetzt und gilt als geführt.` : "Es wird ein Gespräch mit dem heutigen Datum eingetragen.";
         const notiz = await UI.prompt(`Gespräch geführt · ${current.company}`, { label: `${frage} Ihre Stichpunkte dazu (optional, sieht der Kunde nicht):`, value: "", multiline: true, ok: "Als geführt eintragen" });
         if (notiz === null) return;
-        if (current.next) await api(`/appointments/${current.next.id}`, { method: "PATCH", body: { start: jetzt, notes_intern: notiz || undefined, notify: false } });
-        else await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", start: jetzt, minutes: 30, kind: "Erstgespräch", notes_intern: notiz, notify: false } });
+        if (K.next) await api(`/appointments/${K.next.id}`, { method: "PATCH", body: { start: jetzt, notes_intern: notiz || undefined, notify: false } });
+        else await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", start: jetzt, minutes: 30, kind: "Erstgespräch", notes_intern: notiz, notify: false, project_id: K._p?.id || undefined } });
         toast("Eingetragen – jetzt können Sie das Angebot erstellen."); window.loadVertrieb(); return window.updateBadges?.();
       }
       if (b.dataset.lact === "notes") {
-        const t = await UI.prompt(`Gesprächsnotizen · ${current.company}`, { label: "Interne Stichpunkte aus dem Gespräch – der Kunde sieht sie nicht. Sie stehen beim Erstellen des Angebots daneben.", value: current.last.notiz || "", multiline: true, ok: "Speichern" });
+        const t = await UI.prompt(`Gesprächsnotizen · ${current.company}`, { label: "Interne Stichpunkte aus dem Gespräch – der Kunde sieht sie nicht. Sie stehen beim Erstellen des Angebots daneben.", value: K.last.notiz || "", multiline: true, ok: "Speichern" });
         if (t === null) return;
-        await api(`/appointments/${current.last.id}`, { method: "PATCH", body: { notes_intern: t, notify: false } }); toast("Notizen gespeichert"); return window.loadVertrieb();
+        await api(`/appointments/${K.last.id}`, { method: "PATCH", body: { notes_intern: t, notify: false } }); toast("Notizen gespeichert"); return window.loadVertrieb();
       }
       if (b.dataset.lact === "offerOpen") { location.hash = "#finanzen/angebote"; return; }
       if (b.dataset.lact === "won") {
@@ -249,28 +260,28 @@
     if (!list?.length) return "";
     const chips = l => `<div class="evd__chips">${l.map(t => `<span>${esc(t)}</span>`).join("")}</div>`;
     const row = r => `<div class="evd__row"><span>${esc(r.k)}</span><div>${r.chips ? chips(r.chips) : ""}${r.v ? `<p>${esc(r.v)}</p>` : ""}</div></div>`;
-    return list.map(o => `<div class="card"><h2 style="font-size:18px;margin-bottom:10px">Onboarding ${o.bereiche.map(b => bereichTag({ bereich: b.id })).join(" ")}</h2>
+    return list.map(o => `<div class="card fbkarte"><h2 style="font-size:18px;margin-bottom:10px">Fragebogen ${o.bereiche.map(b => bereichTag({ bereich: b.id })).join(" ")}</h2>
       <div class="evd__prep">
         <div class="evd__vorab ${o.status === "ausgefuellt" ? "ok" : ""}"><span><b>${o.status === "ausgefuellt" ? "Ausgefüllt" : "Verschickt, noch nicht ausgefüllt"}</b>
           <small class="evd__img">${o.answered_at ? `ausgefüllt am ${esc(C.fmt(o.answered_at.replace(" ", "T") + "Z", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}` : `verschickt am ${esc(C.fmt(o.invited_at.replace(" ", "T") + "Z", { day: "numeric", month: "short" }))}`}${o.dateien ? ` · ${o.dateien} Datei${o.dateien === 1 ? "" : "en"}` : ""}</small>
           ${o.projekte.length ? `<small class="evd__img">Projekt: ${o.projekte.map(p => `<a href="${projektHref(p)}">${esc(p.title)}</a>`).join(", ")}</small>` : ""}</span>
-          <a href="${esc(o.link)}" target="_blank" rel="noopener">Fragebogen ↗</a></div>
-        ${o.bereiche.flatMap(b => b.antworten).map((g, i) => `<details class="evd__sec" ${i === 0 ? "open" : ""}><summary>${esc(g.title)}</summary><div class="evd__body">${g.rows.map(row).join("")}</div></details>`).join("")}
+          </div>
+        ${o.status === "ausgefuellt" ? `<details class="fballe"><summary>Antworten ansehen</summary>${o.bereiche.flatMap(b => b.antworten).map(g => `<details class="evd__sec"><summary>${esc(g.title)}</summary><div class="evd__body">${g.rows.map(row).join("")}</div></details>`).join("")}</details>` : ""}
       </div></div>`).join("");
   }
   function vorabCard(list, c) {
     if (!list?.length) return "";
-    const v = list[0], chips = l => `<div class="evd__chips">${l.map(t => `<span>${esc(t)}</span>`).join("")}</div>`;
+    const chips = l => `<div class="evd__chips">${l.map(t => `<span>${esc(t)}</span>`).join("")}</div>`;
     const row = r => `<div class="evd__row"><span>${esc(r.k)}</span><div>${r.chips ? chips(r.chips) : ""}${r.v ? `<p>${esc(r.v)}</p>` : ""}${r.colors?.length ? `<div class="evd__sw">${r.colors.map(x => `<i style="background:${esc(x)}"></i>`).join("")}</div>` : ""}</div></div>`;
-    return `<div class="card"><h2 style="font-size:18px;margin-bottom:10px">Fragebogen &amp; Vorab-Entwurf</h2>
+    return list.map(v => `<div class="card fbkarte"><h2 style="font-size:18px;margin-bottom:10px">Fragebogen <span class="bereich bereich--sw">Website</span></h2>
       <div class="evd__prep">
         <div class="evd__vorab ${v.status === "fertig" ? "ok" : v.status === "fehler" ? "warn" : ""}"><span><b>${esc(VST[v.status] || v.status)}</b>
           <small class="evd__img">${c.status === "aktiv" ? "Kundenkonto angelegt" : "Noch kein Kundenkonto"}${v.answered_at ? ` · ausgefüllt am ${esc(C.fmt(v.answered_at.replace(" ", "T") + "Z", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}` : ""}${v.cost ? ` · KI-Kosten ${String(v.cost.toFixed(2)).replace(".", ",")} $` : ""}</small>
           ${v.url ? `<small class="evd__img">${v.visible ? "Für den Kunden im Portal sichtbar" : "Für den Kunden noch nicht sichtbar – zeigen Sie ihn im Gespräch"}</small>` : ""}
           ${v.notes?.length ? `<small class="evd__img">${esc(v.notes.join(" · "))}</small>` : ""}</span>
-          ${v.url ? `<a href="${esc(v.url)}" target="_blank" rel="noopener">Ansehen ↗</a>` : ""}</div>
-        ${(v.answers || []).map((g, i) => `<details class="evd__sec" ${i === 0 ? "open" : ""}><summary>${esc(g.title)}</summary><div class="evd__body">${g.rows.map(row).join("")}</div></details>`).join("")}
-      </div></div>`;
+          ${v.url ? `<a href="${esc(v.url)}" target="_blank" rel="noopener">Entwurf ansehen ↗</a>` : ""}</div>
+        ${(v.answers || []).length ? `<details class="fballe"><summary>Antworten ansehen</summary>${v.answers.map(g => `<details class="evd__sec"><summary>${esc(g.title)}</summary><div class="evd__body">${g.rows.map(row).join("")}</div></details>`).join("")}</details>` : ""}
+      </div></div>`).join("");
   }
   async function showOverview() {
     const [tl, projs, vorab, onb] = await Promise.all([api(`/clients/${current.id}/timeline`), api(`/clients/${current.id}/projects`), ME.owner ? api(`/vorab/kunde/${current.id}`).catch(() => []) : [], ME.owner ? api(`/onboarding/kunde/${current.id}`).catch(() => []) : []]);
@@ -284,15 +295,15 @@
       <div class="card"><h2 style="font-size:18px">Verlauf</h2>
         <ol class="ctl">${tl.map(i => `<li class="ctl--${esc(i.kind)} ${i.future ? "ctl--future" : ""}"><span class="ctl__ico">${ICO(i.kind)}</span><div><b>${esc(i.title)}</b><span>${C.fmt(i.at.includes("T") ? i.at : i.at.replace(" ", "T") + "Z", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>${i.detail ? `<p>${esc(i.detail)}</p>` : ""}</div></li>`).join("")}</ol></div>
       <div class="stack">
-        ${onboardingCard(onb)}
-        ${vorabCard(vorab, c)}
         ${next && (ME.owner || next.act === "schedule") ? `<div class="card nextstep"><p class="kicker">Nächster Schritt</p><h3>${esc(next.t)}</h3><p>${esc(next.d)}</p><button class="btn btn--grad btn--sm" data-act="${next.act}">${next.btn}</button></div>` : ""}
-        <div class="card"><h2 style="font-size:18px">Projekte</h2>${projs.length ? projs.map(p => `<a class="miniproj" href="${projektHref(p)}"><b>${esc(p.title)} ${bereichTag(p)}</b><span>${esc(p.phase)} · ${esc(p.status)}${(p.members || []).length ? " · " + esc(p.members.map(m => m.name.split(" ")[0]).join(", ")) : ""}</span></a>`).join("") : `<p class="hint" style="margin:0">Noch kein Projekt.</p>`}
+        <div class="card"><h2 style="font-size:18px">Projekte</h2>${projs.length ? projs.map(p => `<a class="miniproj" href="${projektHref(p)}"><b>${esc(p.title)} ${bereichTag(p)}</b><span>${p.status === "anfrage" ? "Angefragt" + (p.fragebogen?.stand ? " · Fragebogen " + (p.fragebogen.stand === "ausgefuellt" ? "ausgefüllt" : "offen") : "") + (p.next ? " · Termin " + dayShort(p.next.start) : "") : esc(p.phase) + " · " + esc(p.status)}${(p.members || []).length ? " · " + esc(p.members.map(m => m.name.split(" ")[0]).join(", ")) : ""}</span></a>`).join("") : `<p class="hint" style="margin:0">Noch kein Projekt.</p>`}
           ${ME.owner ? `<button class="link" data-act="newProject" style="margin-top:8px">+ Neues Projekt</button>` : ""}</div>
         ${ME.owner ? `<form class="card form" id="contactForm" style="display:grid;gap:10px"><h2 style="font-size:18px;margin:0">Kontakt</h2>
           <label>Firma<input name="company" value="${esc(c.company)}"></label><label>Ansprechpartner<input name="name" value="${esc(c.name)}"></label>
           <label>Telefon<input name="phone" value="${esc(c.phone || "")}"></label><label>Interne Notiz<textarea name="notes" rows="3" placeholder="Nur für Ihr Team sichtbar">${esc(c.notes || "")}</textarea></label>
           <button class="btn btn--sm" type="submit" style="justify-self:start">Speichern</button></form>` : ""}
+        ${onboardingCard(onb)}
+        ${vorabCard(vorab, c)}
       </div></div>`;
     $("#contactForm")?.addEventListener("submit", async e => { e.preventDefault(); const f = e.target;
       try { await api(`/clients/${current.id}/stage`, { method: "PATCH", body: { stage: current.stage, company: f.company.value, name: f.name.value, phone: f.phone.value, notes: f.notes.value } }); toast("Kontakt gespeichert"); await loadClients(); current = clients.find(x => x.id === current.id); }

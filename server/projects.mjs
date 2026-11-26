@@ -4,6 +4,7 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { projektnamenPflegen } from "./projektname.mjs";
 import { vereinbarungenVonProjekt } from "./vereinbarungen.mjs";
+import { fragebogenVonProjekt, termineVonProjekt, projektZurAnfrage } from "./anfragen.mjs";
 import { callModel, assistantStatus } from "./assistant.mjs";
 import { db } from "./db.mjs";
 import { isOwner, memberProjectIds, FINANCE_DOC_KINDS, FINANCE_EVENT_KINDS } from "./access.mjs";
@@ -86,7 +87,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
     return text;
   }
   const projectOut = p => p && ({ id: p.id, client_id: p.client_id, title: p.title, bereich: p.bereich || "software", kind: p.kind, description: p.description, phase: p.phase, phaseIndex: PHASES.indexOf(p.phase), phases: PHASES,
-    model: p.model, status: p.status, offer_net: p.offer_net, vat_rate: p.vat_rate,
+    model: p.model, status: p.status, offer_net: p.offer_net, vat_rate: p.vat_rate, anfrage_art: p.anfrage_art || null,
     // Liegt ein versendetes Angebot beim Kunden? Dann ist das Projekt „Angebot offen“.
     offerOpen: db.prepare("SELECT id, number, gross FROM invoices WHERE project_id = ? AND kind = 'angebot' AND locked = 1 AND status = 'versendet' ORDER BY id DESC LIMIT 1").get(p.id) || null,
     offer_gross: p.offer_net == null ? null : Math.round(p.offer_net * (1 + p.vat_rate / 100)), conditions: p.conditions, created_at: p.created_at, updated_at: p.updated_at });
@@ -129,10 +130,10 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
     };
   }
   function projectSummary(p) {
-    const next = db.prepare("SELECT * FROM appointments WHERE project_id = ? AND start >= ? ORDER BY start LIMIT 1").get(p.id, new Date().toISOString());
+    const next = db.prepare("SELECT * FROM appointments WHERE (project_id = ? OR (? IS NOT NULL AND booking_id = ?)) AND start >= ? ORDER BY start LIMIT 1").get(p.id, p.booking_id ?? null, p.booking_id ?? null, new Date().toISOString());
     const latest = db.prepare("SELECT * FROM prototypes WHERE project_id = ? AND active = 1 ORDER BY id DESC LIMIT 1").get(p.id);
     const open = db.prepare("SELECT COALESCE(SUM(amount_net),0) s FROM payments WHERE project_id = ? AND status != 'bezahlt'").get(p.id).s;
-    return { ...projectOut(p), next: next ? apptOut(next) : null, latest: latest ? { ...protoOut(latest), version: latest.version } : null, open_net: open,
+    return { ...projectOut(p), fragebogen: fragebogenVonProjekt(p), next: next ? apptOut(next) : null, latest: latest ? { ...protoOut(latest), version: latest.version } : null, open_net: open,
       open_gross: Math.round(open * (1 + p.vat_rate / 100)) };
   }
 
@@ -199,11 +200,11 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
       const out = [], termin = id => (id ? db.prepare("SELECT start FROM bookings WHERE id = ? AND status IN ('neu','bestaetigt')").get(id)?.start : null) || null;
       try { for (const o of db.prepare("SELECT o.* FROM onboarding o LEFT JOIN bookings b ON b.id = o.booking_id WHERE o.client_id = ? OR b.client_id = ? ORDER BY o.id DESC").all(c.id, c.id)) {
         const fertig = o.status === "ausgefuellt"; let kinds = [], ids = []; try { kinds = JSON.parse(o.kinds || "[]"); ids = JSON.parse(o.project_ids || "[]"); } catch {}
-        if (fertig && ids.length) continue;   // steht schon als Projekt in der Liste
+        if ((fertig && ids.length) || (o.booking_id && kinds.length && kinds.every(k => projektZurAnfrage(o.booking_id, k)))) continue;   // steht schon als Projekt in der Liste
         out.push({ art: kinds.map(k => k === "hardware" ? "Hardware" : "Software").join(" & ") || "Software", fertig, am: (fertig ? o.answered_at : o.invited_at) || null, link: fertig ? null : `/portal/onboarding.html#${o.token}`, termin: termin(o.booking_id) });
       } } catch {}
       try { for (const v of db.prepare("SELECT v.* FROM vorab v LEFT JOIN bookings b ON b.id = v.booking_id WHERE v.client_id = ? OR b.client_id = ? ORDER BY v.id DESC").all(c.id, c.id))
-        out.push({ art: "Website", fertig: !!v.answered_at, am: v.answered_at || v.invited_at || null, link: v.answered_at ? null : `/portal/fragebogen.html#${v.token}`, termin: termin(v.booking_id) }); } catch {}
+        if (!projektZurAnfrage(v.booking_id, "website")) out.push({ art: "Website", fertig: !!v.answered_at, am: v.answered_at || v.invited_at || null, link: v.answered_at ? null : `/portal/fragebogen.html#${v.token}`, termin: termin(v.booking_id) }); } catch {}
       return json(res, 200, out);
     }
     if (p === "/documents" && m === "GET")
@@ -325,8 +326,10 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
         // schritt 0 Termin · 1 Gespräch · 2 Angebot · 3 Auftrag · 4 Arbeit läuft; wer: "ich" | "kunde" | "geplant"
         let vorgang = null, offerOpen = null;
         if (x.status === "anfrage" || x.status === "aktiv") {
-          const termin = db.prepare("SELECT id, title, start, video_url FROM appointments WHERE client_id = ? AND start >= ? ORDER BY start LIMIT 1").get(x.client_id, now) || null;
-          const letztes = db.prepare("SELECT id, title, start, notes_intern FROM appointments WHERE client_id = ? AND start < ? ORDER BY start DESC LIMIT 1").get(x.client_id, now) || null;
+          // Projekte aus einer Buchung zeigen nur ihre eigenen Termine – zwei Anfragen desselben Kunden vermischen sich nicht
+          const eigene = x.booking_id ? termineVonProjekt(x, now) : null;
+          const termin = eigene ? eigene.naechster : db.prepare("SELECT id, title, start, video_url FROM appointments WHERE client_id = ? AND start >= ? ORDER BY start LIMIT 1").get(x.client_id, now) || null;
+          const letztes = eigene ? eigene.letzter : db.prepare("SELECT id, title, start, notes_intern FROM appointments WHERE client_id = ? AND start < ? ORDER BY start DESC LIMIT 1").get(x.client_id, now) || null;
           const buchung = db.prepare("SELECT id, start FROM bookings WHERE client_id = ? AND status = 'neu' AND start >= ? AND id NOT IN (SELECT booking_id FROM appointments WHERE booking_id IS NOT NULL) ORDER BY start LIMIT 1").get(x.client_id, now) || null;
           offerOpen = db.prepare("SELECT id, number, gross, issue_date FROM invoices WHERE kind = 'angebot' AND locked = 1 AND status = 'versendet' AND (project_id = ? OR (project_id IS NULL AND client_id = ?)) ORDER BY id DESC LIMIT 1").get(x.id, x.client_id) || null;
           const entwurf = offerOpen ? null : db.prepare("SELECT id FROM invoices WHERE kind = 'angebot' AND locked = 0 AND (project_id = ? OR (project_id IS NULL AND client_id = ?)) LIMIT 1").get(x.id, x.client_id) || null;
@@ -336,7 +339,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
             angebot: dev ? null : offerOpen };
         }
         const st = x.bereich === "hardware" ? null : letzterStand(x.id);
-        return strip({ id: x.id, vorgang, offerOpen: dev ? null : offerOpen, updated_at: x.updated_at, taeglich: !!x.daily_updates, notiz: x.next_note || "", vereinbarungen: dev ? [] : vereinbarungenVonProjekt(x.id),
+        return strip({ id: x.id, vorgang, fragebogen: fragebogenVonProjekt(x).stand, anfrage_art: x.anfrage_art || null, offerOpen: dev ? null : offerOpen, updated_at: x.updated_at, taeglich: !!x.daily_updates, notiz: x.next_note || "", vereinbarungen: dev ? [] : vereinbarungenVonProjekt(x.id),
           stand: st ? { version: st.version, at: st.created_at, text: x.stand_summary_ref === st.id ? (x.stand_summary || "") : (st.changes || "") } : null, title: x.title, bereich: x.bereich || "software", kind: x.kind, phase: x.phase, phaseIndex: PHASES.indexOf(x.phase), status: x.status, model: x.model,
           client: { id: x.client_id, company: x.company, name: x.client_name }, members: members(x.id), next, last_activity: last || x.updated_at, prototype: latest?.version || null,
           openNotes: db.prepare("SELECT COUNT(*) n FROM annotations a JOIN prototypes pr ON pr.id = a.prototype_id WHERE pr.project_id = ? AND a.status = 'offen'").get(x.id).n,

@@ -118,22 +118,23 @@ function wegBar(i) {
     <div class="steps__label"><span>Schritt ${i + 1} von ${WEG.length}</span><b>${WEG[i]}</b></div>`;
 }
 function stepsBar(p) {
-  if (p.status === "anfrage") return wegBar(2);   // Projekt in Anfrage: Fragebogen liegt vor, als Nächstes das Gespräch
+  if (p.status === "anfrage") return wegBar(p.fragebogen?.stand === "offen" ? 1 : p.offerOpen ? 3 : 2);   // Fragebogen offen → Schritt 2, sonst Gespräch, mit Angebot Schritt 4
   const i = p.phaseIndex;
   return `<div class="steps">${p.phases.map((_, k) => `<i class="${k < i ? "done" : k === i ? "now" : ""}"></i>`).join("")}</div>
     <div class="steps__label"><span>Phase ${i + 1} von ${p.phases.length}</span><b>${esc(p.phase)}</b></div>`;
 }
 const STATUS_TXT = { anfrage: "Angefragt", aktiv: "Läuft", pausiert: "Pausiert", abgeschlossen: "Abgeschlossen" };
 function projectCard(p) {
-  return `<a class="pcard" href="#projekt/${p.id}">
+  const fbOffen = p.status === "anfrage" && p.fragebogen?.link;
+  return `<a class="pcard" href="${fbOffen ? esc(p.fragebogen.link) : "#projekt/" + p.id}">
     <div class="pcard__top"><div><h3>${esc(p.title)}</h3><div class="pcard__kind">${esc(p.kind || "Projekt")}${p.model ? " · " + esc(p.model) : ""}</div></div><span class="pill pill--${p.status}">${esc(STATUS_TXT[p.status] || p.status)}</span></div>
     ${stepsBar(p)}
     <div class="pcard__meta">
-      ${p.status === "anfrage" && !p.next ? `<span>Ihre Angaben liegen uns vor.</span>` : ""}
+      ${p.status === "anfrage" ? `<span>${fbOffen ? "Uns fehlen noch Ihre Angaben (etwa fünf Minuten)." : "Ihre Angaben liegen uns vor."}</span>` : ""}
       ${p.next ? `<span>Nächster Termin: <b>${fmt(p.next.start, { day: "numeric", month: "short" })}</b></span>` : ""}
       ${p.latest ? `<span>Prototyp: <b>V${p.latest.version}</b></span>` : ""}
       ${p.open_net ? `<span>Offen: <b>${money(p.open_gross)}</b></span>` : ""}
-    </div></a>`;
+    </div>${fbOffen ? `<span class="btn btn--grad btn--sm" style="justify-self:start">Fragebogen ausfüllen</span>` : ""}</a>`;
 }
 // Anfrage, zu der es noch kein Projekt gibt (Fragebogen offen, oder Website-Fragebogen ausgefüllt): gleiche Karte wie ein Projekt
 function anfrageCard(a) {

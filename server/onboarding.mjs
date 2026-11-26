@@ -178,8 +178,12 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
       const kurz = (bereich === "hardware" ? t("idee") : t("kann")) || "";
       const art = ART_KURZ[a.art] || "Software";
       const titel = clean(bereich === "hardware" ? (kurz.split(/[.!?\n]/)[0] || "Hardware-Anfrage") : `${art} für ${wer}`, 110) || "Anfrage";
-      const pid = Number(db.prepare("INSERT INTO projects(client_id, title, kind, description, phase, status, bereich) VALUES(?, ?, ?, ?, 'Erstgespräch', 'anfrage', ?)")
-        .run(cid, titel, bereich === "hardware" ? "Hardware" : art, clean(kurz, 4000), bereich).lastInsertRowid);
+      // Das Projekt gibt es seit der Buchung schon (anfragen.mjs). Der Fragebogen füllt es mit Titel und Beschreibung.
+      const da = o.booking_id ? db.prepare("SELECT id FROM projects WHERE booking_id = ? AND anfrage_art = ? AND status = 'anfrage'").get(o.booking_id, bereich) : null;
+      let pid;
+      if (da) { pid = da.id; db.prepare("UPDATE projects SET title = ?, kind = ?, description = ?, updated_at = datetime('now') WHERE id = ?").run(titel, bereich === "hardware" ? "Hardware" : art, clean(kurz, 4000), pid); }
+      else pid = Number(db.prepare("INSERT INTO projects(client_id, title, kind, description, phase, status, bereich, booking_id, anfrage_art) VALUES(?, ?, ?, ?, 'Erstgespräch', 'anfrage', ?, ?, ?)")
+        .run(cid, titel, bereich === "hardware" ? "Hardware" : art, clean(kurz, 4000), bereich, o.booking_id || null, bereich).lastInsertRowid);
       db.prepare("INSERT INTO events(client_id, project_id, kind, title, detail, notify) VALUES(?, ?, 'projekt', ?, ?, 0)").run(cid, pid, "Onboarding ausgefüllt", clean(kurz, 600));
       const eigene = (dateien || []).filter(d => d.bereich === bereich);
       if (bereich === "hardware") {

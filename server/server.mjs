@@ -29,6 +29,7 @@ import { createHardware } from "./hardware.mjs";
 import { DEFAULT_HARDWARE } from "./firmen.mjs";
 import { createVereinbarungen } from "./vereinbarungen.mjs";
 import { createOnboarding, fragebogenStand, setVorabEinladen } from "./onboarding.mjs";
+import { projekteFuerBuchung, themenDerBuchung, anfragenNachziehen } from "./anfragen.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
 
@@ -208,6 +209,8 @@ async function publicApi(req, res, url) {
     const gewaehlt = new Set(topics.map(t => /^website$/i.test(t) ? "website" : /^hardware$/i.test(t) ? "hardware" : "software"));
     if (bereichOfType(type) === "hardware") gewaehlt.add("hardware");
     const weitere = [...gewaehlt].filter(k => k !== "website");
+    // Eine Anfrage ist ein Projekt: je Thema entsteht sofort ein Projekt „anfrage“, der Termin hängt daran
+    try { projekteFuerBuchung(row, gewaehlt.size ? [...gewaehlt] : ["website"]); } catch (e) { console.warn("Anfrage-Projekt:", e.message); }
     (async () => { await mailForStatus(row, "bestaetigt"); await mailNewBookingToTeam(row);
       if (gewaehlt.has("website") || !gewaehlt.size) await vorab.invite(row);
       if (weitere.length) await onboarding.invite(row, weitere); })().catch(e => console.warn("Mail:", e.message));
@@ -510,7 +513,8 @@ async function adminApi(req, res, url) {
     const status = ["neu", "bestaetigt", "abgesagt", "erledigt"].includes(d.status) ? d.status : b.status;
     const note = d.note !== undefined ? clean(d.note, 3000) : b.note;
     db.prepare("UPDATE bookings SET status = ?, note = ?, updated_at = datetime('now') WHERE id = ?").run(status, note, b.id);
-    if (status === "bestaetigt" && b.status !== "bestaetigt") { const c = confirmBooking({ ...b }, "Website-Termin"); b.video_url = c.video_url; b.client_id = c.client_id; }
+    if (status === "bestaetigt" && b.status !== "bestaetigt") { const c = confirmBooking({ ...b }, "Website-Termin"); b.video_url = c.video_url; b.client_id = c.client_id;
+      try { projekteFuerBuchung(c, themenDerBuchung(c, bereichOfType(c.type) === "hardware")); } catch (e) { console.warn("Anfrage-Projekt:", e.message); } }
     if (status === "abgesagt") db.prepare("DELETE FROM appointments WHERE booking_id = ? AND start > ?").run(b.id, new Date().toISOString());
     let mailed = null;
     if (d.notify && status !== b.status && (status === "bestaetigt" || status === "abgesagt")) mailed = await mailForStatus(b, status);
@@ -652,6 +656,7 @@ http.createServer(async (req, res) => {
     if (!e.code) console.error(e);
   }
 }).listen(PORT, () => {
+  anfragenNachziehen(t => bereichOfType(t) === "hardware");
   automation.start();
   console.log(`Reeder Software läuft auf ${SITE_URL}  ·  Admin-Board: ${SITE_URL}/admin  ·  E-Mail-Versand: ${mailStatus().ready ? "aktiv" : "aus (nur Postausgang)"}`);
 });
