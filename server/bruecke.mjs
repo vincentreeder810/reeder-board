@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { db, getSetting, setSetting } from "./db.mjs";
 import { hwIntern } from "./hardware.mjs";
+import { anfrageBeschreiben } from "./projektname.mjs";
 
 const sha = t => createHash("sha256").update(String(t)).digest("hex");
 const FRIST = 15000;          // so lange gilt die Brücke nach der letzten Meldung als verbunden
@@ -53,9 +54,18 @@ export function createBruecke({ json, send, readJson }) {
     }
     let mm = p.match(/^\/projekt\/(\d+)$/);
     if (mm && m === "GET") {
-      const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Hardware-Projekt nicht gefunden" });
+      let x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Hardware-Projekt nicht gefunden" });
+      // Der Ordner auf dem Rechner bekommt seinen Namen beim ersten Anlegen und behält ihn (sonst reißen Claude-Gespräche ab).
+      // Deshalb vorher für einen ordentlichen Projektnamen sorgen: Hat die KI das Projekt noch nie benannt, tut sie es jetzt.
+      const stand0 = db.prepare("SELECT name_ki, description FROM projects WHERE id = ?").get(x.id);
+      if (!stand0.name_ki) {
+        const k0 = hwIntern.konzeptLesen(x.id), text = [stand0.description, k0.steckbrief?.zweck].filter(Boolean).join("
+");
+        const r = await anfrageBeschreiben(x.id, text).catch(() => null);
+        if (r) { hwIntern.konzeptSchreiben(x.id, { ...hwIntern.konzeptLesen(x.id), name: r.name, ...(r.zusammenfassung ? { kurzbeschreibung: r.zusammenfassung } : {}) }); x = projekt(x.id); }
+      }
       if (!fs.existsSync(hwIntern.konzeptDatei(x.id))) hwIntern.konzeptSchreiben(x.id, { ...hwIntern.konzeptLesen(x.id), name: x.title, kurzbeschreibung: x.description || "" });
-      return json(res, 200, { id: x.id, titel: x.title, ordner: path.basename(hwIntern.ordner(x.id)), konzept: hwIntern.konzeptLesen(x.id), anleitung: hwIntern.anleitung(x), dateien: hwIntern.dateiListe(x.id), stand: hwIntern.stand(x.id) });
+      return json(res, 200, { id: x.id, titel: x.title, ordner: hwIntern.ordnerName(x.title) || `Projekt ${x.id}`, konzept: hwIntern.konzeptLesen(x.id), anleitung: hwIntern.anleitung(x), dateien: hwIntern.dateiListe(x.id), stand: hwIntern.stand(x.id) });
     }
     mm = p.match(/^\/projekt\/(\d+)\/datei\/([^/]+)$/);
     if (mm && m === "GET") {

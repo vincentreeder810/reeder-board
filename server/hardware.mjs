@@ -185,7 +185,7 @@ export const hardwareDateiOrdner = dateiOrdner;
 /** Einzelne Felder des Konzepts setzen (z. B. Name und Kurzbeschreibung aus der KI-Zusammenfassung) */
 export function hardwareKonzeptFelder(id, felder) { try { konzeptSchreiben(id, { ...konzeptLesen(id), ...felder }); } catch { /* Datei gerade nicht lesbar */ } }
 /** Für die Brücke zum Rechner des Inhabers (bruecke.mjs) */
-export const hwIntern = { ordner, konzeptDatei, konzeptLesen, konzeptSchreiben, stand, dateiListe, dateiOrdner, anleitung };
+export const hwIntern = { ordnerName, ordner, konzeptDatei, konzeptLesen, konzeptSchreiben, stand, dateiListe, dateiOrdner, anleitung };
 
 /** Kunde für eigene Produktideen ohne Auftraggeber */
 function internerKunde() {
