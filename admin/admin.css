@@ -1427,4 +1427,14 @@ label.auf__item{cursor:pointer}
 
 /* Brücke zu Claude auf der Projektseite */
 .stand--bruecke{margin-bottom:10px;background:linear-gradient(120deg,#f3efff,#fff 55%)}
-.stand--bruecke .acts{flex-wrap:wrap;justify-content:flex-end}
+/* Text bekommt die volle Breite, die drei Knöpfe stehen darunter – auch in der schmalen Spalte der Projektseite */
+.stand--bruecke{grid-template-columns:auto minmax(0,1fr);align-items:start}
+.stand--bruecke .acts{grid-column:2;justify-content:flex-start;margin-top:2px}
+.stand--bruecke .stand__st{margin-top:6px}
+@media (max-width:560px){.stand--bruecke .acts{grid-column:1/-1}}
+
+/* Alle Stand-Karten auf der Projektseite: Text über die volle Breite, Knöpfe darunter (die Spalte ist dafür zu schmal) */
+#pStand .stand{grid-template-columns:auto minmax(0,1fr)}
+#pStand .stand .acts{grid-column:2;justify-content:flex-start;margin-top:2px}
+#pStand .stand+.stand{margin-top:0}
+@media (max-width:560px){#pStand .stand .acts{grid-column:1/-1}}
