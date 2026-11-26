@@ -480,15 +480,27 @@ textarea.inp{min-height:120px;resize:vertical}
   function infoSetzen(pop) {
     const id = pop.id.slice(5), karte = $(`[data-info-karte="${id}"]`, app), knopf = $(`[data-info="${id}"]`, app), grid = pop.parentElement;
     if (!karte || !grid) return;
-    const breit = Math.min(grid.clientWidth, Math.max(karte.offsetWidth, 380));
+    const breit = Math.min(grid.clientWidth, 330);   // kompakt – nur so breit, wie die kurze Erklärung braucht
     const links = Math.max(0, Math.min(karte.offsetLeft, grid.clientWidth - breit));
     pop.style.width = breit + "px"; pop.style.left = links + "px"; pop.style.top = (karte.offsetTop + karte.offsetHeight + 12) + "px";
+    // Ragt das Pop-up unter die Karten hinaus, bekommt die Seite dort so viel Platz – sonst ließe es sich nicht ganz über die untere Leiste scrollen
+    grid.style.marginBottom = ""; const ueber = pop.offsetTop + pop.offsetHeight - grid.offsetHeight;
+    if (ueber > 0) grid.style.marginBottom = (ueber + 20) + "px";
     if (knopf) pop.style.setProperty("--pfeil", Math.max(16, Math.min(breit - 30, knopf.getBoundingClientRect().left - grid.getBoundingClientRect().left - links + 12)) + "px");
   }
   function infoUmschalten(id, soll = null) {
     const pop = document.getElementById("info-" + id), knopf = $(`[data-info="${id}"]`, app); if (!pop) return;
     const auf = soll === null ? pop.hidden : soll; pop.hidden = !auf; knopf?.setAttribute("aria-expanded", auf); knopf?.classList.toggle("auf", auf);
-    if (auf) { infoSetzen(pop); pop.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" }); }
+    if (auf) { infoSetzen(pop); infoZeigen(pop); } else if (pop.parentElement) pop.parentElement.style.marginBottom = "";
+  }
+  /** Pop-up vollständig sichtbar machen: zwischen Kopfzeile und der Leiste mit Zurück/Weiter, samt Link */
+  function infoZeigen(pop) {
+    const oben = ($(".top")?.getBoundingClientRect().bottom || 0) + 12, unten = innerHeight - ($("#bar:not([hidden])")?.offsetHeight || 0) - 12;
+    const r = pop.getBoundingClientRect(), knopf = $(`[data-info="${pop.id.slice(5)}"]`, app)?.getBoundingClientRect();
+    let dy = 0;
+    if (r.bottom > unten) dy = r.bottom - unten;                                                    // unten verdeckt → so weit hochscrollen, dass alles frei ist
+    if (knopf && knopf.top - dy < oben) dy = Math.max(0, knopf.top - oben);                         // den Info-Knopf dabei oben nicht aus dem Bild schieben
+    if (dy) scrollBy({ top: dy, behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" });
   }
   addEventListener("resize", () => $$(".infopop:not([hidden])", app).forEach(infoSetzen));
   // Klick daneben oder Escape schließt das Pop-up
