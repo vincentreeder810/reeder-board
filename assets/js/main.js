@@ -677,3 +677,30 @@ if (fab) {
   addEventListener("hashchange", ausAdresse);
   if (!ausAdresse()) setz("software");
 })();
+
+
+/* ---------- Handy: Wischreihen mit Punkten, lange Beschreibungen zum Aufklappen ---------- */
+(function mobil() {
+  if (!matchMedia("(max-width:760px)").matches) return;
+  const REIHEN = ".lx__grid,.why,.branchen,.covered__grid,.ways,.proto__steps,.plans,.timeline,.facts,.flow,.cards,.gk__grid,.px__wege,.calc,.vcards,.stats";
+  function punkte() {
+    $$(REIHEN).forEach(el => {
+      if (el.dataset.punkte || el.children.length < 2 || el.offsetParent === null || el.scrollWidth <= el.clientWidth + 8) return;
+      el.dataset.punkte = "1";
+      const d = document.createElement("div"); d.className = "mdots" + (el.closest(".dark") ? " mdots--hell" : ""); d.setAttribute("aria-hidden", "true");
+      d.innerHTML = [...el.children].map(() => "<i></i>").join(""); el.after(d);
+      const zeig = () => { const weg = el.scrollWidth - el.clientWidth || 1, i = Math.round(el.scrollLeft / weg * (el.children.length - 1)); [...d.children].forEach((x, k) => x.classList.toggle("on", k === i)); };
+      el.addEventListener("scroll", zeig, { passive: true }); zeig();
+    });
+  }
+  punkte(); setTimeout(punkte, 1200); addEventListener("load", punkte);
+  document.addEventListener("click", () => setTimeout(punkte, 400));   // nach dem Umschalten von Bereichen und Filtern
+  // Produktbeschreibungen: Name, Versprechen und Bild bleiben sichtbar, der lange Text klappt auf
+  $$(".product:not(.product--covered) .product__copy").forEach(c => {
+    const teile = [$(".product__text", c), $(".checks", c)].filter(Boolean); if (!teile.length) return;
+    const w = document.createElement("div"); w.className = "mfold"; teile[0].before(w); teile.forEach(t => w.appendChild(t));
+    const name = ($(".product__name", c)?.textContent || "dem Produkt").trim(), b = document.createElement("button");
+    b.type = "button"; b.className = "mfold__btn"; b.textContent = "Mehr zu " + name; w.after(b);
+    b.addEventListener("click", () => { const auf = w.classList.toggle("is-auf"); b.classList.toggle("is-auf", auf); b.textContent = auf ? "Weniger anzeigen" : "Mehr zu " + name; });
+  });
+})();

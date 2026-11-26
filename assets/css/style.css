@@ -1716,3 +1716,38 @@ a.why__item:hover{transform:translateY(-3px);box-shadow:0 0 0 1px var(--line),0 
 .gk__lead{margin:0;color:var(--ink-2)}
 @media (max-width:860px){.gk__grid{grid-template-columns:1fr}.gk__bild{height:190px}.gk__bild svg{height:124px}}
 @media (max-width:560px){.pnav__inner{gap:10px;padding-left:14px}.pswitch button{padding:7px 13px}}
+
+
+/* ===================== Handy: viel Inhalt auf wenig Fläche ===================== */
+/* Was am PC nebeneinander steht, wird am Handy nicht gestapelt, sondern liegt in einer Reihe zum Wischen. Punkte darunter zeigen, wo man ist. */
+@media (max-width:760px){
+  .lx__grid,.why,.branchen,.covered__grid,.ways,.proto__steps,.plans,.timeline,.facts,.flow,.cards,.gk__grid,.px__wege,.calc,.vcards,.stats{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:stretch;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;scroll-padding-inline:22px;margin-inline:-22px!important;padding:6px 22px 16px!important;max-width:none!important;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .lx__grid::-webkit-scrollbar,.why::-webkit-scrollbar,.branchen::-webkit-scrollbar,.covered__grid::-webkit-scrollbar,.ways::-webkit-scrollbar,.proto__steps::-webkit-scrollbar,.plans::-webkit-scrollbar,.timeline::-webkit-scrollbar,.facts::-webkit-scrollbar,.flow::-webkit-scrollbar,.cards::-webkit-scrollbar,.gk__grid::-webkit-scrollbar,.px__wege::-webkit-scrollbar,.calc::-webkit-scrollbar,.vcards::-webkit-scrollbar,.stats::-webkit-scrollbar{display:none}
+  .lx__grid>*,.why>*,.covered__grid>*,.ways>*,.proto__steps>*,.plans>*,.timeline>*,.flow>*,.cards>*,.gk__grid>*,.calc>*,.vcards>*{flex:0 0 84%;min-width:0;scroll-snap-align:start;margin:0!important}
+  .branchen>*,.facts>*,.px__wege>*,.stats>*{flex:0 0 62%;min-width:0;scroll-snap-align:start;margin:0!important}
+  /* In einer Wischreihe ist alles sofort da – keine Karte bleibt unsichtbar, bis man sie anwischt */
+  .lx__grid .reveal,.why .reveal,.branchen .reveal,.covered__grid .reveal,.ways .reveal,.proto__steps .reveal,.plans .reveal,.timeline .reveal,.facts .reveal,.flow .reveal,.cards .reveal,.gk__grid .reveal,.px__wege .reveal,.calc .reveal,.vcards .reveal,.stats .reveal,.lx__grid.reveal,.why.reveal,.branchen.reveal,.covered__grid.reveal,.ways.reveal,.proto__steps.reveal,.plans.reveal,.timeline.reveal,.facts.reveal,.flow.reveal,.cards.reveal,.gk__grid.reveal,.px__wege.reveal,.calc.reveal,.vcards.reveal,.stats.reveal{opacity:1!important;transform:none!important}
+  .mdots{display:flex;justify-content:center;gap:6px;margin:2px 0 0}
+  .mdots i{width:6px;height:6px;border-radius:999px;background:rgba(0,0,0,.16);transition:width .35s var(--ease),background .3s}
+  .mdots i.on{width:20px;background:var(--grad)}
+  .mdots--hell i{background:rgba(255,255,255,.22)}
+  /* Engere Abstände und ruhigere Überschriften */
+  .section{padding-top:58px;padding-bottom:58px}
+  .section--tight{padding-top:42px;padding-bottom:42px}
+  .shead{margin-bottom:26px;gap:14px}
+  .final{padding-top:76px;padding-bottom:76px}
+  .lead{font-size:16.5px}
+  /* Einblenden: ein Abschnitt kommt als Ganzes, ohne gestaffelte Wartezeiten */
+  .reveal{transition-duration:.55s!important;transition-delay:0s!important}
+  /* Lange Beschreibungen klappen auf */
+  .mfold{max-height:0;overflow:hidden;transition:max-height .6s var(--ease)}
+  .mfold.is-auf{max-height:1400px}
+  .mfold__btn{display:inline-flex;align-items:center;gap:8px;margin:14px 0 4px;padding:10px 16px;border-radius:999px;background:rgba(127,127,127,.12);font-size:14.5px;font-weight:600;color:inherit}
+  .mfold__btn::after{content:"";width:7px;height:7px;border:solid currentColor;border-width:0 1.7px 1.7px 0;transform:rotate(45deg) translateY(-2px);transition:transform .3s}
+  .mfold__btn.is-auf::after{transform:rotate(-135deg) translateY(-2px)}
+  .product{padding-top:44px!important;padding-bottom:44px!important}
+}
+@media (min-width:761px){.mdots,.mfold__btn{display:none}}
