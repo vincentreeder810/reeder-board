@@ -12,6 +12,7 @@ import { answersText } from "./vorab.mjs";
 import { antwortenView } from "./onboarding.mjs";
 import { PROTO_MIME, safeRel } from "./portal.mjs";
 import { workspaceSpeichern, workspaceLesen } from "./workspace.mjs";
+import { anmerkungenText, anmerkungenStempel, anmerkungenErledigen } from "./anmerkungen.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
 const MAX_BYTES = 60 * 1024 * 1024, MAX_FILES = 600;
@@ -58,6 +59,7 @@ Software- bzw. Website-Projekt im Reeder Board (Projekt ${x.id}, Kunde: ${x.comp
 - \`website/\` – die Website bzw. der Prototyp: statische Dateien (HTML, CSS, JS, Bilder), Einstieg ist \`index.html\`. Hier wird gearbeitet. Liegt schon etwas darin, ist das der bisherige Entwurf oder der letzte veröffentlichte Stand.
 - \`notizen/\` – Gesprächsnotizen des Inhabers. Lesen erlaubt, nicht verändern.
 - \`arbeitsstand.json\` – dein Arbeitsstand für das Board (siehe unten). Diese Datei pflegst du.
+- \`anmerkungen.md\` – die offenen Anmerkungen, die Kunde und Team im Board an der Website angepinnt haben. Wird vom Board laufend neu geschrieben, nicht bearbeiten.
 
 ## Wer ist wer
 
@@ -78,6 +80,14 @@ Der Inhaber entwickelt seine Ideen am liebsten im Gespräch und spricht seine Na
 - Keine erfundenen Angaben zum Kunden (Adresse, Telefon, Preise, Zitate, Auszeichnungen). Was fehlt, sichtbar als Platzhalter kennzeichnen und als Frage an den Kunden notieren.
 - Auf dem Handy zuerst prüfen: gut lesbar, nichts ragt seitlich heraus, Schaltflächen gut zu treffen. Bilder klein halten.
 - Keine Zugangsdaten, Schlüssel oder persönlichen Daten in die Dateien schreiben.
+
+## Anmerkungen aus dem Board (anmerkungen.md)
+
+Kunde und Inhaber pinnen im Board Anmerkungen direkt an die Website. Alle offenen stehen in \`anmerkungen.md\` – mit Seite, Stelle, Text und, wenn vorhanden, dem genauen Änderungswunsch. Die Datei ist immer aktuell; lies sie zu Beginn jeder Sitzung und wenn der Inhaber von „den Anmerkungen“ spricht. Er muss sie dir nicht diktieren.
+
+- Sag zuerst kurz, welche Anmerkungen du siehst und wie du sie umsetzen würdest. Unklare oder große Wünsche erst mit dem Inhaber klären.
+- Die Stelle ist als Seite, Bildschirmbreite und Abstand von links/oben angegeben; ein Selektor bezieht sich auf die Website in \`website/\`.
+- Merk dir die Nummern (#) der Anmerkungen, die du umgesetzt hast. Beim Hochladen meldest du sie als erledigt (siehe unten) – dann sind sie im Board abgehakt und der Kunde sieht „Umgesetzt in Version …“.
 
 ## Arbeitsstand für das Board (arbeitsstand.json)
 
@@ -105,7 +115,7 @@ Halte die Datei aktuell: am Ende jeder Sitzung, nach jedem größeren Schritt un
 Sagt der Inhaber ausdrücklich, dass du den Stand hochladen sollst („lade den aktuellen Stand hoch“), dann:
 
 1. \`arbeitsstand.json\` aktualisieren.
-2. Im Projektordner die Datei \`hochladen.json\` anlegen: \`{ "aenderungen": "Ein, zwei Sätze für den Kunden: Was ist neu?", "kundeBenachrichtigen": false }\`
+2. Im Projektordner die Datei \`hochladen.json\` anlegen: \`{ "aenderungen": "Ein, zwei Sätze für den Kunden: Was ist neu?", "kundeBenachrichtigen": false, "erledigteAnmerkungen": [12, 15] }\` – in \`erledigteAnmerkungen\` die Nummern der Anmerkungen aus \`anmerkungen.md\`, die in diesem Stand wirklich umgesetzt sind (sonst leere Liste).
 3. Die Brücke lädt den Inhalt von \`website/\` innerhalb weniger Sekunden als neue Version hoch, löscht \`hochladen.json\` und schreibt das Ergebnis in \`hochladen-ergebnis.json\`. Lies diese Datei nach etwa zehn Sekunden und sag dem Inhaber, welche Version jetzt online ist (oder was nicht geklappt hat).
 
 Wichtig: Eine hochgeladene Version ist für den Kunden im Kundenportal sichtbar. \`kundeBenachrichtigen\` nur auf \`true\` setzen, wenn der Inhaber sagt, dass der Kunde eine Nachricht dazu bekommen soll. Nie von dir aus hochladen. Der Inhaber kann auch selbst im Board auf „Neuen Stand hochladen“ drücken.
@@ -157,7 +167,14 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish }) 
         files.push({ path: rel, buf });
       }
       const r = await publish(db.prepare("SELECT * FROM projects WHERE id = ?").get(x.id), files, { changes: d.changes, announce: d.announce !== false, source: "bruecke", author: clean(d.author, 80) || "Team Reeder" });
-      return json(res, r.published ? 201 : 200, r);
+      // Von Claude als umgesetzt gemeldete Anmerkungen abhaken – nur wenn wirklich eine neue Version entstanden ist
+      const erledigt = r.published ? anmerkungenErledigen(x.id, d.erledigt, r.version) : 0;
+      return json(res, r.published ? 201 : 200, { ...r, erledigt });
+    }
+    mm = p.match(/^\/(\d+)\/anmerkungen$/);
+    if (mm && m === "GET") {
+      const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
+      return json(res, 200, { stempel: anmerkungenStempel(x.id), text: anmerkungenText(x.id), anleitung: anleitung(x) });
     }
     // Arbeitsstand aus arbeitsstand.json: Stand, letzte Sitzung, Notizen, Fragen an den Kunden
     mm = p.match(/^\/(\d+)\/arbeitsstand$/);

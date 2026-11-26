@@ -872,7 +872,7 @@ Danach kann sich die Person mit derselben E-Mail-Adresse ganz neu anmelden.`, { 
     delPay: a => a.closest(".payrow").remove(),
     uploadProto: () => uploadDialog(null),
     newVersion: a => uploadDialog(groupVersions(+a.dataset.g)),
-    openProto: a => { const g = groupVersions(+a.dataset.g); window.RSViewer.open(C.protoData(g[0]), { versions: g.map(C.protoData), showList: true }); },
+    openProto: a => { const g = groupVersions(+a.dataset.g); window.RSViewer.open(C.protoData(g[0]), { versions: g.map(C.protoData), showList: a.dataset.liste !== "0" }); },
     async copyProto(a) { await navigator.clipboard?.writeText(location.origin + a.dataset.url); toast("Link kopiert – jeder mit diesem Link kann den Prototyp ansehen."); },
     async toggleProto(a) { await api(`/clients/${current.id}/prototypes/${a.dataset.id}`, { method: "PATCH", body: { active: a.dataset.on !== "1" } }); refreshCurrent(); },
     async deleteProto(a) { if (!(await UI.confirm("Dateien und Anmerkungen werden entfernt.", { title: "Version endgültig löschen?", ok: "Löschen", danger: true }))) return; await api(`/clients/${current.id}/prototypes/${a.dataset.id}`, { method: "DELETE", body: {} }); refreshCurrent(); toast("Gelöscht"); },

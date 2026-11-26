@@ -247,8 +247,12 @@ export function createAssistant({ json, readJson, clean, limited }) {
 
   /* ---------- Portal ---------- */
   async function portal(req, res, url, p, c) {
-    if (p === "/assist/status" && req.method === "GET") { const s = assistantStatus(); return json(res, 200, { available: s.available, contact: cfg().contact }); }
+    // Der Assistent im Kundenportal ist abgeschaltet: Kunden pinnen nur an, das Gespräch dazu führt das Team.
+    // Zum Wiedereinschalten KUNDEN_ASSISTENT auf true setzen – der Rest ist unverändert vorhanden.
+    const KUNDEN_ASSISTENT = false;
+    if (p === "/assist/status" && req.method === "GET") { const s = assistantStatus(); return json(res, 200, { available: KUNDEN_ASSISTENT && s.available, contact: cfg().contact }); }
     const mm = p.match(/^\/annotations\/(\d+)\/assist(\/(clarify|choose|message))?$/); if (!mm) return null;
+    if (!KUNDEN_ASSISTENT) return json(res, 404, { error: "Nicht verfügbar" });
     const a = db.prepare("SELECT * FROM annotations WHERE id = ? AND client_id = ? AND author_kind = 'client'").get(+mm[1], c.id);
     if (!a) return json(res, 404, { error: "Nicht gefunden" });
     let t = thread(a.id);

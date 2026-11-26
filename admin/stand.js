@@ -162,7 +162,7 @@
     W = await api(`/projects/${p.id}/workspace`).catch(() => null); if (!W) return;
     box.dataset.pid = p.id; box.hidden = false;
     const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div>
-      <div class="acts">${$('[data-act="openProto"]') ? `<button class="btn btn--ghost btn--sm" data-ws="website">Website ansehen</button>` : ""}</div></div>`;
+      <div class="acts">${$('[data-act="openProto"]') ? `<button class="btn btn--ghost btn--sm" data-ws="website">Website ansehen</button><button class="btn btn--grad btn--sm" data-ws="anmerkungen">Website mit Anmerkungen</button>` : ""}</div></div>`;
     if (W.leer) { box.innerHTML = kopf("Stand, Notizen und offene Fragen aus der Arbeit mit Claude") + `<p class="ws__leer">Noch nichts da. Öffne das Projekt unten mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Wenige Sekunden später steht hier, wo das Projekt steht, was zuletzt gemacht wurde und welche Fragen an den Kunden offen sind.</p>`; return; }
     const offen = W.fragen.filter(f => f.status === "offen"), klar = W.fragen.filter(f => f.status !== "offen");
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
@@ -178,7 +178,7 @@
   }
   document.addEventListener("click", async e => {
     const b = e.target.closest("[data-ws]"); if (!b) return;
-    if (b.dataset.ws === "website") return $('[data-act="openProto"]')?.click();
+    if (b.dataset.ws === "website" || b.dataset.ws === "anmerkungen") { const k = $('[data-act="openProto"]'); if (!k) return; k.dataset.liste = b.dataset.ws === "website" ? "0" : "1"; k.click(); delete k.dataset.liste; return; }
     const box = $("#pWs"), pid = +box.dataset.pid, ids = $$(".ws__f input:checked", box).map(i => i.value);
     if (!ids.length) return toast("Bitte mindestens eine Frage ankreuzen.");
     const fragen = W.fragen.filter(f => ids.includes(f.id));
