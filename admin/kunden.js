@@ -404,7 +404,7 @@
     const byProto = {}; [...anns].sort((a, b) => a.id - b.id).forEach(a => { (byProto[a.prototype_id] ||= []).push(a.id); });
     const openAnns = anns.filter(a => a.status === "offen");
     const paid = p.payments.filter(x => x.status === "bezahlt").reduce((s, x) => s + x.amount_net, 0), total = p.payments.reduce((s, x) => s + x.amount_net, 0);
-    const more = [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, p.status === "anfrage" ? { v: "resume", l: "Als Auftrag übernehmen" } : p.status === "aktiv" ? { v: "pause", l: "Projekt pausieren" } : { v: "resume", l: "Projekt fortsetzen" }, ...(p.status !== "abgeschlossen" ? [{ v: "finish", l: "Als abgeschlossen markieren" }] : []), { v: "deleteProject", l: "Projekt löschen", danger: true }];
+    const more = [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, ...(p.status === "aktiv" && !p.offer_net ? [{ v: "zurAnfrage", l: "Zurück zur Anfrage" }] : []), p.status === "anfrage" ? { v: "resume", l: "Als Auftrag übernehmen" } : p.status === "aktiv" ? { v: "pause", l: "Projekt pausieren" } : p.status === "nie" ? null : { v: "resume", l: "Projekt fortsetzen" }, ...(p.status !== "abgeschlossen" ? [{ v: "finish", l: "Als abgeschlossen markieren" }] : []), { v: "deleteProject", l: "Projekt löschen", danger: true }];
     const statusPill = p.status === "aktiv" ? `<span class="pill pill--aktiv">aktiv</span>` : `<span class="pill">${esc(p.status)}</span>`;
     host.innerHTML = `
       <a class="back" href="#projekte">← Alle Projekte</a>
@@ -847,7 +847,8 @@ Danach kann sich die Person mit derselben E-Mail-Adresse ganz neu anmelden.`, { 
     assign: () => window.BOARD.assign(project, () => openProjectPage(project.id, true)),
     setPhase: a => a.dataset.ph === project.phase ? null : setProject({ phase: a.dataset.ph, notify: true }, `Phase „${a.dataset.ph}“ – der Kunde sieht es im Portal.`),
     pause: () => setProject({ status: "pausiert", notify: false }, "Projekt pausiert"),
-    resume: () => setProject({ status: "aktiv", notify: false }, "Projekt wieder aufgenommen"),
+    resume: async () => { if (project.status === "anfrage" && !(await UI.confirm("Das Projekt gilt dann als beauftragt und steht unter „Alle aktiven“. Normalerweise passiert das von selbst, wenn der Kunde das Angebot annimmt.", { title: "Ohne Angebot als Auftrag übernehmen?", ok: "Als Auftrag übernehmen" }))) return; return setProject({ status: "aktiv", notify: false }, "Projekt wieder aufgenommen"); },
+    zurAnfrage: () => setProject({ status: "anfrage", notify: false }, "Wieder als Anfrage geführt"),
     finish: () => setProject({ status: "abgeschlossen", notify: true }, "Projekt abgeschlossen"),
     async deleteProject() { if (!(await UI.confirm("Zahlungsplan und Verlauf werden entfernt; Termine, Dokumente und Prototypen bleiben beim Kunden erhalten.", { title: `Projekt „${project.title}“ löschen?`, ok: "Löschen", danger: true }))) return; await api(`/projects/${project.id}`, { method: "DELETE", body: {} }); project = null; toast("Projekt gelöscht"); location.hash = "#projekte"; },
     addPay: a => (a.closest("form") || document).querySelector("#payRows").insertAdjacentHTML("beforeend", payRow({})),

@@ -288,6 +288,12 @@ export function createHardware({ json, send, readJson, clean, logEvent = () => {
         if (typeof d.kurzbeschreibung === "string") db.prepare("UPDATE projects SET description = ? WHERE id = ?").run(clean(d.kurzbeschreibung, 4000), id);
         // Aus einer Anfrage wird ein Auftrag: nur der Inhaber, nur in diese Richtung
         if (d.status === "aktiv" && x.status === "anfrage") { if (!owner) return json(res, 403, { error: "Das entscheidet der Inhaber." }); db.prepare("UPDATE projects SET status = 'aktiv' WHERE id = ?").run(id); }
+        // Zurück zur Anfrage: nur der Inhaber, und nur solange kein Angebot angenommen und keine Rechnung gestellt ist
+        if (d.status === "anfrage" && x.status === "aktiv") {
+          if (!owner) return json(res, 403, { error: "Das entscheidet der Inhaber." });
+          if (db.prepare("SELECT 1 FROM invoices WHERE project_id = ? AND locked = 1 AND (kind != 'angebot' OR status = 'angenommen')").get(id)) return json(res, 409, { error: "Zu diesem Projekt gibt es ein angenommenes Angebot oder eine Rechnung – es bleibt ein Auftrag." });
+          db.prepare("UPDATE projects SET status = 'anfrage' WHERE id = ?").run(id);
+        }
         delete d.status;
         if (typeof d.archiviert === "boolean") { db.prepare("UPDATE projects SET status = ? WHERE id = ?").run(d.archiviert ? "abgeschlossen" : "aktiv", id); delete d.archiviert; }
         if (d.kundeId !== undefined) {
