@@ -467,10 +467,11 @@
           <div class="card" id="pVerein" hidden></div>
         </div>
         <div class="stack p-more">
-          ${p.description || p.conditions ? `<div class="card"><h2 style="font-size:18px">Beschreibung</h2>${p.description ? `<p class="ptext pclamp">${esc(p.description)}</p>${p.description.length > 260 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}` : ""}${p.conditions ? `<p class="ptext ptext--muted"><b>Konditionen:</b> ${esc(p.conditions)}</p>` : ""}</div>` : ""}
+          ${p.description || p.conditions ? `<div class="card"><h2 style="font-size:18px">Beschreibung</h2>${p.description ? `<p class="ptext pclamp">${esc(p.description)}</p><button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}${p.conditions ? `<p class="ptext ptext--muted"><b>Konditionen:</b> ${esc(p.conditions)}</p>` : ""}</div>` : ""}
         </div>
       </div>`;
     window.WORK?.projectCards(p);
+    window.kuerzungPruefen?.();
     window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
     // Prüfstrecke nur zeigen, wo sie laufen kann (auf dem Online-Server gibt es keinen Browser dafür)
     Promise.resolve(window.PRUEF?.load(p)).then(() => { const k = $("#pTests"); if (k && /Kein Browser gefunden/.test(k.textContent)) k.hidden = true; }).catch(() => {});
@@ -490,6 +491,9 @@
     <button type="button" class="x" data-act="delPay" title="Entfernen">✕</button></div>`;
   // Lange Texte: „ganz anzeigen“ klappt den gekürzten Absatz davor auf
   document.addEventListener("click", e => { const b = e.target.closest("[data-mehr]"); if (!b) return; const auf = b.previousElementSibling.classList.toggle("auf"); b.textContent = auf ? "weniger" : "ganz anzeigen"; });
+  // „ganz anzeigen“ nur dort zeigen, wo der Text bei der aktuellen Fensterbreite wirklich gekürzt ist
+  window.kuerzungPruefen = () => requestAnimationFrame(() => { for (const p of document.querySelectorAll(".pclamp:not(.auf)")) { const b = p.nextElementSibling; if (b?.matches("[data-mehr]")) b.hidden = p.scrollHeight <= p.clientHeight + 2; } });
+  let kuerzT = 0; addEventListener("resize", () => { clearTimeout(kuerzT); kuerzT = setTimeout(window.kuerzungPruefen, 150); });
   // „N weitere anzeigen“: Die zusätzlichen Einträge erscheinen direkt über dem Knopf, der Knopf bleibt darunter stehen
   window.weitere = (n, html, wort) => { if (!(n > 0)) return ""; const w = Array.isArray(wort) ? wort[n === 1 ? 0 : 1] : wort;
     return `<div class="weitere" hidden>${html}</div><button type="button" class="weiterknopf" data-weitere data-zu="${n} ${w} anzeigen"><i></i><span>${n} ${w} anzeigen</span></button>`; };

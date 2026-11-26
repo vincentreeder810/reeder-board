@@ -165,7 +165,7 @@
     const offen = W.fragen.filter(f => f.status === "offen"), klar = W.fragen.filter(f => f.status !== "offen");
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
     // Lange Texte werden auf drei Zeilen gekürzt und lassen sich aufklappen
-    const kurz = (t, leer) => !t ? `<p><i>${leer}</i></p>` : `<p class="pclamp">${absatz(t)}</p>${t.length > 230 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}`;
+    const kurz = (t, leer) => !t ? `<p><i>${leer}</i></p>` : `<p class="pclamp">${absatz(t)}</p><button type="button" class="link" data-mehr>ganz anzeigen</button>`;
     const frage = f => `<div class="ws__f"><input type="checkbox" value="${esc(f.id)}" aria-label="Zum Senden auswählen"><span>${absatz(f.text)}<small>${f.vonTeam ? "von dir" : "von Claude"}${f.gesendet ? ` · <em>an den Kunden geschickt am ${tag(f.gesendet)}</em>` : ""}</small></span>
       <span class="ws__fk"><button type="button" class="link" data-wsf="antwort" data-id="${esc(f.id)}">Antwort eintragen</button><button type="button" class="link link--leise" data-wsf="loeschen" data-id="${esc(f.id)}">Löschen</button></span></div>`;
     const ZEIG_N = 3, ZEIG_F = 4;
@@ -184,6 +184,7 @@
       ${W.notizen.length ? `<div class="ws__b"><b>Notizen</b><ul>${W.notizen.slice(0, ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul>
         ${weitere(W.notizen.length - ZEIG_N, `<ul>${W.notizen.slice(ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul>`, ["weitere Notiz", "weitere Notizen"])}</div>` : ""}
       ${fragenBlock}`;
+    window.kuerzungPruefen?.();
   }
   // Eigene Fragen: anlegen, Antwort eintragen, löschen
   document.addEventListener("submit", async e => {
@@ -216,8 +217,9 @@
     box.dataset.pid = p.id;
     box.innerHTML = `<div class="pfrei__k"><span class="pfrei__ic">${ICON}</span><div><b>Version ${w.version} wartet auf deine Freigabe</b>
         <p>Von Claude hochgeladen ${ago(w.created_at)}. ${F.live ? `Der Kunde sieht noch Version ${F.live.version}.` : "Der Kunde sieht noch nichts."}${w.erledigt ? ` Mit der Freigabe ${w.erledigt === 1 ? "wird 1 Anmerkung" : `werden ${w.erledigt} Anmerkungen`} abgehakt.` : ""}</p>
-        ${w.changes ? `<p class="pfrei__t pclamp">„${esc(w.changes)}“</p>${w.changes.length > 230 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}` : ""}</div></div>
+        ${w.changes ? `<p class="pfrei__t pclamp">„${esc(w.changes)}“</p><button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}</div></div>
       <div class="acts"><button class="btn btn--ghost btn--sm" data-fr="verwerfen">Verwerfen</button><button class="btn btn--ghost btn--sm" data-fr="ansehen">Ansehen</button><button class="btn btn--grad btn--sm" data-fr="freigeben">Freigeben</button></div>`;
+    window.kuerzungPruefen?.();
   }
   document.addEventListener("click", async e => {
     const b = e.target.closest("[data-fr]"); if (!b || !F?.wartend) return;
