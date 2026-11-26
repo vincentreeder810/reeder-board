@@ -130,12 +130,10 @@
     const a = await api(`/projects/${p.id}/arbeitsstand`).catch(() => null); if (!a) return;
     const tag = iso => C.fmt(iso, { weekday: "short", day: "numeric", month: "short" });
     box.hidden = false;
-    box.innerHTML = `<div class="chead" style="margin-bottom:10px"><h2 style="font-size:18px">Eigene Notiz &amp; Updates</h2></div>
-      ${a.letzter ? `<p class="astand__letzt"><b>Zuletzt hochgeladen:${tag(String(a.letzter.at).replace(" ", "T") + "Z")} · Stand V${a.letzter.version}</b>${a.letzter.zusammenfassung ? esc(a.letzter.zusammenfassung) : "Keine Beschreibung."}</p>`
-        : `<p class="astand__letzt"><b>Noch kein Stand hochgeladen</b>Mit „Neuen Stand hochladen“ bei den Website-Versionen kommt der erste.</p>`}
-      <label class="astand__notiz">Fürs nächste Mal<textarea rows="3" placeholder="Womit geht es weiter? Was ist noch offen?">${esc(a.notiz)}</textarea></label>
-      <div class="astand__tage">${a.verlauf.map(d => `<span class="${d.versionen.length ? "ok" : ""}" title="${d.tag.split("-").reverse().join(".")}${d.versionen.length ? " · Stand V" + d.versionen.join(", V") : " · kein Update"}"><i>${d.tag.slice(8)}.</i>${d.versionen.length ? "V" + d.versionen[d.versionen.length - 1] : "–"}</span>`).join("")}</div>
-      <label class="check" style="margin-top:10px"><input type="checkbox" ${a.taeglich ? "checked" : ""}> Tägliche Updates zugesagt <small class="muted">– „Mein Arbeitsplatz“ warnt, wenn zwei Tage kein Stand kommt</small></label>`;
+    box.innerHTML = `<div class="chead" style="margin-bottom:10px"><h2 style="font-size:18px">Fürs nächste Mal</h2></div>
+      <label class="astand__notiz"><textarea rows="3" placeholder="Deine eigene Notiz: Womit geht es weiter? Was ist noch offen?">${esc(a.notiz)}</textarea></label>
+      <details class="pmehr"><summary>Tägliche Updates</summary><div class="pmehr__in"><div class="astand__tage" style="margin-top:0">${a.verlauf.map(d => `<span class="${d.versionen.length ? "ok" : ""}" title="${d.tag.split("-").reverse().join(".")}${d.versionen.length ? " · Stand V" + d.versionen.join(", V") : " · kein Update"}"><i>${d.tag.slice(8)}.</i>${d.versionen.length ? "V" + d.versionen[d.versionen.length - 1] : "–"}</span>`).join("")}</div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" ${a.taeglich ? "checked" : ""}> Tägliche Updates zugesagt <small class="muted">– „Mein Arbeitsplatz“ warnt, wenn zwei Tage kein Stand kommt</small></label></div></details>`;
     const speichern = body => api(`/projects/${p.id}/arbeitsstand`, { method: "PATCH", body }).then(() => toast("Gespeichert")).catch(x => toast(x.message));
     $("textarea", box).addEventListener("change", e => speichern({ notiz: e.target.value }));
     $("input[type=checkbox]", box).addEventListener("change", e => speichern({ taeglich: e.target.checked }));

@@ -166,16 +166,56 @@
     if (W.leer) { box.innerHTML = kopf("Stand, Notizen und offene Fragen aus der Arbeit mit Claude") + `<p class="ws__leer">Noch nichts da. Öffne das Projekt oben mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Wenige Sekunden später steht hier, wo das Projekt steht, was zuletzt gemacht wurde und welche Fragen an den Kunden offen sind.</p>`; return; }
     const offen = W.fragen.filter(f => f.status === "offen"), klar = W.fragen.filter(f => f.status !== "offen");
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
-    box.innerHTML = kopf(`Von Claude aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `
-      <div class="ws__zwei"><div class="ws__b"><b>Aktueller Stand</b><p>${W.stand ? absatz(W.stand) : "<i>Noch nicht beschrieben.</i>"}</p></div>
-        <div class="ws__b"><b>Letzte Sitzung</b><p>${W.letzteSitzung ? absatz(W.letzteSitzung) : "<i>Noch nichts eingetragen.</i>"}</p></div></div>
-      ${W.notizen.length ? `<div class="ws__b"><b>Notizen</b><ul>${W.notizen.map(n => `<li>${absatz(n)}</li>`).join("")}</ul></div>` : ""}
-      <div class="ws__b ws__fragen"><b>Offene Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
-        ${offen.length ? offen.map(f => `<label class="ws__f"><input type="checkbox" value="${esc(f.id)}" ${f.gesendet ? "" : "checked"}><span>${absatz(f.text)}${f.gesendet ? `<small>an den Kunden geschickt am ${tag(f.gesendet)}</small>` : ""}</span></label>`).join("")
-          + (S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen an den Kunden senden</button></div>` : "")
+    // Lange Texte werden auf drei Zeilen gekürzt und lassen sich aufklappen
+    const kurz = (t, leer) => !t ? `<p><i>${leer}</i></p>` : `<p class="pclamp">${absatz(t)}</p>${t.length > 230 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}`;
+    const frage = f => `<label class="ws__f"><input type="checkbox" value="${esc(f.id)}"><span>${absatz(f.text)}${f.gesendet ? `<small>an den Kunden geschickt am ${tag(f.gesendet)}</small>` : ""}</span></label>`;
+    const ZEIG_N = 3, ZEIG_F = 4;
+    box.innerHTML = kopf(`Claudes Notizen aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `
+      <div class="ws__zwei"><div class="ws__b"><b>Aktueller Stand</b>${kurz(W.stand, "Noch nicht beschrieben.")}</div>
+        <div class="ws__b"><b>Letzte Sitzung</b>${kurz(W.letzteSitzung, "Noch nichts eingetragen.")}</div></div>
+      ${W.notizen.length ? `<div class="ws__b"><b>Notizen</b><ul>${W.notizen.slice(0, ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul>
+        ${W.notizen.length > ZEIG_N ? `<details class="ws__klar"><summary>${W.notizen.length - ZEIG_N} weitere Notizen</summary><ul style="margin-top:8px">${W.notizen.slice(ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul></details>` : ""}</div>` : ""}
+      <div class="ws__b ws__fragen"><b>Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
+        ${offen.length ? `<p class="ws__woher">Diese Fragen hat Claude beim Arbeiten gesammelt, weil nur der Kunde sie beantworten kann. Beim Kunden ist davon nur, was als „geschickt“ markiert ist. Kreuze an, was du jetzt senden willst.</p>`
+          + offen.slice(0, ZEIG_F).map(frage).join("")
+          + (offen.length > ZEIG_F ? `<details class="ws__klar"><summary>${offen.length - ZEIG_F} weitere Fragen</summary>${offen.slice(ZEIG_F).map(frage).join("")}</details>` : "")
+          + (S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen senden</button></div>` : "")
           : `<p>Keine offenen Fragen.</p>`}
         ${klar.length ? `<details class="ws__klar"><summary>${klar.length} geklärt</summary>${klar.map(f => `<p><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}</p>`).join("")}</details>` : ""}</div>`;
   }
+
+  /* ---------- Freigabe: Was Claude über die Brücke hochlädt, sieht der Kunde erst nach dem Okay des Inhabers ---------- */
+  let F = null;
+  async function freigabe(p) {
+    const box = $("#pFrei"); if (!box || !p || !ME.owner || p.bereich === "hardware") return;
+    F = await api(`/bruecke/projekt/${p.id}/wartend`).catch(() => null);
+    const w = F?.wartend; box.hidden = !w; if (!w) return;
+    box.dataset.pid = p.id;
+    box.innerHTML = `<div class="pfrei__k"><span class="pfrei__ic">${ICON}</span><div><b>Version ${w.version} wartet auf deine Freigabe</b>
+        <p>Von Claude hochgeladen ${ago(w.created_at)}. ${F.live ? `Der Kunde sieht noch Version ${F.live.version}.` : "Der Kunde sieht noch nichts."}${w.erledigt ? ` Mit der Freigabe ${w.erledigt === 1 ? "wird 1 Anmerkung" : `werden ${w.erledigt} Anmerkungen`} abgehakt.` : ""}</p>
+        ${w.changes ? `<p class="pfrei__t pclamp">„${esc(w.changes)}“</p>${w.changes.length > 230 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}` : ""}</div></div>
+      <div class="acts"><button class="btn btn--ghost btn--sm" data-fr="verwerfen">Verwerfen</button><button class="btn btn--ghost btn--sm" data-fr="ansehen">Ansehen</button><button class="btn btn--grad btn--sm" data-fr="freigeben">Freigeben</button></div>`;
+  }
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-fr]"); if (!b || !F?.wartend) return;
+    const w = F.wartend, pid = +$("#pFrei").dataset.pid;
+    try {
+      if (b.dataset.fr === "ansehen") return window.RSViewer.open({ id: w.id, title: w.title, url: w.url, base: w.base, entry: w.entry, version: w.version, created_at: w.created_at });
+      if (b.dataset.fr === "verwerfen") {
+        if (!(await UI.confirm(`Version ${w.version} wird gelöscht. Der Kunde merkt davon nichts, im Projektordner bleibt alles, wie es ist.`, { title: "Version verwerfen?", ok: "Verwerfen", danger: true }))) return;
+        await api(`/bruecke/projekt/${pid}/verwerfen`, { method: "POST", body: {} }); toast("Verworfen"); return window.KUNDEN?.openProjectPage(pid, true);
+      }
+      const d = modal(`<h2 class="span2">Version ${w.version} freigeben</h2>
+        <p class="hint span2" style="margin:0">Mit der Freigabe sieht der Kunde diese Version im Kundenportal.</p>
+        <label class="span2">Was ist neu? (sieht der Kunde)<textarea name="text" rows="3">${esc(w.changes || "")}</textarea></label>
+        <label class="check span2"><input type="checkbox" name="announce" checked> Kunden im Chat und per Neuigkeiten-Mail benachrichtigen</label>
+        <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Freigeben</button></div>`);
+      d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"); k.disabled = true;
+        try { const r = await api(`/bruecke/projekt/${pid}/freigeben`, { method: "POST", body: { text: d.f.text.value, announce: d.f.announce.checked } });
+          d.close(); toast(`Version ${r.version} ist jetzt beim Kunden${r.erledigt ? ` · ${r.erledigt} Anmerkung${r.erledigt === 1 ? "" : "en"} abgehakt` : ""}`); window.KUNDEN?.openProjectPage(pid, true); }
+        catch (err) { d.fail(err.message); k.disabled = false; } });
+    } catch (err) { toast(err.message); }
+  });
   document.addEventListener("click", async e => {
     const b = e.target.closest("[data-ws]"); if (!b) return;
     if (b.dataset.ws === "website" || b.dataset.ws === "anmerkungen") { const k = $('[data-act="openProto"]'); if (!k) return; k.dataset.liste = b.dataset.ws === "website" ? "0" : "1"; k.click(); delete k.dataset.liste; return; }
@@ -192,5 +232,5 @@
         d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Chat des Kunden${r.mailed ? " und per E-Mail" : ""}.`); workspace({ id: pid }); }
       catch (err) { d.fail(err.message); k.disabled = false; } });
   });
-  window.STAND = { projectCard, workspace };
+  window.STAND = { projectCard, workspace, freigabe };
 })();

@@ -1479,3 +1479,22 @@ label.auf__item{cursor:pointer}
 .pklapp>summary span{font-size:13px;color:var(--muted);margin-right:auto}
 /* Schmale Fenster: erst Anmerkungen, Arbeitsbereich und Website, danach Team, Zeit und Zahlungen */
 @media (max-width:1280px){.pgrid{grid-template-areas:"main" "side" "more"}}
+
+/* Projektseite, zweite Überarbeitung: Freigabe-Karte, gekürzte Texte, Status im Kopf */
+.pweb__st{font-size:13.5px;color:var(--ink2);margin-left:auto;order:3}
+.pweb__st b{color:var(--ink)}
+.pclamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.pclamp--2{-webkit-line-clamp:2}
+.pclamp.auf{display:block}
+.ws__b .link,.pfrei .link,.p-more .link{font-size:12.5px;color:#6d28d9;font-weight:600;padding:0;margin-top:4px}
+.ws__woher{font-size:12.5px!important;color:var(--muted)!important;margin:0 0 6px!important}
+.pfrei{display:grid;gap:12px;background:linear-gradient(120deg,#f3efff,#fff 60%);border:1px solid rgba(139,92,246,.3)}
+.pfrei__k{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.pfrei__ic{width:40px;height:40px;border-radius:12px;background:var(--grad);color:#fff;display:grid;place-items:center}
+.pfrei__ic svg{width:20px;height:20px}
+.pfrei__k b{font-size:16.5px}
+.pfrei__k p{margin:3px 0 0;font-size:14px;line-height:1.5;color:var(--ink2)}
+.pfrei__t{color:var(--ink)!important}
+.pfrei .acts{justify-content:flex-end}
+.pklapp>.plist,.pklapp>.hint{cursor:default}
+@media (max-width:1280px){.pgrid{grid-template-areas:"main" "side" "more"}.pweb__st{margin-left:0;flex-basis:100%}}

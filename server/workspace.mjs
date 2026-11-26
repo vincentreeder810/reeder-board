@@ -11,6 +11,21 @@ db.exec(`CREATE TABLE IF NOT EXISTS project_workspace (
   daten TEXT NOT NULL, gesendet TEXT, updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`);
 
+// Aufgaben, die der abgeschaltete Assistent im Kundenportal angelegt hat („Großer Kundenwunsch – persönlich melden“), abschließen:
+// Die Anmerkung selbst steht weiter in der Anmerkungsliste des Projekts.
+try { db.prepare("UPDATE tasks SET status = 'erledigt', done_at = datetime('now'), done_by = 'System' WHERE source = 'assistent' AND status != 'erledigt'").run(); } catch {}
+
+/** Phase nachziehen: Ein beauftragtes Projekt, für das schon eine Website-Version beim Kunden liegt, ist in der Umsetzung */
+export function phaseNachziehen(pid) {
+  try {
+    const p = db.prepare("SELECT id, phase, status FROM projects WHERE id = ?").get(pid);
+    if (!p || p.status !== "aktiv" || !["Erstgespräch", "Konzept", "Prototyp"].includes(p.phase)) return;
+    const live = db.prepare("SELECT 1 FROM prototypes WHERE project_id = ? AND state IS NULL AND active = 1 LIMIT 1").get(pid);
+    if (live) db.prepare("UPDATE projects SET phase = 'Umsetzung', updated_at = datetime('now') WHERE id = ?").run(pid);
+  } catch {}
+}
+try { for (const r of db.prepare("SELECT id FROM projects WHERE status = 'aktiv'").all()) phaseNachziehen(r.id); } catch {}
+
 const kurz = (t, n) => String(t ?? "").replace(/\r/g, "").trim().slice(0, n);
 /** Eingabe aus arbeitsstand.json säubern: nur bekannte Felder, begrenzte Längen */
 function sauber(d) {
@@ -39,7 +54,8 @@ export function createWorkspace({ json, readJson, clean, SITE_URL }) {
     const mm = p.match(/^\/projects\/(\d+)\/workspace(\/fragen-senden)?$/); if (!mm) return null;
     const pr = db.prepare("SELECT p.*, c.name client_name, c.email client_email, c.company FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.id = ?").get(+mm[1]);
     if (!pr || !canProject(user, pr.id)) return json(res, 404, { error: "Projekt nicht gefunden" });
-    if (!mm[2] && m === "GET") return json(res, 200, workspaceLesen(pr.id) || { leer: true });
+    if (!mm[2] && m === "GET") phaseNachziehen(pr.id);
+    if (!mm[2] && m === "GET") return json(res, 200,workspaceLesen(pr.id) || { leer: true });
     if (mm[2] && m === "POST") {
       // Offene Fragen an den Kunden schicken: als Nachricht im Kundenportal und zusätzlich direkt per E-Mail
       if (!isOwner(user)) return json(res, 403, { error: "Das entscheidet der Inhaber." });

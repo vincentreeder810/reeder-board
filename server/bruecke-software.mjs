@@ -11,7 +11,7 @@ import { hwIntern } from "./hardware.mjs";
 import { answersText } from "./vorab.mjs";
 import { antwortenView } from "./onboarding.mjs";
 import { PROTO_MIME, safeRel } from "./portal.mjs";
-import { workspaceSpeichern, workspaceLesen } from "./workspace.mjs";
+import { workspaceSpeichern, workspaceLesen, phaseNachziehen } from "./workspace.mjs";
 import { anmerkungenText, anmerkungenStempel, anmerkungenErledigen } from "./anmerkungen.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
@@ -97,16 +97,18 @@ Halte die Datei aktuell: am Ende jeder Sitzung, nach jedem größeren Schritt un
 
 \`\`\`json
 {
-  "stand": "Wo steht das Projekt insgesamt? Drei bis sechs Sätze, ohne Fachwörter.",
-  "letzteSitzung": "Was wurde in der letzten Sitzung gemacht und was ist als Nächstes dran?",
-  "notizen": ["Entscheidungen, Wünsche des Inhabers, Dinge zum Merken – je ein kurzer Eintrag"],
+  "stand": "Zwei, höchstens drei kurze Sätze: Was ist fertig, was fehlt noch?",
+  "letzteSitzung": "Höchstens drei kurze Sätze: Was wurde zuletzt gemacht, was ist als Nächstes dran?",
+  "notizen": ["Höchstens fünf Einträge, je ein Satz: Entscheidungen, die für die weitere Arbeit noch gelten"],
   "fragen": [
     { "id": "f1", "text": "Frage an den Kunden, so formuliert, dass man sie ihm unverändert schicken kann (Sie-Form)", "status": "offen", "antwort": "" }
   ]
 }
 \`\`\`
 
-- Fragen: nur was wirklich der Kunde beantworten muss. Jede Frage bekommt eine feste \`id\` (f1, f2 …), die sich nie ändert.
+- Kurz halten – der Inhaber liest das zwischen Tür und Angel. \`stand\` und \`letzteSitzung\` beschreiben die Arbeit am Projekt, nicht den Kunden: keine Firmengeschichte, keine Namen, Zahlen oder Standorte des Kunden, keine Aufzählung aller Seiten. Bei jedem Aktualisieren neu und knapp schreiben, nicht anhängen.
+- \`notizen\`: nichts, was schon erledigt ist, und keine Aufgaben für den Inhaber. Was er selbst tun muss, sagst du ihm im Gespräch. Alte Einträge streichen, sobald sie nicht mehr gebraucht werden.
+- Fragen: nur was wirklich der Kunde beantworten muss und was die Arbeit gerade aufhält – höchstens fünf offene. Nimmst du eine Frage neu auf, sag es dem Inhaber im Gespräch, damit er weiß, woher sie kommt. Jede Frage bekommt eine feste \`id\` (f1, f2 …), die sich nie ändert.
 - Ist eine Frage geklärt (der Inhaber nennt dir die Antwort oder sie hat sich erledigt): \`status\` auf \`"geklaert"\` setzen und die Antwort in \`antwort\` eintragen. Sie verschwindet dann im Board aus den offenen Fragen. Alte geklärte Fragen darfst du nach einiger Zeit ganz löschen.
 - Keine Zugangsdaten und nichts Vertrauliches hineinschreiben.
 
@@ -115,15 +117,41 @@ Halte die Datei aktuell: am Ende jeder Sitzung, nach jedem größeren Schritt un
 Sagt der Inhaber ausdrücklich, dass du den Stand hochladen sollst („lade den aktuellen Stand hoch“), dann:
 
 1. \`arbeitsstand.json\` aktualisieren.
-2. Im Projektordner die Datei \`hochladen.json\` anlegen: \`{ "aenderungen": "Ein, zwei Sätze für den Kunden: Was ist neu?", "kundeBenachrichtigen": false, "erledigteAnmerkungen": [12, 15] }\` – in \`erledigteAnmerkungen\` die Nummern der Anmerkungen aus \`anmerkungen.md\`, die in diesem Stand wirklich umgesetzt sind (sonst leere Liste).
-3. Die Brücke lädt den Inhalt von \`website/\` innerhalb weniger Sekunden als neue Version hoch, löscht \`hochladen.json\` und schreibt das Ergebnis in \`hochladen-ergebnis.json\`. Lies diese Datei nach etwa zehn Sekunden und sag dem Inhaber, welche Version jetzt online ist (oder was nicht geklappt hat).
+2. Im Projektordner die Datei \`hochladen.json\` anlegen: \`{ "aenderungen": "Ein, höchstens zwei kurze Sätze für den Kunden: Was ist neu?", "erledigteAnmerkungen": [12, 15] }\` – in \`erledigteAnmerkungen\` die Nummern der Anmerkungen aus \`anmerkungen.md\`, die in diesem Stand wirklich umgesetzt sind (sonst leere Liste).
+3. Die Brücke lädt den Inhalt von \`website/\` innerhalb weniger Sekunden hoch, löscht \`hochladen.json\` und schreibt das Ergebnis in \`hochladen-ergebnis.json\`. Lies diese Datei nach etwa zehn Sekunden und sag dem Inhaber, welche Version hochgeladen ist (oder was nicht geklappt hat).
 
-Wichtig: Eine hochgeladene Version ist für den Kunden im Kundenportal sichtbar. \`kundeBenachrichtigen\` nur auf \`true\` setzen, wenn der Inhaber sagt, dass der Kunde eine Nachricht dazu bekommen soll. Nie von dir aus hochladen. Der Inhaber kann auch selbst im Board auf „Neuen Stand hochladen“ drücken.
+Wichtig: Was du hochlädst, sieht der Kunde noch nicht. Die Version wartet im Board auf die Freigabe des Inhabers: Auf der Projektseite steht oben „Version … wartet auf deine Freigabe“ – dort sieht er sie an und gibt sie frei oder verwirft sie. Erst mit der Freigabe sieht der Kunde die Version, und erst dann werden die gemeldeten Anmerkungen abgehakt. Sag ihm das nach dem Hochladen in einem Satz. Nie von dir aus hochladen.
+
+Eine Anmerkung, die du bewusst nicht umgesetzt hast, meldest du nicht als erledigt. Sag dem Inhaber im Gespräch kurz, welche das ist und warum.
 `;
 
-export function createBrueckeSoftware({ json, send, readJson, clean, publish }) {
+// Anmerkungen, die mit einer wartenden Version als erledigt gemeldet wurden – abgehakt wird erst bei der Freigabe
+if (!db.prepare("PRAGMA table_info(prototypes)").all().some(c => c.name === "erledigt_ids")) db.exec("ALTER TABLE prototypes ADD COLUMN erledigt_ids TEXT");
+/** Version dieses Projekts, die auf die Freigabe des Inhabers wartet (von Claude über die Brücke hochgeladen) */
+const wartend = pid => db.prepare("SELECT * FROM prototypes WHERE project_id = ? AND state = 'kandidat' AND job_id IS NULL AND COALESCE(source, '') = 'bruecke' ORDER BY id DESC LIMIT 1").get(pid) || null;
+const idListe = t => { try { return JSON.parse(t || "[]"); } catch { return []; } };
+
+export function createBrueckeSoftware({ json, send, readJson, clean, publish, stand }) {
   /** Board (nur Inhaber): Aufträge für die Brücke anstoßen – /bruecke/projekt/<id>/(claude|ordner|stand) */
   async function admin(req, res, p, m, user) {
+    // Freigabe einer wartenden Version – braucht die Brücke nicht
+    const fm = p.match(/^\/bruecke\/projekt\/(\d+)\/(wartend|freigeben|verwerfen)$/);
+    if (fm) {
+      const x = projekt(+fm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
+      const c = wartend(x.id);
+      if (fm[2] === "wartend" && m === "GET") {
+        const live = db.prepare("SELECT version, created_at FROM prototypes WHERE project_id = ? AND state IS NULL AND active = 1 ORDER BY id DESC LIMIT 1").get(x.id) || null;
+        return json(res, 200, { wartend: c ? { id: c.id, version: c.version, changes: c.changes, created_at: c.created_at, url: `/p/${c.token}/${c.entry}`, base: `/p/${c.token}/`, entry: c.entry, title: c.title, erledigt: idListe(c.erledigt_ids).length } : null, live });
+      }
+      if (m !== "POST") return null;
+      if (!c) return json(res, 404, { error: "Es wartet keine Version auf Freigabe." });
+      if (fm[2] === "verwerfen") { await stand.discardCandidate(c); return json(res, 200, { ok: true }); }
+      const d = await readJson(req, 64 * 1024);
+      stand.releaseCandidate(c, { text: clean(d.text, 3000) || c.changes, announce: d.announce !== false, author: user?.name || "Team Reeder" });
+      const erledigt = anmerkungenErledigen(x.id, idListe(c.erledigt_ids), c.version);
+      phaseNachziehen(x.id);
+      return json(res, 200, { ok: true, version: c.version, erledigt });
+    }
     const mm = p.match(/^\/bruecke\/projekt\/(\d+)\/(claude|ordner|stand)$/); if (!mm || m !== "POST") return null;
     const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
     if (!brueckeEingerichtet()) return json(res, 400, { error: "Dafür braucht es die Brücke auf deinem Rechner. Einrichten unter Einstellungen → Livegang → „Brücke zu Claude“." });
@@ -166,10 +194,13 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish }) 
         if (bytes > MAX_BYTES) return json(res, 400, { error: "Zusammen größer als 60 MB – bitte Bilder verkleinern." });
         files.push({ path: rel, buf });
       }
-      const r = await publish(db.prepare("SELECT * FROM projects WHERE id = ?").get(x.id), files, { changes: d.changes, announce: d.announce !== false, source: "bruecke", author: clean(d.author, 80) || "Team Reeder" });
-      // Von Claude als umgesetzt gemeldete Anmerkungen abhaken – nur wenn wirklich eine neue Version entstanden ist
-      const erledigt = r.published ? anmerkungenErledigen(x.id, d.erledigt, r.version) : 0;
-      return json(res, r.published ? 201 : 200, { ...r, erledigt });
+      const r = await publish(db.prepare("SELECT * FROM projects WHERE id = ?").get(x.id), files, { changes: d.changes, announce: d.announce !== false, source: "bruecke", author: clean(d.author, 80) || "Team Reeder", kandidat: d.freigabe === true });
+      // Von Claude als umgesetzt gemeldete Anmerkungen: sofort abhaken, wenn die Version gleich online ist – sonst erst bei der Freigabe
+      const ids = [...new Set((Array.isArray(d.erledigt) ? d.erledigt : []).map(Number).filter(Number.isInteger))].slice(0, 200);
+      if (r.candidate) db.prepare("UPDATE prototypes SET erledigt_ids = ? WHERE id = ?").run(JSON.stringify(ids), r.id);
+      const erledigt = r.published ? anmerkungenErledigen(x.id, ids, r.version) : 0;
+      if (r.published) phaseNachziehen(x.id);
+      return json(res, r.published || r.candidate ? 201 : 200, { ...r, erledigt, gemeldet: ids.length });
     }
     mm = p.match(/^\/(\d+)\/anmerkungen$/);
     if (mm && m === "GET") {

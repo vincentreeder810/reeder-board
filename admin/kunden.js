@@ -395,7 +395,10 @@
     const anns = (await api(`/clients/${current.id}/annotations`).catch(() => [])).filter(a => protoIds.has(a.prototype_id));
     loadAnnotations.all = anns;
     const byProto = {}; [...anns].sort((a, b) => a.id - b.id).forEach(a => { (byProto[a.prototype_id] ||= []).push(a.id); });
-    const openAnns = anns.filter(a => a.status === "offen");
+    const openAnns = anns.filter(a => a.status === "offen"), doneAnns = anns.filter(a => a.status === "erledigt").sort((x, y) => y.id - x.id);
+    // Was der Kunde gerade sieht: die neueste freigegebene Version
+    const liveV = p.prototypes.flat().filter(v => v.state !== "kandidat" && v.active).sort((x, y) => y.id - x.id)[0] || null;
+    const evZeile = e => `<li><b>${esc(e.title)}</b><span>${C.fmt(e.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>${e.detail ? `<p class="pclamp pclamp--2">${esc(e.detail)}</p>` : ""}</li>`;
     const paid = p.payments.filter(x => x.status === "bezahlt").reduce((s, x) => s + x.amount_net, 0), total = p.payments.reduce((s, x) => s + x.amount_net, 0);
     const more = [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, ...(p.status === "aktiv" && !p.offer_net ? [{ v: "zurAnfrage", l: "Zurück zur Anfrage" }] : []), p.status === "anfrage" ? { v: "resume", l: "Als Auftrag übernehmen" } : p.status === "aktiv" ? { v: "pause", l: "Projekt pausieren" } : { v: "resume", l: "Projekt fortsetzen" }, ...(p.status !== "abgeschlossen" ? [{ v: "finish", l: "Als abgeschlossen markieren" }] : []), { v: "deleteProject", l: "Projekt löschen", danger: true }];
     const statusPill = p.status === "aktiv" ? `<span class="pill pill--aktiv">aktiv</span>` : `<span class="pill">${esc(p.status)}</span>`;
@@ -410,60 +413,67 @@
             <button class="btn btn--ghost btn--sm" data-act="schedule">Termin</button>
             <button class="btn btn--ghost btn--sm" data-act="editProject">Bearbeiten</button>
             ${ME.owner ? DD.html("pMore", more, "", { trigger: "Mehr", align: "right" }) : ""}</div></div>
-        <div class="pweb">${p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="0">Website ansehen</button><button class="btn btn--ghost btn--sm" data-web="1">Website mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--grad btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}</div>
+        <div class="pweb">${p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="0">Website ansehen</button><button class="btn btn--ghost btn--sm" data-web="1">Website mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span>` : ""}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--grad btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}</div>
         <div class="pphase" role="list">${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
       </div>
       <div class="pgrid">
         <div class="stack p-main">
+          <div class="card pfrei" id="pFrei" hidden></div>
           <div class="card" id="pAnn">
-            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Anmerkungen${openAnns.length ? ` <em class="pcount">${openAnns.length}</em>` : ""}</h2><p>${openAnns.length ? "Was Kunde und Team an der Website angepinnt haben. Claude findet dieselbe Liste im Projektordner." : "Keine offenen Anmerkungen."}</p></div>
-              ${openAnns.length ? `<div class="acts"><button class="btn btn--grad btn--sm" data-web="1">Auf der Website ansehen</button></div>` : ""}</div>
+            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Anmerkungen${openAnns.length ? ` <em class="pcount">${openAnns.length}</em>` : ""}</h2><p>${openAnns.length ? "Offene Wünsche von Kunde und Team. Claude hat dieselbe Liste im Projektordner." : `Keine offenen Anmerkungen.${p.prototypes.length ? " Neue pinnst du direkt an der Website an." : ""}`}</p></div>
+              ${p.prototypes.length ? `<div class="acts"><button class="btn ${openAnns.length ? "btn--grad" : "btn--ghost"} btn--sm" data-web="1">${openAnns.length ? "Auf der Website ansehen" : "Anmerkung anpinnen"}</button></div>` : ""}</div>
             ${openAnns.length ? `<div class="annlist">${[...openAnns].sort((a, b) => String(a.page).localeCompare(String(b.page)) || a.id - b.id).map((a, i) => `
               <div class="ann" data-act="jump" data-id="${a.id}"><span class="ann__no">${i + 1}</span>
                 <div class="ann__body"><p>${esc(a.comment || "(nur eingezeichnet, ohne Text)")}</p>${a.change && a.comment !== window.RSViewer?.changeText(a.change) ? `<p class="ann__chg">Wunsch: ${esc(window.RSViewer.changeText(a.change))}</p>` : ""}<span>${esc(seiteName(a.page))} · ${a.author_kind === "team" ? "Team" : "Kunde"}: ${esc(a.author)} · ${ago(a.created_at)} · zu Version ${a.proto_version}</span></div>
                 <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-ann-task="${a.id}" title="Als Aufgabe übernehmen – erledigt sich mit der Aufgabe">→ Aufgabe</button><button class="btn btn--ok btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="offen">✓ Erledigt</button></div></div>`).join("")}</div>` : ""}
+            ${doneAnns.length ? `<details class="pmehr"><summary>${doneAnns.length} erledigt – ansehen oder wieder öffnen</summary><div class="annlist pmehr__in">${doneAnns.slice(0, 40).map(a => `
+              <div class="ann ann--done"><span class="ann__no">✓</span>
+                <div class="ann__body"><p>${esc(a.comment || "(nur eingezeichnet, ohne Text)")}</p><span>${esc(seiteName(a.page))} · ${a.author_kind === "team" ? "Team" : "Kunde"}: ${esc(a.author)}${a.reply ? " · " + esc(a.reply) : ""}</span></div>
+                <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="erledigt">Wieder öffnen</button></div></div>`).join("")}</div></details>` : ""}
           </div>
           <div class="card ws" id="pWs" hidden></div>
-          <div class="card">
-            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Website-Versionen</h2><p>${p.prototypes.length ? "Die oberste Version ist die aktuelle. Der Kunde sieht sie im Kundenportal." : "Noch keine Version hochgeladen."}</p></div>
-              ${ME.owner ? `<div class="acts"><button class="btn btn--grad btn--sm" data-br="stand">Neuen Stand hochladen</button></div>` : ""}</div>
-            <div class="plist">${p.prototypes.length ? p.prototypes.map((g, gi) => protoGroupRow(g, gi)).join("") : `<div class="empty">Noch keine Version. Mit „Mit Claude arbeiten“ entsteht die Website im Projektordner, „Neuen Stand hochladen“ bringt sie hierher.</div>`}</div>
-            <details class="pmehr" id="pWege"><summary>Brücke, Ordner und weitere Wege zum Hochladen</summary>
-              <div class="pmehr__in"><div class="acts" style="justify-content:flex-start;margin:0 0 10px"><button class="btn btn--ghost btn--sm" data-act="uploadProto">Dateien von Hand hochladen</button></div>
-                <div id="pStand"></div>
-                <div id="pAuftrag"></div></div></details>
-          </div>
           <div class="card" id="pTasks"></div>
-          <div class="card" id="pTests"></div>
           <details class="card pklapp" ${p.appointments.some(a => new Date(a.start) > new Date()) ? "open" : ""}><summary><h2>Termine</h2><span>${p.appointments.length || "keine"}</span></summary>
             <div class="acts" style="justify-content:flex-start;margin:12px 0 10px"><button class="btn btn--ghost btn--sm" data-act="newAppt">Termin eintragen</button></div>
             <div class="plist">${p.appointments.length ? [...p.appointments].sort((x, y) => y.start.localeCompare(x.start)).map(apptRow).join("") : `<div class="empty">Noch keine Termine.</div>`}</div></details>
           <details class="card pklapp"><summary><h2>Dokumente</h2><span>${p.documents.length || "keine"}</span></summary>
             <div class="acts" style="justify-content:flex-start;margin:12px 0 10px"><button class="btn btn--ghost btn--sm" data-act="newDoc">Hochladen</button></div>
             <div class="plist">${p.documents.length ? p.documents.map(docRow).join("") : `<div class="empty">Noch keine Dokumente.</div>`}</div></details>
+          <details class="card pklapp" id="pVers"><summary><h2>Website-Versionen</h2><span>${p.prototypes.flat().length || "keine"}</span></summary>
+            <p class="hint" style="margin:12px 0 10px">Alle bisherigen Versionen. Die oberste ohne Hinweis ist die, die der Kunde im Kundenportal sieht.</p>
+            <div class="plist">${p.prototypes.length ? p.prototypes.map((g, gi) => protoGroupRow(g, gi)).join("") : `<div class="empty">Noch keine Version. Mit „Mit Claude arbeiten“ entsteht die Website im Projektordner.</div>`}</div>
+            <details class="pmehr" id="pWege"><summary>Selbst hochladen, Ordner und Brücke</summary>
+              <div class="pmehr__in"><p class="hint" style="margin:0 0 10px">Nur nötig, wenn Claude nicht selbst hochlädt: Was du hier hochlädst, sieht der Kunde sofort – ohne Freigabe.</p>
+                <div class="acts" style="justify-content:flex-start;margin:0 0 10px">${ME.owner ? `<button class="btn btn--ghost btn--sm" data-br="stand">Stand aus dem Projektordner hochladen</button>` : ""}<button class="btn btn--ghost btn--sm" data-act="uploadProto">Dateien von Hand hochladen</button></div>
+                <div id="pStand"></div>
+                <div id="pAuftrag"></div></div></details>
+          </details>
+          <div class="card" id="pTests"></div>
         </div>
-<div class="stack p-side">
+        <div class="stack p-side">
+          <div class="card" id="pTime"></div>
           <div class="card astand" id="pArbeit" hidden></div>
-          <div class="card" id="pVerein" hidden></div>
+          <div class="card"><h2 style="font-size:18px">Verlauf</h2><ol class="tl">${p.events.slice(0, 5).map(evZeile).join("") || "<li><span>Noch keine Einträge.</span></li>"}</ol>
+            ${p.events.length > 5 ? `<details class="pmehr"><summary>Ältere Einträge</summary><ol class="tl pmehr__in">${p.events.slice(5, 30).map(evZeile).join("")}</ol></details>` : ""}</div>
           <div class="card"><div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Team</h2>${ME.owner ? `<div class="acts"><button class="btn btn--ghost btn--sm" data-act="assign">${p.members.length ? "Ändern" : "Zuweisen"}</button></div>` : ""}</div>
             ${p.members.length ? `<div class="pmembers">${p.members.map(m => `<div><span class="avatar">${esc(initials(m.name))}</span><span><b>${esc(m.name)}${m.id === ME.id ? " (Sie)" : ""}</b><small>${m.role === "inhaber" ? "Inhaber" : "Entwickler"}</small></span></div>`).join("")}</div>`
               : `<div class="pnoteam"><b>Noch niemand zugewiesen.</b><span>Wählen Sie, wer das Projekt umsetzt – mit Blick auf die aktuelle Auslastung.</span>${ME.owner ? `<button class="btn btn--grad btn--sm" data-act="assign">Jetzt zuweisen</button>` : ""}</div>`}</div>
-          <div class="card" id="pTime"></div>
           ${ME.owner ? `<div class="card"><div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Auftrag &amp; Zahlungen</h2><div class="acts"><button class="btn btn--ghost btn--sm" data-act="editProject">Bearbeiten</button></div></div>
             ${p.offer_net != null ? `<div class="pmoney"><div><small>Auftrag netto</small><b>${money(p.offer_net)}</b><span>${money(p.offer_gross)} brutto</span></div><div><small>Bezahlt</small><b>${money(paid)}</b><span>offen ${money(total - paid)}</span></div></div>
               <div class="pbar"><i style="width:${total ? paid / total * 100 : 0}%"></i></div>` : `<p class="hint" style="margin:0 0 10px">Noch kein Kostenvoranschlag hinterlegt.</p>`}
             <div class="ppays">${p.payments.map(x => `<div class="ppay ppay--${x.status}"><span><b>${esc(x.label)}</b><small>${x.due ? "fällig " + x.due.split("-").reverse().join(".") : x.due_on ? (x.due_on === "Auftrag" ? "bei Auftrag" : "ab Phase " + esc(x.due_on)) + (x.pct ? ` · ${String(x.pct).replace(".", ",")} %` : "") : "ohne Fälligkeit"}</small></span><span class="num">${money(x.amount_net)}</span>
               <span class="ppay__st">${x.status === "bezahlt" ? "bezahlt" : x.status === "berechnet" ? "Rechnung gestellt" : "offen"}</span>
               ${x.invoice_url ? `<a class="payinv" href="${esc(x.invoice_url)}" target="_blank" rel="noopener">PDF</a>` : x.status !== "bezahlt" ? `<button type="button" class="payinv payinv--new" data-act="invoicePay" data-id="${x.id}" title="Rechnung für diese Position erstellen">+ RE</button>` : `<span></span>`}</div>`).join("") || `<p class="hint" style="margin:0">Noch kein Zahlungsplan.</p>`}</div></div>` : ""}
+          <div class="card" id="pVerein" hidden></div>
         </div>
         <div class="stack p-more">
-          ${p.description || p.conditions ? `<div class="card"><h2 style="font-size:18px">Beschreibung</h2>${p.description ? `<p class="ptext">${esc(p.description)}</p>` : ""}${p.conditions ? `<p class="ptext ptext--muted"><b>Konditionen:</b> ${esc(p.conditions)}</p>` : ""}</div>` : ""}
-          <div class="card"><h2 style="font-size:18px">Verlauf</h2><ol class="tl">${p.events.slice(0, 12).map(e => `<li><b>${esc(e.title)}</b><span>${C.fmt(e.created_at, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>${e.detail ? `<p>${esc(e.detail)}</p>` : ""}</li>`).join("") || "<li><span>Noch keine Einträge.</span></li>"}</ol></div>
+          ${p.description || p.conditions ? `<div class="card"><h2 style="font-size:18px">Beschreibung</h2>${p.description ? `<p class="ptext pclamp">${esc(p.description)}</p>${p.description.length > 260 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}` : ""}${p.conditions ? `<p class="ptext ptext--muted"><b>Konditionen:</b> ${esc(p.conditions)}</p>` : ""}</div>` : ""}
         </div>
       </div>`;
     window.WORK?.projectCards(p);
-    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) $("#pWege").open = true; });
-    window.PRUEF?.load(p);
+    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
+    // Prüfstrecke nur zeigen, wo sie laufen kann (auf dem Online-Server gibt es keinen Browser dafür)
+    Promise.resolve(window.PRUEF?.load(p)).then(() => { const k = $("#pTests"); if (k && /Kein Browser gefunden/.test(k.textContent)) k.hidden = true; }).catch(() => {});
     window.BOARD?.arbeitsstand?.(p);
     window.BOARD?.vereinbarungen?.(p);
     if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
@@ -478,6 +488,8 @@
     <select data-f="status" class="paystate paystate--${x.status || "offen"}">${[["offen", "offen"], ["berechnet", "Rechnung gestellt"], ["bezahlt", "bezahlt"]].map(([v, l]) => `<option value="${v}" ${v === (x.status || "offen") ? "selected" : ""}>${l}</option>`).join("")}</select>
     <span class="payinv payinv--none"></span>
     <button type="button" class="x" data-act="delPay" title="Entfernen">✕</button></div>`;
+  // Lange Texte: „ganz anzeigen“ klappt den gekürzten Absatz davor auf
+  document.addEventListener("click", e => { const b = e.target.closest("[data-mehr]"); if (!b) return; const auf = b.previousElementSibling.classList.toggle("auf"); b.textContent = auf ? "weniger" : "ganz anzeigen"; });
   const seiteName = pg => !pg || /^index\.html?$/i.test(pg) ? "Startseite" : "Seite „" + String(pg).replace(/\.html?$/i, "").replace(/[-_/]+/g, " ") + "“";
   // Website direkt öffnen: ohne oder mit Anmerkungsliste
   document.addEventListener("click", e => { const b = e.target.closest("[data-web]"); if (!b || !project?.prototypes.length) return; const mit = b.dataset.web === "1";

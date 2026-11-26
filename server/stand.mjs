@@ -109,28 +109,31 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
   }
 
   /** Kern: Dateien vergleichen und – wenn geändert – als neue Version veröffentlichen */
-  async function publish(p, files, { changes = "", announce = true, dry = false, source = "ordner", author = "Team Reeder", job = null } = {}) {
+  async function publish(p, files, { changes = "", announce = true, dry = false, source = "ordner", author = "Team Reeder", job = null, kandidat = false } = {}) {
     const htmls = files.map(f => f.path).filter(isPage).sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
     if (!htmls.length) throw err(400, "Keine HTML-Datei gefunden. Ein Stand braucht mindestens eine .html-Datei.");
     const groupId = targetGroup(p), prev = latestIn(groupId), next = manifestOf(files);
     const diff = diffOf(prev ? await manifestOfVersion(prev) : {}, next);
     const count = diff.added.length + diff.changed.length + diff.removed.length;
     const summary = prev ? describe(diff) : `Erster Stand mit ${htmls.length} Seite${htmls.length === 1 ? "" : "n"}`;
-    const maxV = groupId ? db.prepare("SELECT MAX(version) v FROM prototypes WHERE group_id = ?").get(groupId).v || 0 : 0;
+    // Wartet eine Version auf Freigabe und wird durch eine neue ersetzt, behält die neue deren Nummer (sonst springt die Zählung für den Kunden)
+    const maxV = groupId ? db.prepare(kandidat && !job ? "SELECT MAX(version) v FROM prototypes WHERE group_id = ? AND state IS NULL" : "SELECT MAX(version) v FROM prototypes WHERE group_id = ?").get(groupId).v || 0 : 0;
     const base = { diff, summary, files: files.length, bytes: files.reduce((s, f) => s + f.buf.length, 0), version: Math.max(maxV, prev?.version || 0) + 1, title: prev?.title || p.title };
     const waiting = pendingIn(groupId);
-    if (!job && waiting) throw err(409, `Version ${waiting.version} wartet noch auf Freigabe – bitte erst freigeben oder zurückweisen (Projektseite > Auftrag).`);
+    if (!job && !kandidat && waiting) throw err(409, `Version ${waiting.version} wartet noch auf Freigabe – bitte erst freigeben oder zurückweisen (Projektseite > Auftrag).`);
     if (prev && !count) return { unchanged: true, version: prev.version, summary: `Keine Änderungen seit Version ${prev.version}.` };
     if (dry) return { dry: true, ...base };
     if (job && !groupId) throw err(400, "Für einen Kandidaten muss es schon einen veröffentlichten Stand geben.");
-    if (job && waiting) await discardCandidate(waiting);           // neuer Kandidat ersetzt den alten
+    if ((job || kandidat) && waiting) await discardCandidate(waiting);           // neuer Kandidat ersetzt den alten
     const entry = (prev && htmls.includes(prev.entry) && prev.entry) || htmls.find(h => /(^|\/)index\.html?$/i.test(h)) || htmls[0];
     const token = randomBytes(24).toString("hex"), dir = path.join(PROTO_DIR, token);
     for (const f of files) { const t = path.join(dir, f.path); await mkdir(path.dirname(t), { recursive: true }); await writeFile(t, f.buf); }
     const text = clean(changes, 3000) || summary;
     const r = db.prepare("INSERT INTO prototypes(client_id, title, note, token, entry, files, bytes, project_id, group_id, version, changes, manifest, diff, source, active, state, job_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-      .run(p.client_id, base.title, prev?.note || null, token, entry, files.length, base.bytes, p.id, groupId, base.version, text, JSON.stringify(next), JSON.stringify(diff), source, job ? 0 : 1, job ? "kandidat" : null, job || null);
-    for (const f of listeners) try { f(Number(r.lastInsertRowid), !!job); } catch {}
+      .run(p.client_id, base.title, prev?.note || null, token, entry, files.length, base.bytes, p.id, groupId, base.version, text, JSON.stringify(next), JSON.stringify(diff), source, job || kandidat ? 0 : 1, job || kandidat ? "kandidat" : null, job || null);
+    for (const f of listeners) try { f(Number(r.lastInsertRowid), !!job || kandidat); } catch {}
+    // Wartet auf Freigabe (von Claude über die Brücke hochgeladen): Der Kunde sieht die Version erst, wenn der Inhaber sie freigibt
+    if (kandidat && !job) { if (!groupId) db.prepare("UPDATE prototypes SET group_id = id WHERE id = ?").run(r.lastInsertRowid); return { candidate: true, id: Number(r.lastInsertRowid), ...base, changes: text }; }
     if (job) return { candidate: true, id: Number(r.lastInsertRowid), ...base, changes: text };   // Kunde sieht ihn erst nach der Freigabe
     const gid = groupId || r.lastInsertRowid;
     if (!groupId) db.prepare("UPDATE prototypes SET group_id = id WHERE id = ?").run(gid);
