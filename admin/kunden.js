@@ -404,7 +404,7 @@
     const byProto = {}; [...anns].sort((a, b) => a.id - b.id).forEach(a => { (byProto[a.prototype_id] ||= []).push(a.id); });
     const openAnns = anns.filter(a => a.status === "offen");
     const paid = p.payments.filter(x => x.status === "bezahlt").reduce((s, x) => s + x.amount_net, 0), total = p.payments.reduce((s, x) => s + x.amount_net, 0);
-    const more = [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, ...(p.status === "aktiv" && !p.offer_net ? [{ v: "zurAnfrage", l: "Zurück zur Anfrage" }] : []), p.status === "anfrage" ? { v: "resume", l: "Als Auftrag übernehmen" } : p.status === "aktiv" ? { v: "pause", l: "Projekt pausieren" } : p.status === "nie" ? null : { v: "resume", l: "Projekt fortsetzen" }, ...(p.status !== "abgeschlossen" ? [{ v: "finish", l: "Als abgeschlossen markieren" }] : []), { v: "deleteProject", l: "Projekt löschen", danger: true }];
+    const more = [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, ...(p.status === "aktiv" && !p.offer_net ? [{ v: "zurAnfrage", l: "Zurück zur Anfrage" }] : []), p.status === "anfrage" ? { v: "resume", l: "Als Auftrag übernehmen" } : p.status === "aktiv" ? { v: "pause", l: "Projekt pausieren" } : { v: "resume", l: "Projekt fortsetzen" }, ...(p.status !== "abgeschlossen" ? [{ v: "finish", l: "Als abgeschlossen markieren" }] : []), { v: "deleteProject", l: "Projekt löschen", danger: true }];
     const statusPill = p.status === "aktiv" ? `<span class="pill pill--aktiv">aktiv</span>` : `<span class="pill">${esc(p.status)}</span>`;
     host.innerHTML = `
       <a class="back" href="#projekte">← Alle Projekte</a>
