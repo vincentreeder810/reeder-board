@@ -288,7 +288,6 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
       let ids = JSON.parse(o.project_ids || "[]");
       if (!ids.length) {
         ids = projekteAnlegen(o, antworten, JSON.parse(db.prepare("SELECT files FROM onboarding WHERE id = ?").get(o.id).files || "[]"));
-        projektnamenPflegen().catch(() => {});   // gleich einen kurzen Projektnamen vergeben
         db.prepare("UPDATE onboarding SET project_ids = ? WHERE id = ?").run(JSON.stringify(ids), o.id);
         const cfg = getSetting("mail", DEFAULT_MAIL);
         sendMail({ to: cfg.notifyAddress, subject: `Onboarding ausgefüllt: ${b?.name || "Interessent"}${b?.company ? " (" + b.company + ")" : ""}`,

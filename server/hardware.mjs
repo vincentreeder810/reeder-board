@@ -109,6 +109,13 @@ Hardware-Projekt im Reeder Board (Projekt ${x.id}, Kunde: ${x.company || "–"})
 - \`notizen/\` – Gesprächsnotizen des Inhabers. Lesen erlaubt, nicht verändern.
 - \`ergebnisse/\` – hier Berechnungen, Recherchen und Hilfsskripte ablegen.
 
+## Wer ist wer
+
+- Du sprichst mit dem Inhaber von Reeder Hardware. Er entwickelt das Produkt im Auftrag des Kunden. Sprich ihn mit „du“ an.
+- Der Steckbrief in \`projekt.json\` und die Unterlagen in \`dateien/\` stammen vom Kunden (${x.company || "–"}), meist aus einem kurzen Online-Fragebogen. Der Kunde liest hier nicht mit. Schreibe also nicht „Ihr Steckbrief“, sondern „die Angaben des Kunden“.
+- Was nur der Kunde beantworten kann, kläre zuerst mit dem Inhaber (vielleicht weiß er es aus dem Gespräch) und sammle den Rest unter \`konzept.offeneFragen\` als Fragen an den Kunden für das nächste Gespräch.
+- Bei eigenen Produktideen (Kunde „Reeder intern“) ist der Inhaber selbst der Auftraggeber.
+
 ## Gespräch zuerst
 
 Der Inhaber entwickelt seine Ideen am liebsten im Gespräch und spricht seine Nachrichten oft ein (Diktat – Hörfehler mitdenken, bei Unklarheit nachfragen).
