@@ -74,6 +74,37 @@ h1{font-size:clamp(30px,4.4vw,48px);letter-spacing:-.045em;line-height:1.06;marg
 .ico{flex:none;width:46px;height:46px;border-radius:14px;background:var(--ink);color:#fff;display:grid;place-items:center;transition:background .25s,transform .3s var(--ease)}
 .ico svg{width:23px;height:23px}
 .card.sel .ico{background:var(--grad);transform:scale(1.05)}
+/* Hervorgehobene Karte (Signature): Verlauf lila–rosa mit leisem Schimmer, weiße Schrift */
+.card--glanz{background:linear-gradient(125deg,#4f7cff 0%,#8b5cf6 48%,#ec4899 100%);color:#fff;box-shadow:0 18px 40px -18px rgba(139,92,246,.75);overflow:hidden;isolation:isolate}
+.card--glanz::selection{background:transparent}
+.card--glanz>*{position:relative;z-index:1}
+.card--glanz .card__t{position:relative}
+.card--glanz small{color:rgba(255,255,255,.88)}
+.card--glanz .ico{background:rgba(255,255,255,.2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.card--glanz::after{z-index:2;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.75)}
+.card--glanz .card__t::before{content:"";position:absolute;inset:-60% -40%;z-index:-1;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);transform:translateX(-60%);animation:schimmer 4.5s ease-in-out infinite;pointer-events:none}
+@keyframes schimmer{0%,55%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
+.card--glanz:hover{background:linear-gradient(125deg,#4f7cff 0%,#8b5cf6 48%,#ec4899 100%)}
+.card--glanz.sel{background:linear-gradient(125deg,#4f7cff 0%,#8b5cf6 48%,#ec4899 100%);box-shadow:0 0 0 3px #fff,0 0 0 5px #8b5cf6,0 22px 48px -16px rgba(236,72,153,.7)}
+.card--glanz.sel::after{background:#fff;box-shadow:none}
+.card--glanz.sel::before{z-index:3;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 12.5l3.2 3.2L17 9' fill='none' stroke='%238b5cf6' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/18px no-repeat}
+.card--glanz.sel .ico{background:rgba(255,255,255,.28)}
+/* i-Knopf im Titel und das aufploppende Info-Feld */
+.card__info{display:inline-grid;place-items:center;width:24px;height:24px;margin-left:6px;vertical-align:2px;border-radius:50%;background:rgba(255,255,255,.95);color:#6d28d9;font-size:13px;font-weight:800;font-style:normal;line-height:1;cursor:pointer;box-shadow:0 2px 8px -2px rgba(0,0,0,.25);transition:transform .2s var(--ease)}
+.card__info{position:relative}
+.card__info::before{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+.grid:has(.infopop){grid-auto-rows:auto}
+/* Mehrspaltig: Das Info-Feld steht unter der ganzen Kartenreihe, damit die Karten nebeneinander bleiben */
+@media (min-width:621px){.infopop{order:99}}
+.card__info:hover,.card__info.auf{transform:scale(1.1)}
+.card__info:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.infopop{grid-column:1/-1;position:relative;margin-top:-4px;padding:18px 20px;border-radius:20px;background:#fff;box-shadow:0 0 0 1.5px rgba(139,92,246,.35),0 22px 50px -22px rgba(76,29,149,.45);font-size:14.5px;line-height:1.55;color:var(--ink2);animation:aufploppen .28s var(--ease)}
+.infopop::before{content:"";position:absolute;top:-7px;left:34px;width:14px;height:14px;background:#fff;transform:rotate(45deg);box-shadow:-1.5px -1.5px 0 0 rgba(139,92,246,.35)}
+.infopop b{display:block;margin:0 0 6px;font-size:15.5px;color:var(--ink);background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content;max-width:100%}
+.infopop p{margin:0 0 12px}
+.infopop a{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:999px;background:var(--grad);color:#fff;font-weight:600;font-size:14px;text-decoration:none}
+@keyframes aufploppen{from{opacity:0;transform:translateY(-6px) scale(.98)}}
+@media (prefers-reduced-motion:reduce){.card--glanz .card__t::before{animation:none;display:none}.infopop{animation:none}}
 
 /* ---------- Chips ---------- */
 .chips{display:flex;flex-wrap:wrap;gap:10px}
@@ -387,7 +418,11 @@ textarea.inp{min-height:120px;resize:vertical}
     const attr = `data-feld="${esc(f.id)}" data-art="${f.art}"${f.max ? ` data-max="${f.max}"` : ""}${f.allein ? ` data-allein="${esc(f.allein.join(" "))}"` : ""} role="group"${f.label ? ` aria-label="${esc(f.label)}"` : ` aria-label="${esc(s.frage)}"`}`;
     if (f.stil === "karten") return `<div class="grid" ${attr}>${f.optionen.map(([v, l, d]) => {
       const an = gew.includes(v), ic = ICON[`${f.id}:${v}`];
-      return `<button type="button" class="card ${multi ? "card--multi" : ""} ${ic ? "" : "card--ohne"} ${an ? "sel" : ""} ${voll && !an ? "voll" : ""}" data-v="${esc(v)}" aria-pressed="${an}">${ic ? `<span class="ico">${svg(ic)}</span>` : ""}<span class="card__t"><b>${esc(l)}</b>${d ? `<small>${esc(d)}</small>` : ""}</span></button>`; }).join("")}</div>`;
+      // Hervorgehobene Option (z. B. Signature): Karte im Verlaufs-Look, im Titel ein kleiner i-Knopf; das Info-Feld ploppt direkt darunter auf
+      const glanz = f.info?.zu === v;
+      const iKnopf = glanz ? ` <span class="card__info" data-info="${esc(f.id)}" role="button" tabindex="0" aria-expanded="false" aria-controls="info-${esc(f.id)}" aria-label="${esc(f.info.titel)}">i</span>` : "";
+      const pop = glanz ? `<div class="infopop" id="info-${esc(f.id)}" hidden><b>${esc(f.info.titel)}</b><p>${esc(f.info.text)}</p>${f.info.link ? `<a href="${esc(f.info.link)}" target="_blank" rel="noopener">${esc(f.info.linkText || "Mehr erfahren")} <span aria-hidden="true">↗</span></a>` : ""}</div>` : "";
+      return `<button type="button" class="card ${glanz ? "card--glanz" : ""} ${multi ? "card--multi" : ""} ${ic ? "" : "card--ohne"} ${an ? "sel" : ""} ${voll && !an ? "voll" : ""}" data-v="${esc(v)}" aria-pressed="${an}">${ic ? `<span class="ico">${svg(ic)}</span>` : ""}<span class="card__t"><b>${esc(l)}${iKnopf}</b>${d ? `<small>${esc(d)}</small>` : ""}</span></button>${pop}`; }).join("")}</div>`;
     return `<div class="chips" ${attr}>${f.optionen.map(([v, l]) => { const an = gew.includes(v);
       return `<button type="button" class="chip ${an ? "sel" : ""} ${voll && !an ? "voll" : ""}" data-v="${esc(v)}" aria-pressed="${an}">${esc(l)}</button>`; }).join("")}</div>`;
   }
@@ -396,7 +431,7 @@ textarea.inp{min-height:120px;resize:vertical}
     const zusatz = f.art === "mehr" && f.label ? ` <small>${f.max ? `höchstens ${f.max}` : "mehrere möglich"}</small>` : "";
     const label = f.label ? `<span class="field__label">${esc(f.label)}${zusatz}</span>` : "";
     // Kleines Info-Kästchen unter der Auswahl (z. B. „Was ist Signature?“) mit Erklärung und Link zur Website
-    const info = f.info ? `<details class="info"><summary><i aria-hidden="true">i</i>${esc(f.info.titel)}</summary><div class="info__in"><p>${esc(f.info.text)}</p>${f.info.link ? `<a href="${esc(f.info.link)}" target="_blank" rel="noopener">${esc(f.info.linkText || "Mehr erfahren")} ↗</a>` : ""}</div></details>` : "";
+    const info = f.info && !f.info.zu ? `<details class="info"><summary><i aria-hidden="true">i</i>${esc(f.info.titel)}</summary><div class="info__in"><p>${esc(f.info.text)}</p>${f.info.link ? `<a href="${esc(f.info.link)}" target="_blank" rel="noopener">${esc(f.info.linkText || "Mehr erfahren")} ↗</a>` : ""}</div></details>` : "";
     if (f.art === "wahl" || f.art === "mehr") return `<div class="field">${label}${auswahlHtml(s, f)}${info}</div>`;
     if (f.art === "datei") {
       const eigene = dateien.filter(d => d.bereich === s.bereich);
@@ -440,7 +475,14 @@ textarea.inp{min-height:120px;resize:vertical}
   }
 
   /* ---------- Eingaben in den Zustand übernehmen ---------- */
+  // i-Knopf auch mit der Tastatur bedienbar (Enter/Leertaste), ohne die Karte auszuwählen
+  app.addEventListener("keydown", e => { const ik = e.target.closest?.("[data-info]"); if (ik && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); ik.click(); } }, true);
   app.addEventListener("click", e => {
+    // i-Knopf auf einer Karte: nur das Info-Feld auf- bzw. zuklappen, die Karte dabei nicht auswählen
+    const ik = e.target.closest("[data-info]");
+    if (ik) { e.preventDefault(); e.stopPropagation(); const pop = document.getElementById("info-" + ik.dataset.info); if (!pop) return;
+      const auf = pop.hidden; pop.hidden = !auf; ik.setAttribute("aria-expanded", auf); ik.classList.toggle("auf", auf);
+      if (auf) pop.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" }); return; }
     const o = e.target.closest("[data-v]"); if (!o) return;
     const box = o.closest("[data-feld]"), s = liste()[pos]; if (!box || !s) return;
     const id = box.dataset.feld, a = (antworten[s.bereich] ||= {}), v = o.dataset.v, knoepfe = $$("[data-v]", box);
