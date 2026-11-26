@@ -94,27 +94,57 @@ function route() {
   const v = VIEWS[name] ? name : "uebersicht";
   $$("[data-view]").forEach(s => s.hidden = s.dataset.view !== v);
   $$(".nav nav a").forEach(a => a.classList.toggle("on", a.dataset.v === v || ((v === "projekt" || v === "angebot") && a.dataset.v === "projekte")));
+  // Schmale Fenster: Der Menüknopf zeigt, wo man gerade ist; nach der Auswahl klappt das Menü wieder zu
+  { const an = $(".nav nav a.on span"), jetzt = $("#navNow"); if (an && jetzt) jetzt.textContent = an.textContent; menuZu(); }
   if (v !== "chat") { stopChat?.(); stopChat = null; }
   scrollTo(0, 0);
   VIEWS[v](arg).catch(err => toast(err.message));
 }
 addEventListener("hashchange", route);
+function menuZu() { $(".nav")?.classList.remove("is-open"); $("#navToggle")?.setAttribute("aria-expanded", "false"); }
+$("#navToggle")?.addEventListener("click", e => { e.stopPropagation(); const auf = $(".nav").classList.toggle("is-open"); $("#navToggle").setAttribute("aria-expanded", String(auf)); });
+document.addEventListener("click", e => { if (!e.target.closest(".nav nav") || e.target.closest(".nav nav a")) menuZu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") menuZu(); });
+// Zähler am Menüknopf: zeigt, ob in Chat oder Support etwas Neues wartet, auch wenn das Menü zu ist
+new MutationObserver(() => { const n = ["#bChat", "#bSupport"].map(s => $(s)).filter(b => b && !b.hidden).reduce((s, b) => s + (+b.textContent || 0), 0), m = $("#bMenu"); if (m) { m.hidden = !n; m.textContent = n; } })
+  .observe($(".nav nav"), { subtree: true, attributes: true, childList: true, characterData: true });
 
 /* ---------- Bausteine ---------- */
+// Vor dem Auftrag zeigt jede Karte denselben Weg in fünf Schritten – egal ob Website, Software oder Hardware.
+// Erst mit dem Auftrag kommen die Projektphasen.
+const WEG = ["Anfrage", "Fragebogen", "Erstgespräch", "Angebot", "Auftrag"];
+function wegBar(i) {
+  return `<div class="steps steps--5">${WEG.map((_, k) => `<i class="${k < i ? "done" : k === i ? "now" : ""}"></i>`).join("")}</div>
+    <div class="steps__label"><span>Schritt ${i + 1} von ${WEG.length}</span><b>${WEG[i]}</b></div>`;
+}
 function stepsBar(p) {
+  if (p.status === "anfrage") return wegBar(2);   // Projekt in Anfrage: Fragebogen liegt vor, als Nächstes das Gespräch
   const i = p.phaseIndex;
   return `<div class="steps">${p.phases.map((_, k) => `<i class="${k < i ? "done" : k === i ? "now" : ""}"></i>`).join("")}</div>
     <div class="steps__label"><span>Phase ${i + 1} von ${p.phases.length}</span><b>${esc(p.phase)}</b></div>`;
 }
+const STATUS_TXT = { anfrage: "Angefragt", aktiv: "Läuft", pausiert: "Pausiert", abgeschlossen: "Abgeschlossen" };
 function projectCard(p) {
   return `<a class="pcard" href="#projekt/${p.id}">
-    <div class="pcard__top"><div><h3>${esc(p.title)}</h3><div class="pcard__kind">${esc(p.kind || "Projekt")}${p.model ? " · " + esc(p.model) : ""}</div></div><span class="pill pill--${p.status}">${esc({ anfrage: "Angefragt", aktiv: "Läuft", pausiert: "Pausiert", abgeschlossen: "Abgeschlossen" }[p.status] || p.status)}</span></div>
+    <div class="pcard__top"><div><h3>${esc(p.title)}</h3><div class="pcard__kind">${esc(p.kind || "Projekt")}${p.model ? " · " + esc(p.model) : ""}</div></div><span class="pill pill--${p.status}">${esc(STATUS_TXT[p.status] || p.status)}</span></div>
     ${stepsBar(p)}
     <div class="pcard__meta">
+      ${p.status === "anfrage" && !p.next ? `<span>Ihre Angaben liegen uns vor.</span>` : ""}
       ${p.next ? `<span>Nächster Termin: <b>${fmt(p.next.start, { day: "numeric", month: "short" })}</b></span>` : ""}
       ${p.latest ? `<span>Prototyp: <b>V${p.latest.version}</b></span>` : ""}
       ${p.open_net ? `<span>Offen: <b>${money(p.open_gross)}</b></span>` : ""}
     </div></a>`;
+}
+// Anfrage, zu der es noch kein Projekt gibt (Fragebogen offen, oder Website-Fragebogen ausgefüllt): gleiche Karte wie ein Projekt
+function anfrageCard(a) {
+  return `<div class="pcard pcard--anfrage">
+    <div class="pcard__top"><div><h3>${esc(a.art)}</h3><div class="pcard__kind">Ihre Anfrage</div></div><span class="pill pill--anfrage">Angefragt</span></div>
+    ${wegBar(a.fertig ? 2 : 1)}
+    <div class="pcard__meta">
+      <span>${a.fertig ? "Ihre Angaben liegen uns vor." : "Uns fehlen noch Ihre Angaben (etwa fünf Minuten)."}</span>
+      ${a.termin ? `<span>Erstgespräch: <b>${fmt(a.termin, { day: "numeric", month: "short" })}, ${fmt(a.termin, { hour: "2-digit", minute: "2-digit" })} Uhr</b></span>` : ""}
+    </div>
+    ${a.link ? `<a class="btn btn--grad btn--sm" href="${esc(a.link)}">Fragebogen ausfüllen</a>` : ""}</div>`;
 }
 function eventsList(events) {
   return events.length ? events.map(e => `<li><b>${esc(e.title)}</b><span>${fmt(e.created_at, { day: "numeric", month: "long", year: "numeric" })}${e.project_title ? " · " + esc(e.project_title) : ""}</span>${e.detail ? `<p>${esc(e.detail)}</p>` : ""}</li>`).join("")
@@ -184,7 +214,7 @@ window.addEventListener("rs:viewer-open", e => { if (e.detail?.id) api(`/prototy
 
 /* ---------- Übersicht ---------- */
 async function viewOverview() {
-  const [o, quotes, news] = await Promise.all([api("/overview"), api("/quotes").catch(() => []), api("/neu").catch(() => [])]);
+  const [o, quotes, news, anfragen] = await Promise.all([api("/overview"), api("/quotes").catch(() => []), api("/neu").catch(() => []), api("/anfragen").catch(() => [])]);
   renderNews(news);
   const h = new Date().getHours();
   const pending = quotes.filter(q => q.status === "versendet");
@@ -201,7 +231,7 @@ async function viewOverview() {
     <a class="tile" href="#dokumente"><small>Offener Betrag</small><b>${money(open)}</b><span>laut Zahlungsplan, brutto</span></a>`;
   // Höchstens 5 Projekte, der Rest hinter „Alle anzeigen“
   const MAXP = 5, extra = Math.max(0, o.projects.length - MAXP);
-  $("#ovProjects").innerHTML = o.projects.length ? o.projects.map((p, i) => i < MAXP ? projectCard(p) : projectCard(p).replace('class="pcard"', 'class="pcard pcard--extra"')).join("") : `<div class="empty">Sobald wir gemeinsam starten, finden Sie Ihr Projekt hier.</div>`;
+  $("#ovProjects").innerHTML = (anfragen.map(anfrageCard).join("") + o.projects.map((p, i) => i < MAXP ? projectCard(p) : projectCard(p).replace('class="pcard"', 'class="pcard pcard--extra"')).join("")) || `<div class="empty">Sobald wir gemeinsam starten, finden Sie Ihr Projekt hier.</div>`;
   $("#ovProjects").classList.remove("open");
   $("#projMore").hidden = !extra; $("#projMore").classList.remove("open");
   $("span", $("#projMore")).textContent = `${extra} weitere${extra === 1 ? "s" : ""} Projekt${extra === 1 ? "" : "e"} anzeigen`;
@@ -308,15 +338,10 @@ async function viewQuote(id) {
 /* ---------- Projekte ---------- */
 async function viewProjects() {
   const [list, anfragen] = await Promise.all([api("/projects"), api("/anfragen").catch(() => [])]);
-  // Anfragen: Fragebögen, aus denen noch kein Projekt geworden ist – damit der Kunde sieht, was bei uns angekommen ist und was noch fehlt
-  const tag = z => { const t = String(z || ""); return fmt(t.includes("T") ? t : t.replace(" ", "T") + "Z", { day: "numeric", month: "long" }); };
-  const anfrageCard = a => `<div class="pcard pcard--anfrage">
-    <div class="pcard__top"><div><h3>${esc(a.art)} – Ihre Anfrage</h3><div class="pcard__kind">${a.termin ? "Erstgespräch am " + fmt(a.termin, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) + " Uhr" : "Anfrage"}</div></div>
-      <span class="pill ${a.fertig ? "pill--bezahlt" : "pill--offen"}">${a.fertig ? "✓ Fragebogen ausgefüllt" : "Fragebogen offen"}</span></div>
-    <p class="pcard__hin">${a.fertig ? `Ihre Angaben${a.am ? " vom " + tag(a.am) : ""} liegen uns vor. Wir bereiten damit das Gespräch vor. Nach dem Gespräch wird daraus Ihr Projekt.` : "Damit wir uns gut vorbereiten können, fehlen uns noch Ihre Angaben. Das dauert etwa fünf Minuten."}</p>
-    ${a.link ? `<a class="btn btn--grad btn--sm" href="${esc(a.link)}">Fragebogen ausfüllen</a>` : ""}</div>`;
-  $("#projList").innerHTML = (anfragen.length ? `<p class="listhead" style="margin-top:0">Ihre Anfragen</p>` + anfragen.map(anfrageCard).join("") + (list.length ? `<p class="listhead">Projekte</p>` : "") : "")
-    + (list.length ? list.map(projectCard).join("") : anfragen.length ? "" : `<div class="empty">Noch keine Projekte. Sobald Sie etwas bei uns anfragen, sehen Sie es hier.</div>`);
+  // Eine Liste: zuerst, wo noch etwas von Ihnen fehlt, dann die übrigen Anfragen, dann die Projekte
+  const offen = anfragen.filter(a => !a.fertig), fertig = anfragen.filter(a => a.fertig);
+  $("#projList").innerHTML = [...offen.map(anfrageCard), ...fertig.map(anfrageCard), ...list.map(projectCard)].join("")
+    || `<div class="empty">Noch keine Projekte. Sobald Sie etwas bei uns anfragen, sehen Sie es hier.</div>`;
 }
 let project = null, ptab = "ueberblick";
 async function viewProject(id) {

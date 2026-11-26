@@ -487,3 +487,34 @@ a.tile:hover{transform:translateY(-3px)}
 .pill--anfrage{background:#f3efff;color:#6d28d9}
 .appt__video{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 16px;border-radius:14px;background:#f3efff}
 .appt__video span{font-size:13.5px;color:var(--ink2,#424245)}
+
+/* ===================== Einheitliche Karten: Anfragen und Projekte ===================== */
+.steps--5{grid-template-columns:repeat(5,1fr)}
+.pcard--anfrage{gap:14px}
+.pcard--anfrage:hover{transform:none;box-shadow:0 0 0 1px var(--line)}
+.pcard .steps__label{margin-top:-6px}
+
+/* ===================== Menü in schmalen Fenstern ===================== */
+.nav__toggle{display:none}
+@media (max-width:860px){
+  .nav{overflow:visible;justify-content:space-between;gap:12px;padding:10px 14px;min-height:58px}
+  .nav .brand{padding:0}
+  .nav .brand span{display:inline;font-size:16px}
+  .nav__toggle{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:inherit;font-size:15px;font-weight:600;color:#fff;padding:10px 12px 10px 16px;border-radius:999px;
+    background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);transition:background .2s}
+  .nav__toggle:hover{background:rgba(255,255,255,.16)}
+  .nav__toggle svg{width:18px;height:18px;transition:transform .35s var(--ease)}
+  .nav.is-open .nav__toggle svg{transform:rotate(180deg)}
+  .nav__toggle .badge{position:static}
+  .nav nav{display:grid;gap:2px;position:absolute;left:10px;right:10px;top:calc(100% + 6px);padding:8px;border-radius:20px;background:#0b0b0e;
+    box-shadow:0 0 0 1px rgba(255,255,255,.1),0 30px 60px -20px rgba(0,0,0,.6);z-index:40;
+    opacity:0;visibility:hidden;transform:translateY(-8px);transition:opacity .22s,transform .35s var(--ease),visibility 0s .22s}
+  .nav.is-open nav{opacity:1;visibility:visible;transform:none;transition:opacity .22s,transform .35s var(--ease),visibility 0s}
+  .nav nav a{padding:13px 14px;gap:14px;font-size:16px;white-space:nowrap;border-radius:13px}
+  .nav nav a span{display:inline!important}
+  .nav nav a svg{width:20px;height:20px}
+  .nav nav a[hidden]{display:none}
+}
+@media (max-width:400px){.nav .brand em{display:none}}
+/* Schmale Fenster: Die Leiste bleibt flach, auch wenn die Seite wenig Inhalt hat (vorher teilte sie sich die Höhe mit dem Inhalt) */
+@media (max-width:860px){.shell{grid-template-rows:auto 1fr}.nav{align-self:start}}

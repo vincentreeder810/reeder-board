@@ -77,7 +77,8 @@
 <div class="shell" id="app" hidden>
   <aside class="nav">
     <a class="brand" href="#uebersicht"><svg><use href="#sail"/></svg><span>Reeder <em>Kundenportal</em></span></a>
-    <nav>
+    <button type="button" class="nav__toggle" id="navToggle" aria-expanded="false" aria-controls="navList"><span id="navNow">Übersicht</span><b class="badge" id="bMenu" hidden></b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+    <nav id="navList">
       <a href="#uebersicht" data-v="uebersicht"><svg><use href="#i-home"/></svg><span>Übersicht</span></a>
       <a href="#projekte" data-v="projekte"><svg><use href="#i-proj"/></svg><span>Projekte</span></a>
       <a href="#support" data-v="support"><svg><use href="#i-help"/></svg><span>Support</span><b class="badge" id="bSupport" hidden></b></a>
