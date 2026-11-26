@@ -84,9 +84,22 @@
         <div class="loginlog">${logins.slice(0, 25).map(l => `<div><span>${l.ok ? "✓" : "✕"}</span><span>${esc(l.who || l.email || "unbekannt")}<small> · ${l.kind === "client" ? "Kunde" : l.kind === "team" ? "Team" : "?"} · ${esc(l.reason || "")} · ${esc(l.ip || "")}</small></span><small>${fmt(l.created_at.replace(" ", "T") + "Z", { dateStyle: "short", timeStyle: "short" })}</small></div>`).join("") || `<p class="hint">Noch keine Einträge.</p>`}</div></div>
       <div class="card"><h2>Komplettsicherung</h2><p class="hint" style="margin:-6px 0 12px">Datenbank und alle Dateien (Dokumente, Belege, Prototypen) in einer ZIP-Datei – zum Ablegen außerhalb des Servers oder für den Umzug.</p>
         <a class="btn btn--ghost btn--sm" href="/api/admin/betrieb/komplett" download>Komplettsicherung herunterladen</a></div>
+      <div class="card" id="brueckeKarte"><h2>Brücke zu Claude</h2><p class="hint" style="margin:-6px 0 12px">Damit „Mit Claude besprechen“ auch vom Online-Board aus funktioniert, läuft auf Ihrem Rechner ein kleines Hilfsprogramm. Es legt den Projektordner an, öffnet die Claude-App und gleicht das Konzept ab.</p>
+        <p id="brueckeStand" style="margin:0 0 12px;font-weight:600">…</p>
+        <button class="btn btn--ghost btn--sm" id="brueckeKey">Schlüssel erzeugen</button></div>
       <div class="card"><h2>Testbetrieb: von vorn beginnen</h2><p class="hint" style="margin:-6px 0 12px">Entfernt alle Kunden, Kontakte, Termine, Fragebögen, Projekte, Angebote, Rechnungen und Dateien. Ihr Zugang, die Einstellungen (Firma, E-Mail, Verfügbarkeit) und die Vertragstexte bleiben. Vorher entsteht automatisch eine Sicherung. Nur für die Testphase – im echten Betrieb müssen Rechnungen aufbewahrt werden.</p>
         <button class="btn btn--danger btn--sm" id="allesLeeren">Alle Testdaten löschen …</button></div>
     </div></div>`;
+    const brStand = async () => { try { const b = await api("/bruecke"), el = $("#brueckeStand"); if (!el) return;
+      el.innerHTML = b.verbunden ? `<span style="color:#16774f">● Verbunden</span> – Ihr Rechner ist erreichbar.` : b.eingerichtet ? `<span class="warn">● Nicht verbunden</span> – auf Ihrem Rechner „Brücke starten“ ausführen.` : "Noch nicht eingerichtet.";
+      $("#brueckeKey").textContent = b.eingerichtet ? "Neuen Schlüssel erzeugen" : "Schlüssel erzeugen"; } catch {} };
+    brStand();
+    $("#brueckeKey")?.addEventListener("click", async () => {
+      if ($("#brueckeKey").textContent.startsWith("Neuen") && !(await UI.confirm("Der bisherige Schlüssel wird ungültig. Die Brücke auf Ihrem Rechner braucht danach den neuen.", { title: "Neuen Schlüssel erzeugen?", ok: "Erzeugen" }))) return;
+      try { const r = await api("/bruecke/schluessel", { method: "POST", body: {} });
+        UI.link("Schlüssel für die Brücke", "Kopieren Sie den Schlüssel und fügen Sie ihn beim Start der Brücke auf Ihrem Rechner ein. Er wird nur dieses eine Mal angezeigt.", r.schluessel); brStand(); }
+      catch (err) { toast(err.message); }
+    });
     $("#allesLeeren")?.addEventListener("click", async () => {
       const t = await UI.prompt("Alle Testdaten löschen", { text: "Alle Kunden und alles, was dazugehört, wird entfernt. Das lässt sich nur über die Sicherung rückgängig machen.", label: "Zur Bestätigung bitte eintippen: ALLES LÖSCHEN", value: "", ok: "Endgültig löschen" });
       if (t === null) return;

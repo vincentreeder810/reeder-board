@@ -14,6 +14,7 @@ import { sendMail } from "./mail.mjs";
 import { renderKonzeptPdf } from "./konzept-pdf.mjs";
 import { isOwner, memberProjectIds, canProject, clientIdsFor } from "./access.mjs";
 import { spawn } from "node:child_process";
+import { brueckeAuftrag, brueckeVerbunden, brueckeEingerichtet } from "./bruecke.mjs";
 
 // Wo die Projektordner liegen:
 //   1. HARDWARE_PROJEKTE_DIR, wenn gesetzt.
@@ -172,7 +173,8 @@ function claudeExe() {
   ];
   return orte.find(o => { try { return fs.statSync(o).isFile(); } catch { return false; } }) || null;
 }
-const lokal = req => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
+// HARDWARE_UEBER_BRUECKE=1 behandelt auch den eigenen Rechner wie das Online-Board (zum Testen der Brücke)
+const lokal = req => !process.env.HARDWARE_UEBER_BRUECKE && ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress);
 
 /** Für das Onboarding: Konzeptdatei eines neuen Hardware-Projekts mit Startwerten anlegen */
 export function hardwareKonzeptAnlegen(id, felder = {}) {
@@ -180,6 +182,10 @@ export function hardwareKonzeptAnlegen(id, felder = {}) {
   fs.mkdirSync(dateiOrdner(id), { recursive: true });
 }
 export const hardwareDateiOrdner = dateiOrdner;
+/** Einzelne Felder des Konzepts setzen (z. B. Name und Kurzbeschreibung aus der KI-Zusammenfassung) */
+export function hardwareKonzeptFelder(id, felder) { try { konzeptSchreiben(id, { ...konzeptLesen(id), ...felder }); } catch { /* Datei gerade nicht lesbar */ } }
+/** Für die Brücke zum Rechner des Inhabers (bruecke.mjs) */
+export const hwIntern = { ordner, konzeptDatei, konzeptLesen, konzeptSchreiben, stand, dateiListe, dateiOrdner, anleitung };
 
 /** Kunde für eigene Produktideen ohne Auftraggeber */
 function internerKunde() {
@@ -312,7 +318,15 @@ export function createHardware({ json, send, readJson, clean, logEvent = () => {
     // Arbeitsordner anlegen (liefert den Pfad für den Claude-Link) und auf Wunsch im Explorer öffnen.
     // Beides ergibt nur Sinn, wenn Board und Browser auf demselben Rechner laufen.
     if (mm[2] === "arbeitsordner" && m === "POST") {
-      if (!lokal(req)) return json(res, 400, { error: "Das geht nur, wenn das Board auf diesem Rechner läuft." });
+      if (!lokal(req)) {
+        // Online-Board: Ordner anlegen und Claude starten kann nur die Brücke auf dem Rechner des Inhabers
+        if (!owner) return json(res, 403, { error: "Das geht nur am Rechner des Inhabers." });
+        if (!brueckeEingerichtet()) return json(res, 400, { error: "Dafür braucht es die Brücke auf deinem Rechner. Einrichten unter Einstellungen → Livegang → „Brücke zu Claude“." });
+        if (!brueckeVerbunden()) return json(res, 400, { error: "Die Brücke auf deinem Rechner ist gerade nicht verbunden. Bitte dort „Brücke starten“ ausführen und noch einmal drücken." });
+        const d = mm[3] === "claude" ? await readJson(req, 64 * 1024) : {};
+        brueckeAuftrag(id, mm[3] === "claude" ? (d.wo === "terminal" ? "terminal" : "app") : mm[3] === "oeffnen" ? "ordner" : "anlegen", d.auftrag);
+        return json(res, 200, { pfad: "", gestartet: true, programm: "bruecke" });
+      }
       const pfad = arbeitsordnerAnlegen(x);
       if (mm[3] === "claude") {
         // Claude Code im Projektordner öffnen, Auftrag vorbelegt. Der Server ruft den Link selbst auf: Das klappt in jedem Browser,

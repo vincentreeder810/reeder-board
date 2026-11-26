@@ -12,6 +12,7 @@ import { db, getSetting, DEFAULT_MAIL, upsertLead } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
 import { assistantStatus } from "./assistant.mjs";
 import { projektZurAnfrage, projekteFuerBuchung } from "./anfragen.mjs";
+import { anfrageBeschreiben } from "./projektname.mjs";
 import { withBrowser, loadPage, browserPath } from "./browser.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
@@ -437,6 +438,7 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
         const art = { website: "Website", webapp: "Web-App", app: "App" }[a.kind] || "Website";
         db.prepare("UPDATE projects SET title = ?, kind = ?, description = ?, updated_at = datetime('now') WHERE id = ? AND status = 'anfrage'").run(`${art} für ${a.company || c.company || c.name}`.slice(0, 110), art, answersText(a).slice(0, 4000), pj.id);
         db.prepare("INSERT INTO events(client_id, project_id, kind, title, detail, notify) VALUES(?, ?, 'projekt', 'Fragebogen ausgefüllt', ?, 0)").run(c.id, pj.id, art);
+        anfrageBeschreiben(pj.id, answersText(a)).catch(() => {});
       }
     } catch (e) { console.warn("Website-Projekt:", e.message); }
     // Entwurf nur für Projekte mit Oberfläche und wenn die KI verfügbar ist – im Hintergrund

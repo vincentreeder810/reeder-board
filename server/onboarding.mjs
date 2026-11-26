@@ -10,8 +10,8 @@ import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
-import { projektnamenPflegen } from "./projektname.mjs";
-import { hardwareKonzeptAnlegen, hardwareDateiOrdner } from "./hardware.mjs";
+import { projektnamenPflegen, anfrageBeschreiben } from "./projektname.mjs";
+import { hardwareKonzeptAnlegen, hardwareDateiOrdner, hardwareKonzeptFelder } from "./hardware.mjs";
 
 const DATA = path.resolve(process.env.DATA_DIR || "data");
 const DIR = path.join(DATA, "onboarding");
@@ -209,6 +209,8 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
         }
       }
       ids.push(pid);
+      // KI: kurzer Name und Zusammenfassung; bei Hardware stehen beide auch im Konzept
+      anfrageBeschreiben(pid, kurz).then(r => { if (r && bereich === "hardware") hardwareKonzeptFelder(pid, { name: r.name, ...(r.zusammenfassung ? { kurzbeschreibung: r.zusammenfassung } : {}) }); }).catch(() => {});
     }
     return ids;
   }

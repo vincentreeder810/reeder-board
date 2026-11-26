@@ -33,3 +33,24 @@ export async function projektnamenPflegen() {
     }
   } finally { laeuft = false; }
 }
+
+/** Nach dem Fragebogen: kurzer Projektname und Zusammenfassung in zwei, drei Sätzen. Der Originaltext des Kunden bleibt darunter stehen.
+ *  Aufruf ohne await; ohne API-Schlüssel oder bei einem Fehler bleibt alles, wie es war. Liefert { name, zusammenfassung } oder null. */
+export async function anfrageBeschreiben(pid, roh) {
+  const text = String(roh || "").trim();
+  if (text.length < 40 || !assistantStatus().available) return null;
+  try {
+    const p = db.prepare("SELECT id, title, bereich, kind FROM projects WHERE id = ?").get(pid); if (!p) return null;
+    const r = await callModel("name", MODELL,
+      "Du bereitest Kundenanfragen für eine Firma auf, die Software und physische Produkte entwickelt. Der Text stammt vom Kunden, oft eingesprochen: Hörfehler und Füllwörter kommen vor. Liefere zwei Dinge. name: kurzer deutscher Projektname, zwei bis vier Wörter, Substantive, sagt, was entsteht (z. B. „Kameraüberwachung Pferdeboxen“, „Terminbuchung Praxis“); kein Satz, kein Kundenname, keine Anführungszeichen, kein Punkt. zusammenfassung: zwei bis drei sachliche Sätze in der dritten Person – was der Kunde will, wofür, und die wichtigste Randbedingung. Nichts erfinden, nichts bewerten, keine Aufzählung.",
+      `Fasse diese Anfrage zusammen.\n<<DATEN>>\n${JSON.stringify({ bereich: p.bereich || "software", art: p.kind || "", text: text.slice(0, 6000) })}`,
+      { type: "object", additionalProperties: false, required: ["name", "zusammenfassung"], properties: { name: { type: "string" }, zusammenfassung: { type: "string" } } }, null, pid);
+    const name = String(r?.name || "").replace(/["„“”.]/g, "").replace(/\s+/g, " ").trim().slice(0, 60);
+    const zus = String(r?.zusammenfassung || "").replace(/\s+/g, " ").trim().slice(0, 700);
+    const nameOk = name.length >= 3 && name.split(" ").length <= 6;
+    if (!zus && !nameOk) return null;
+    db.prepare("UPDATE projects SET title = ?, description = ?, name_ki = 1, updated_at = datetime('now') WHERE id = ?")
+      .run(nameOk ? name : p.title, (zus ? zus + "\n\nOriginal aus dem Fragebogen:\n" : "") + text.slice(0, 3200), pid);
+    return { name: nameOk ? name : p.title, zusammenfassung: zus };
+  } catch (e) { console.warn("Anfrage zusammenfassen:", e.message); return null; }
+}
