@@ -413,7 +413,7 @@
             <button class="btn btn--ghost btn--sm" data-act="schedule">Termin</button>
             <button class="btn btn--ghost btn--sm" data-act="editProject">Bearbeiten</button>
             ${ME.owner ? DD.html("pMore", more, "", { trigger: "Mehr", align: "right" }) : ""}</div></div>
-        <div class="pweb">${p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="0">Website ansehen</button><button class="btn btn--ghost btn--sm" data-web="1">Website mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span>` : ""}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--grad btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}</div>
+        <div class="pweb">${liveV ? `<button class="btn btn--grad btn--sm" data-web="0">Aktuelle Website ansehen</button><a class="btn btn--ghost btn--sm" href="${esc(liveV.url)}" target="_blank" rel="noopener" title="Die Website ohne Board in einem neuen Tab öffnen – so, wie der Kunde sie sieht">↗ Neuer Tab</a><button class="btn btn--ghost btn--sm" data-web="1">Mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="1">Website ansehen</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--ghost btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span>` : ""}</div>
         <div class="pphase" role="list">${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
       </div>
       <div class="pgrid">
@@ -426,10 +426,10 @@
               <div class="ann" data-act="jump" data-id="${a.id}"><span class="ann__no">${i + 1}</span>
                 <div class="ann__body"><p>${esc(a.comment || "(nur eingezeichnet, ohne Text)")}</p>${a.change && a.comment !== window.RSViewer?.changeText(a.change) ? `<p class="ann__chg">Wunsch: ${esc(window.RSViewer.changeText(a.change))}</p>` : ""}<span>${esc(seiteName(a.page))} · ${a.author_kind === "team" ? "Team" : "Kunde"}: ${esc(a.author)} · ${ago(a.created_at)} · zu Version ${a.proto_version}</span></div>
                 <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-ann-task="${a.id}" title="Als Aufgabe übernehmen – erledigt sich mit der Aufgabe">→ Aufgabe</button><button class="btn btn--ok btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="offen">✓ Erledigt</button></div></div>`).join("")}</div>` : ""}
-            ${doneAnns.length ? `<details class="pmehr"><summary>${doneAnns.length} erledigt – ansehen oder wieder öffnen</summary><div class="annlist pmehr__in">${doneAnns.slice(0, 40).map(a => `
+            ${weitere(doneAnns.length, `<div class="annlist" style="margin-top:6px">${doneAnns.slice(0, 40).map(a => `
               <div class="ann ann--done"><span class="ann__no">✓</span>
                 <div class="ann__body"><p>${esc(a.comment || "(nur eingezeichnet, ohne Text)")}</p><span>${esc(seiteName(a.page))} · ${a.author_kind === "team" ? "Team" : "Kunde"}: ${esc(a.author)}${a.reply ? " · " + esc(a.reply) : ""}</span></div>
-                <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="erledigt">Wieder öffnen</button></div></div>`).join("")}</div></details>` : ""}
+                <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="erledigt">Wieder öffnen</button></div></div>`).join("")}</div>`, "erledigte")}
           </div>
           <div class="card ws" id="pWs" hidden></div>
           <div class="card" id="pTasks"></div>
@@ -454,7 +454,7 @@
           <div class="card" id="pTime"></div>
           <div class="card astand" id="pArbeit" hidden></div>
           <div class="card"><h2 style="font-size:18px">Verlauf</h2><ol class="tl">${p.events.slice(0, 5).map(evZeile).join("") || "<li><span>Noch keine Einträge.</span></li>"}</ol>
-            ${p.events.length > 5 ? `<details class="pmehr"><summary>Ältere Einträge</summary><ol class="tl pmehr__in">${p.events.slice(5, 30).map(evZeile).join("")}</ol></details>` : ""}</div>
+            ${weitere(Math.min(25, p.events.length - 5), `<ol class="tl">${p.events.slice(5, 30).map(evZeile).join("")}</ol>`, ["älteren Eintrag", "ältere Einträge"])}</div>
           <div class="card"><div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Team</h2>${ME.owner ? `<div class="acts"><button class="btn btn--ghost btn--sm" data-act="assign">${p.members.length ? "Ändern" : "Zuweisen"}</button></div>` : ""}</div>
             ${p.members.length ? `<div class="pmembers">${p.members.map(m => `<div><span class="avatar">${esc(initials(m.name))}</span><span><b>${esc(m.name)}${m.id === ME.id ? " (Sie)" : ""}</b><small>${m.role === "inhaber" ? "Inhaber" : "Entwickler"}</small></span></div>`).join("")}</div>`
               : `<div class="pnoteam"><b>Noch niemand zugewiesen.</b><span>Wählen Sie, wer das Projekt umsetzt – mit Blick auf die aktuelle Auslastung.</span>${ME.owner ? `<button class="btn btn--grad btn--sm" data-act="assign">Jetzt zuweisen</button>` : ""}</div>`}</div>
@@ -490,11 +490,18 @@
     <button type="button" class="x" data-act="delPay" title="Entfernen">✕</button></div>`;
   // Lange Texte: „ganz anzeigen“ klappt den gekürzten Absatz davor auf
   document.addEventListener("click", e => { const b = e.target.closest("[data-mehr]"); if (!b) return; const auf = b.previousElementSibling.classList.toggle("auf"); b.textContent = auf ? "weniger" : "ganz anzeigen"; });
+  // „N weitere anzeigen“: Die zusätzlichen Einträge erscheinen direkt über dem Knopf, der Knopf bleibt darunter stehen
+  window.weitere = (n, html, wort) => { if (!(n > 0)) return ""; const w = Array.isArray(wort) ? wort[n === 1 ? 0 : 1] : wort;
+    return `<div class="weitere" hidden>${html}</div><button type="button" class="weiterknopf" data-weitere data-zu="${n} ${w} anzeigen"><i></i><span>${n} ${w} anzeigen</span></button>`; };
+  document.addEventListener("click", e => { const b = e.target.closest("[data-weitere]"); if (!b) return; const box = b.previousElementSibling; box.hidden = !box.hidden; b.classList.toggle("auf", !box.hidden); b.querySelector("span").textContent = box.hidden ? b.dataset.zu : "weniger anzeigen"; });
   const seiteName = pg => !pg || /^index\.html?$/i.test(pg) ? "Startseite" : "Seite „" + String(pg).replace(/\.html?$/i, "").replace(/[-_/]+/g, " ") + "“";
   // Website direkt öffnen: ohne oder mit Anmerkungsliste
   document.addEventListener("click", e => { const b = e.target.closest("[data-web]"); if (!b || !project?.prototypes.length) return; const mit = b.dataset.web === "1";
     // Mit Anmerkungen: die neueste Version öffnen, an der noch offene Anmerkungen hängen (sie bleiben an der Version, an der sie angepinnt wurden)
-    const gi = mit ? Math.max(0, project.prototypes.findIndex(x => x.some(v => v.openNotes))) : 0, g = groupVersions(gi), v = (mit && g.find(x => x.openNotes)) || g[0];
+    // Ohne Anmerkungen: genau die Version, die der Kunde gerade sieht (nicht eine, die noch auf Freigabe wartet)
+    const live = v0 => v0.state !== "kandidat" && v0.active;
+    const gi = Math.max(0, mit ? project.prototypes.findIndex(x => x.some(v0 => v0.openNotes)) : project.prototypes.findIndex(x => x.some(live)));
+    const g = groupVersions(gi), v = (mit ? g.find(x => x.openNotes) : g.find(live)) || g[0];
     window.RSViewer.open(C.protoData(v), { versions: g.map(C.protoData), showList: mit }); });
   function protoGroupRow(g, gi) {
     const v = g[0];

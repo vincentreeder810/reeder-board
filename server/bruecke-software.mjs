@@ -11,7 +11,7 @@ import { hwIntern } from "./hardware.mjs";
 import { answersText } from "./vorab.mjs";
 import { antwortenView } from "./onboarding.mjs";
 import { PROTO_MIME, safeRel } from "./portal.mjs";
-import { workspaceSpeichern, workspaceLesen, phaseNachziehen } from "./workspace.mjs";
+import { workspaceSpeichern, workspaceLesen, workspaceFuerBruecke, phaseNachziehen } from "./workspace.mjs";
 import { anmerkungenText, anmerkungenStempel, anmerkungenErledigen } from "./anmerkungen.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
@@ -109,6 +109,7 @@ Halte die Datei aktuell: am Ende jeder Sitzung, nach jedem größeren Schritt un
 - Kurz halten – der Inhaber liest das zwischen Tür und Angel. \`stand\` und \`letzteSitzung\` beschreiben die Arbeit am Projekt, nicht den Kunden: keine Firmengeschichte, keine Namen, Zahlen oder Standorte des Kunden, keine Aufzählung aller Seiten. Bei jedem Aktualisieren neu und knapp schreiben, nicht anhängen.
 - \`notizen\`: nichts, was schon erledigt ist, und keine Aufgaben für den Inhaber. Was er selbst tun muss, sagst du ihm im Gespräch. Alte Einträge streichen, sobald sie nicht mehr gebraucht werden.
 - Fragen: nur was wirklich der Kunde beantworten muss und was die Arbeit gerade aufhält – höchstens fünf offene. Nimmst du eine Frage neu auf, sag es dem Inhaber im Gespräch, damit er weiß, woher sie kommt. Jede Frage bekommt eine feste \`id\` (f1, f2 …), die sich nie ändert.
+- Der Inhaber kann im Board selbst Fragen anlegen (ihre \`id\` beginnt mit \`t\`), Antworten eintragen oder Fragen löschen. Die Brücke schreibt das nach wenigen Sekunden in diese Datei. Lösche keine Frage mit \`t\`-id von dir aus. Steht bei einer Frage \`"status": "geklaert"\` mit einer Antwort, die du noch nicht kennst, berücksichtige sie bei der weiteren Arbeit.
 - Ist eine Frage geklärt (der Inhaber nennt dir die Antwort oder sie hat sich erledigt): \`status\` auf \`"geklaert"\` setzen und die Antwort in \`antwort\` eintragen. Sie verschwindet dann im Board aus den offenen Fragen. Alte geklärte Fragen darfst du nach einiger Zeit ganz löschen.
 - Keine Zugangsdaten und nichts Vertrauliches hineinschreiben.
 
@@ -212,7 +213,12 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
     if (mm && m === "POST") {
       const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
       const s = workspaceSpeichern(x.id, await readJson(req, 512 * 1024));
-      return json(res, 200, { ok: true, fragen: s.fragen.filter(f => f.status === "offen").length });
+      // „anders“: Im Board wurden Fragen angelegt, beantwortet oder gelöscht, die in Claudes Datei noch fehlen – die Brücke schreibt sie zurück
+      return json(res, 200, { ok: true, fragen: s.gemischt.fragen.filter(f => f.status === "offen").length, anders: s.anders, stempel: s.stempel, daten: workspaceFuerBruecke(x.id)?.daten });
+    }
+    if (mm && m === "GET") {
+      const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
+      return json(res, 200, workspaceFuerBruecke(x.id) || { daten: null, stempel: "" });
     }
     return json(res, 404, { error: "Unbekannt" });
   }

@@ -9,6 +9,7 @@ import { db, getSetting, setSetting } from "./db.mjs";
 import { hwIntern } from "./hardware.mjs";
 import { anfrageBeschreiben } from "./projektname.mjs";
 import { anmerkungenStempel } from "./anmerkungen.mjs";
+import { workspaceStempel } from "./workspace.mjs";
 
 const sha = t => createHash("sha256").update(String(t)).digest("hex");
 const FRIST = 15000;          // so lange gilt die Brücke nach der letzten Meldung als verbunden
@@ -63,7 +64,7 @@ export function createBruecke({ json, send, readJson }) {
       const ids = String(url.searchParams.get("ids") || "").split(",").map(Number).filter(Boolean).slice(0, 60);
       // Software- und Website-Projekte: Stempel der offenen Anmerkungen – ändert er sich, holt die Brücke anmerkungen.md neu
       const sw = String(url.searchParams.get("sw") || "").split(",").map(Number).filter(Boolean).slice(0, 60);
-      return json(res, 200, { auftraege: auftraege.splice(0), projekte: ids.filter(id => projekt(id)).map(id => ({ id, stand: hwIntern.stand(id) })), software: sw.map(id => ({ id, anm: anmerkungenStempel(id) })) });
+      return json(res, 200, { auftraege: auftraege.splice(0), projekte: ids.filter(id => projekt(id)).map(id => ({ id, stand: hwIntern.stand(id) })), software: sw.map(id => ({ id, anm: anmerkungenStempel(id), ws: workspaceStempel(id) })) });
     }
     let mm = p.match(/^\/projekt\/(\d+)$/);
     if (mm && m === "GET") {

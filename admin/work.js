@@ -147,11 +147,16 @@
         <div class="acts"><button class="btn btn--ghost btn--sm" data-ptask-new>Details …</button></div></div>
       <form class="tquick" data-ptask-quick><input name="title" placeholder="Neue Aufgabe – Titel eingeben und Enter" maxlength="200" autocomplete="off"><button class="btn btn--grad btn--sm">Hinzufügen</button></form>
       ${open.map(t => taskRow(t, true)).join("")}
-      ${done.length ? `<details class="tdone"><summary>${done.length} erledigt</summary>${done.slice(0, 30).map(t => `<div class="task task--erledigt" data-task="${t.id}"><button class="tcheck on" data-undo="${t.id}" title="Wieder öffnen"></button><span class="task__m"><b>${esc(t.title)}</b><small>${esc(t.done_by || "")}${t.done_at ? " · " + de(t.done_at.slice(0, 10)) : ""}${t.spent ? " · " + hm(t.spent) + " Std." : ""}</small></span></div>`).join("")}</details>` : ""}`;
+      ${window.weitere(Math.min(30, done.length), done.slice(0, 30).map(t => `<div class="task task--erledigt" data-task="${t.id}"><button class="tcheck on" data-undo="${t.id}" title="Wieder öffnen"></button><span class="task__m"><b>${esc(t.title)}</b><small>${esc(t.done_by || "")}${t.done_at ? " · " + de(t.done_at.slice(0, 10)) : ""}${t.spent ? " · " + hm(t.spent) + " Std." : ""}</small></span></div>`).join(""), "erledigte")}`;
+    // Zeiteinträge des Projekts: die letzten fünf sichtbar, ältere zum Aufklappen
+    const eintrag = e => `<div class="tentry"><span class="tentry__d">${de(e.date).slice(0, 6)}</span><span class="tentry__m"><b>${esc([e.task_title, e.note].filter(Boolean).join(" · ") || "Ohne Beschreibung")}</b><small>${esc(e.user_name || "")}</small></span><b class="tentry__h">${hm(e.minutes)}</b><button class="x" data-del-time="${e.id}" title="Eintrag löschen">✕</button></div>`;
+    const ein = time.entries || [];
     tbox.innerHTML = `<div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Zeit</h2><div class="acts"><button class="btn btn--ghost btn--sm" data-ptime-log>Nachtragen</button><button class="btn btn--grad btn--sm" data-ptime-start>▶</button></div></div>
       <div class="pmoney"><div><small>Erfasst gesamt</small><b>${hm(time.total)} Std.</b><span>${time.estimate ? `geschätzt ${hm(time.estimate)} Std.` : "ohne Schätzung"}</span></div><div><small>${time.rate !== undefined ? "Effektiver Stundensatz" : "Davon ich"}</small><b>${time.rate !== undefined ? money(time.rate) : hm(time.mine) + " Std."}</b><span>${time.rate !== undefined ? "Auftrag netto ÷ Stunden" : ""}</span></div></div>
       ${time.estimate ? `<div class="pbar"><i style="width:${Math.min(100, time.total / time.estimate * 100)}%;${time.total > time.estimate ? "background:#c4314b" : ""}"></i></div>` : ""}
-      ${time.byUser?.length ? `<div class="wplist" style="margin-top:12px">${time.byUser.map(u => `<div class="wpteam"><span class="avatar avatar--sm">${esc(ini(u.name))}</span><span><b>${esc(u.name)}</b></span><b>${hm(u.minutes)}</b></div>`).join("")}</div>` : ""}`;
+      ${(time.byUser?.length || 0) > 1 ? `<div class="wplist" style="margin-top:12px">${time.byUser.map(u => `<div class="wpteam"><span class="avatar avatar--sm">${esc(ini(u.name))}</span><span><b>${esc(u.name)}</b></span><b>${hm(u.minutes)}</b></div>`).join("")}</div>` : ""}
+      <div class="ptime__eintr">${ein.length ? `<div class="tlist">${ein.slice(0, 5).map(eintrag).join("")}</div>${window.weitere(ein.length - 5, `<div class="tlist">${ein.slice(5).map(eintrag).join("")}</div>`, ["älteren Eintrag", "ältere Einträge"])}`
+        : `<p class="hint" style="margin:0">Noch keine Zeit erfasst. ▶ startet die Stoppuhr für dieses Projekt; beim Stoppen landet der Eintrag hier.</p>`}</div>`;
     box.dataset.pid = tbox.dataset.pid = p.id;
   }
 
@@ -172,7 +177,7 @@
       if (el.dataset.done || el.dataset.undo) { e.stopPropagation(); const id = +(el.dataset.done || el.dataset.undo); el.classList.toggle("on");
         await api(`/tasks/${id}`, { method: "PATCH", body: { status: el.dataset.done ? "erledigt" : "offen" } }); toast(el.dataset.done ? "Erledigt ✓" : "Wieder geöffnet"); return setTimeout(refreshViews, 250); }
       if (el.dataset.play) { e.stopPropagation(); return startTimer({ task_id: +el.dataset.play }); }
-      if (el.dataset.delTime) { if (!(await UI.confirm("Der Zeiteintrag wird gelöscht.", { title: "Eintrag löschen?", ok: "Löschen", danger: true }))) return; await api(`/time/${el.dataset.delTime}`, { method: "DELETE", body: {} }); return load(); }
+      if (el.dataset.delTime) { if (!(await UI.confirm("Der Zeiteintrag wird gelöscht.", { title: "Eintrag löschen?", ok: "Löschen", danger: true }))) return; await api(`/time/${el.dataset.delTime}`, { method: "DELETE", body: {} }); return refreshViews(); }
       if (el.dataset.annTask) { e.stopPropagation(); const r = await api(`/annotations/${el.dataset.annTask}/task`, { method: "POST", body: {} }); toast(r.existed ? "Gibt es schon als Aufgabe." : "Als Aufgabe übernommen – erledigt sich mit der Aufgabe."); return refreshViews(); }
       if (el.dataset.apptTasks) { e.stopPropagation(); const r = await api(`/appointments/${el.dataset.apptTasks}/tasks`, { method: "POST", body: {} }); toast(r.created ? `${r.created} Aufgabe${r.created === 1 ? "" : "n"} angelegt${r.skipped ? ` (${r.skipped} gab es schon)` : ""}.` : "Alle Schritte gibt es schon als Aufgabe."); return refreshViews(); }
       if (el.hasAttribute("data-ptask-new")) return editTask({}, pid);

@@ -161,28 +161,51 @@
     const box = $("#pWs"); if (!box || !p || p.bereich === "hardware") return;
     W = await api(`/projects/${p.id}/workspace`).catch(() => null); if (!W) return;
     box.dataset.pid = p.id; box.hidden = false;
-    const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div>
-      </div>`;
-    if (W.leer) { box.innerHTML = kopf("Stand, Notizen und offene Fragen aus der Arbeit mit Claude") + `<p class="ws__leer">Noch nichts da. Öffne das Projekt oben mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Wenige Sekunden später steht hier, wo das Projekt steht, was zuletzt gemacht wurde und welche Fragen an den Kunden offen sind.</p>`; return; }
+    if (W.leer) W = { leer: true, stand: "", letzteSitzung: "", notizen: [], fragen: [] };
     const offen = W.fragen.filter(f => f.status === "offen"), klar = W.fragen.filter(f => f.status !== "offen");
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
     // Lange Texte werden auf drei Zeilen gekürzt und lassen sich aufklappen
     const kurz = (t, leer) => !t ? `<p><i>${leer}</i></p>` : `<p class="pclamp">${absatz(t)}</p>${t.length > 230 ? `<button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}`;
-    const frage = f => `<label class="ws__f"><input type="checkbox" value="${esc(f.id)}"><span>${absatz(f.text)}${f.gesendet ? `<small>an den Kunden geschickt am ${tag(f.gesendet)}</small>` : ""}</span></label>`;
+    const frage = f => `<div class="ws__f"><input type="checkbox" value="${esc(f.id)}" aria-label="Zum Senden auswählen"><span>${absatz(f.text)}<small>${f.vonTeam ? "von dir" : "von Claude"}${f.gesendet ? ` · <em>an den Kunden geschickt am ${tag(f.gesendet)}</em>` : ""}</small></span>
+      <span class="ws__fk"><button type="button" class="link" data-wsf="antwort" data-id="${esc(f.id)}">Antwort eintragen</button><button type="button" class="link link--leise" data-wsf="loeschen" data-id="${esc(f.id)}">Löschen</button></span></div>`;
     const ZEIG_N = 3, ZEIG_F = 4;
-    box.innerHTML = kopf(`Claudes Notizen aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `
+    const fragenBlock = `<div class="ws__b ws__fragen"><b>Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
+        ${offen.length ? `<p class="ws__woher">Offene Fragen, die nur der Kunde beantworten kann – von Claude gesammelt oder von dir angelegt. Hast du die Antwort schon (z. B. am Telefon), trag sie ein. Zum Senden ankreuzen.</p>`
+          + offen.slice(0, ZEIG_F).map(frage).join("") + weitere(offen.length - ZEIG_F, offen.slice(ZEIG_F).map(frage).join(""), ["weitere Frage", "weitere Fragen"])
+          : `<p>Keine offenen Fragen.</p>`}
+        <form class="ws__neu" data-wsf-neu><input name="text" maxlength="600" placeholder="Eigene Frage an den Kunden hinzufügen …" autocomplete="off"><button class="btn btn--ghost btn--sm">Hinzufügen</button></form>
+        ${offen.length && S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen an den Kunden senden</button></div>` : ""}
+        ${weitere(klar.length, klar.map(f => `<p class="ws__klarf"><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}</p>`).join(""), ["geklärte Frage", "geklärte Fragen"])}</div>`;
+    const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div></div>`;
+    if (W.leer) { box.innerHTML = kopf("Stand, Notizen und Fragen an den Kunden") + `<p class="ws__leer">Von Claude ist noch nichts da. Öffne das Projekt oben mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Fragen an den Kunden kannst du schon jetzt selbst anlegen.</p>` + fragenBlock; return; }
+    box.innerHTML = kopf(`Aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `
       <div class="ws__zwei"><div class="ws__b"><b>Aktueller Stand</b>${kurz(W.stand, "Noch nicht beschrieben.")}</div>
         <div class="ws__b"><b>Letzte Sitzung</b>${kurz(W.letzteSitzung, "Noch nichts eingetragen.")}</div></div>
       ${W.notizen.length ? `<div class="ws__b"><b>Notizen</b><ul>${W.notizen.slice(0, ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul>
-        ${W.notizen.length > ZEIG_N ? `<details class="ws__klar"><summary>${W.notizen.length - ZEIG_N} weitere Notizen</summary><ul style="margin-top:8px">${W.notizen.slice(ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul></details>` : ""}</div>` : ""}
-      <div class="ws__b ws__fragen"><b>Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
-        ${offen.length ? `<p class="ws__woher">Diese Fragen hat Claude beim Arbeiten gesammelt, weil nur der Kunde sie beantworten kann. Beim Kunden ist davon nur, was als „geschickt“ markiert ist. Kreuze an, was du jetzt senden willst.</p>`
-          + offen.slice(0, ZEIG_F).map(frage).join("")
-          + (offen.length > ZEIG_F ? `<details class="ws__klar"><summary>${offen.length - ZEIG_F} weitere Fragen</summary>${offen.slice(ZEIG_F).map(frage).join("")}</details>` : "")
-          + (S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen senden</button></div>` : "")
-          : `<p>Keine offenen Fragen.</p>`}
-        ${klar.length ? `<details class="ws__klar"><summary>${klar.length} geklärt</summary>${klar.map(f => `<p><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}</p>`).join("")}</details>` : ""}</div>`;
+        ${weitere(W.notizen.length - ZEIG_N, `<ul>${W.notizen.slice(ZEIG_N).map(n => `<li>${absatz(n)}</li>`).join("")}</ul>`, ["weitere Notiz", "weitere Notizen"])}</div>` : ""}
+      ${fragenBlock}`;
   }
+  // Eigene Fragen: anlegen, Antwort eintragen, löschen
+  document.addEventListener("submit", async e => {
+    const f = e.target.closest("[data-wsf-neu]"); if (!f) return; e.preventDefault();
+    const text = f.text.value.trim(); if (!text) return;
+    const pid = +$("#pWs").dataset.pid; f.querySelector("button").disabled = true;
+    try { await api(`/projects/${pid}/workspace/fragen`, { method: "POST", body: { text } }); toast("Frage hinzugefügt – Claude bekommt sie im Projektordner."); workspace({ id: pid }); }
+    catch (err) { toast(err.message); f.querySelector("button").disabled = false; }
+  });
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-wsf]"); if (!b) return;
+    const pid = +$("#pWs").dataset.pid, id = b.dataset.id, fr = W?.fragen.find(x => x.id === id); if (!fr) return;
+    try {
+      if (b.dataset.wsf === "antwort") {
+        const a = await UI.prompt("Antwort eintragen", { text: fr.text, label: "Was hat der Kunde geantwortet? Die Frage gilt danach als geklärt, Claude bekommt die Antwort im Projektordner.", value: "", multiline: true, ok: "Als geklärt speichern" });
+        if (a === null) return;
+        await api(`/projects/${pid}/workspace/fragen/${encodeURIComponent(id)}`, { method: "PATCH", body: { antwort: a } }); toast("Gespeichert"); return workspace({ id: pid });
+      }
+      if (!(await UI.confirm(fr.text, { title: "Frage löschen?", ok: "Löschen", danger: true }))) return;
+      await api(`/projects/${pid}/workspace/fragen/${encodeURIComponent(id)}`, { method: "DELETE", body: {} }); toast("Gelöscht"); workspace({ id: pid });
+    } catch (err) { toast(err.message); }
+  });
 
   /* ---------- Freigabe: Was Claude über die Brücke hochlädt, sieht der Kunde erst nach dem Okay des Inhabers ---------- */
   let F = null;
