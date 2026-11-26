@@ -173,10 +173,15 @@ export const FRAGEN = {
       warum: "So planen wir realistisch – und sagen Ihnen ehrlich, was bis zu Ihrem Termin machbar ist.",
       felder: [{ id: "start", art: "wahl", label: "Start", optionen: [["sofort", "So bald wie möglich"], ["quartal", "In den nächsten drei Monaten"], ["spaeter", "Später"], ["offen", "Noch offen"]] },
         { id: "zeit", art: "text", label: "Bis wann soll es fertig sein?", platz: "Zum Beispiel: Start im Januar, fertig zur Saison im Mai." }] },
+    // Eigener Schritt, damit das Modell nicht zwischen den Budgetfragen untergeht (Feld-ID und Werte unverändert)
+    { thema: "Zusammenarbeit", frage: "Wie möchten Sie Ihre Software bekommen?", hilfe: "Kaufen – oder von uns ohne Entwicklungskosten entwickeln lassen. Festlegen müssen Sie sich jetzt noch nicht.",
+      warum: "Das Modell bestimmt, wie wir unser Angebot für Sie aufbauen. Im Gespräch rechnen wir gern beide Wege durch.",
+      felder: [{ id: "modell", art: "wahl", stil: "karten", label: "Welches Modell interessiert Sie?",
+        info: { titel: "Was ist Signature?", text: "Bei Signature entwickeln wir Ihre Software ohne Entwicklungskosten. Sie zahlen eine Einrichtung und danach monatlich Lizenz und Betreuung – Updates, Instandhaltung und neue Wünsche inklusive, ohne Obergrenze beim Funktionsumfang. Nach zwei Jahren können Sie die Software übernehmen (50 % Ihrer Monatsraten werden angerechnet) oder aussteigen.", link: "/modelle.html#signature", linkText: "Signature auf unserer Website ansehen" },
+        optionen: [["signature", "Signature – ohne Entwicklungskosten", "0 € Entwicklung, dafür monatlich Lizenz und Betreuung. Unser Hauptmodell."], ["festpreis", "Festpreis", "Einmal bezahlen – die Software gehört Ihnen sofort."], ["offen", "Beraten Sie mich", "Wir empfehlen im Gespräch, was besser zu Ihnen passt."]] }] },
     { thema: "Budget", frage: "In welchem Rahmen bewegen wir uns?", hilfe: "Grobe Angaben genügen.",
       warum: "Mit einem Rahmen schlagen wir den passenden Weg vor – vom schlanken Start bis zur großen Lösung.",
       felder: [{ id: "budget", art: "wahl", label: "Budget", optionen: [["bis5", "bis 5.000 €"], ["bis15", "5.000 – 15.000 €"], ["bis50", "15.000 – 50.000 €"], ["mehr", "mehr als 50.000 €"], ["offen", "noch offen"]] },
-        { id: "modell", art: "wahl", label: "Welches Modell interessiert Sie?", optionen: [["festpreis", "Festpreis"], ["signature", "Signature – ohne Entwicklungskosten"], ["offen", "Beraten Sie mich"]] },
         { id: "betreuung", art: "wahl", label: "Wer kümmert sich danach um Pflege und Updates?", optionen: [["reeder", "Das übernehmen Sie für uns"], ["selbst", "Wir selbst"], ["offen", "Beraten Sie mich"]] },
         { id: "entscheidung", art: "wahl", label: "Wer entscheidet mit?", optionen: [["ich", "Ich entscheide allein"], ["gemeinsam", "Wir entscheiden gemeinsam"], ["andere", "Jemand anderes entscheidet"]] }] },
     { thema: "Zum Schluss", frage: "Vorbilder und Unterlagen", hilfe: "Alles, was uns ein Bild gibt. Alles freiwillig.",
@@ -191,6 +196,29 @@ export const FRAGEN = {
 /** Kurze Namen für Projekttitel und Projektart */
 const ART_KURZ = { webapp: "Web-App", app: "App", praxis: "Praxissystem", telefon: "Telefonassistent", ki: "KI-Automatisierung", anpassen: "Software-Anpassung", verwaltung: "Verwaltungssoftware", buchung: "Buchungssystem", offen: "Software" };
 const felder = bereich => FRAGEN[bereich].flatMap(s => s.felder);
+
+/** Website-Fragebogen: Wer dort „Web-App“, „App“, „KI-Assistent“ oder „Etwas anderes“ wählt, ist im Software-Fragebogen richtig.
+ *  Legt ihn für dieselbe Buchung an (ohne Mail – der Kunde ist ja gerade da), belegt die Art vor und macht aus dem
+ *  Website-Projekt der Buchung ein Software-Projekt. Gibt den Token des Software-Fragebogens zurück. */
+export function softwareStattWebsite(bookingId, clientId, vorabArt, vorabId = null) {
+  const WAHL = { webapp: "webapp", app: "app", ki: "telefon", anderes: "offen" }, wahl = WAHL[vorabArt] || "offen";
+  let o = db.prepare("SELECT * FROM onboarding WHERE booking_id = ? ORDER BY id DESC LIMIT 1").get(bookingId);
+  if (o) { const k = JSON.parse(o.kinds || "[]"); if (!k.includes("software")) { k.unshift("software"); db.prepare("UPDATE onboarding SET kinds = ? WHERE id = ?").run(JSON.stringify(k), o.id); } }
+  else { const token = randomBytes(24).toString("hex"); db.prepare("INSERT INTO onboarding(booking_id, client_id, token, kinds) VALUES(?,?,?,?)").run(bookingId, clientId || null, token, JSON.stringify(["software"])); o = db.prepare("SELECT * FROM onboarding WHERE token = ?").get(token); }
+  if (o.status !== "ausgefuellt") {   // Art vorbelegen, ohne vorhandene Antworten zu überschreiben
+    let ant = {}; try { ant = JSON.parse(o.answers || "{}") || {}; } catch {}
+    ant.software = ant.software || {}; if (!ant.software.art) ant.software.art = wahl;
+    db.prepare("UPDATE onboarding SET answers = ? WHERE id = ?").run(JSON.stringify(ant), o.id);
+  }
+  if (!db.prepare("SELECT 1 FROM projects WHERE booking_id = ? AND anfrage_art = 'software'").get(bookingId)) {
+    const c = db.prepare("SELECT company, name FROM clients WHERE id = ?").get(clientId) || {};
+    db.prepare("UPDATE projects SET anfrage_art = 'software', bereich = 'software', kind = ?, title = ?, updated_at = datetime('now') WHERE booking_id = ? AND anfrage_art = 'website' AND status = 'anfrage'")
+      .run(ART_KURZ[wahl] || "Software", `${ART_KURZ[wahl] || "Software"} für ${c.company || c.name || "Interessent"}`.slice(0, 110), bookingId);
+  }
+  // Der Website-Fragebogen ist damit erledigt – keine Erinnerungen mehr dafür
+  if (vorabId) db.prepare("UPDATE vorab SET status = 'gewechselt' WHERE id = ? AND answered_at IS NULL").run(vorabId);
+  return o.token;
+}
 const optionsText = (f, wert) => (f.optionen.find(o => o[0] === wert) || [])[1] || "";
 /** Antwort eines Feldes als lesbarer Text ("" wenn leer) */
 function lesbar(f, a) {
@@ -395,7 +423,7 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     }
     // Website-Buchung: Dazu gehört der bildhafte Website-Fragebogen (vorab.mjs), nicht die Software-Fragen.
     // Ist er noch offen, geht die Erinnerung an genau diesen Fragebogen.
-    const offenWeb = db.prepare("SELECT v.token FROM vorab v JOIN bookings bb ON bb.id = v.booking_id WHERE bb.client_id = ? AND v.answered_at IS NULL ORDER BY v.id DESC LIMIT 1").get(clientId);
+    const offenWeb = db.prepare("SELECT v.token FROM vorab v JOIN bookings bb ON bb.id = v.booking_id WHERE bb.client_id = ? AND v.answered_at IS NULL AND COALESCE(v.status, '') != 'gewechselt' ORDER BY v.id DESC LIMIT 1").get(clientId);
     if (offenWeb) {
       const link = `${SITE_URL}/portal/fragebogen.html#${offenWeb.token}`;
       const mailed = await sendMail({ to: c.email, subject: "Kurze Erinnerung: Ihr Fragebogen zur Website",

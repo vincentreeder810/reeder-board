@@ -13,6 +13,7 @@ import { sendMail } from "./mail.mjs";
 import { assistantStatus } from "./assistant.mjs";
 import { projektZurAnfrage, projekteFuerBuchung } from "./anfragen.mjs";
 import { anfrageBeschreiben } from "./projektname.mjs";
+import { softwareStattWebsite } from "./onboarding.mjs";
 import { withBrowser, loadPage, browserPath } from "./browser.mjs";
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
@@ -543,7 +544,7 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
 
   /** Öffentlich: /api/vorab/:token (GET Angaben, POST Antworten), …/konto (Konto anlegen), …/anmelden */
   async function publicRoute(req, res, url) {
-    const mm = url.pathname.match(/^\/api\/vorab\/([a-f0-9]{48})(?:\/(konto|anmelden))?$/); if (!mm) return null;
+    const mm = url.pathname.match(/^\/api\/vorab\/([a-f0-9]{48})(?:\/(konto|anmelden|wechsel))?$/); if (!mm) return null;
     if (limited("vorab:" + ipOf(req), 60, 3600000)) return json(res, 429, { error: "Zu viele Anfragen – bitte später erneut versuchen." });
     const v = row(mm[1]); if (!v) return json(res, 404, { error: "Dieser Link ist nicht gültig." });
     const b = db.prepare("SELECT * FROM bookings WHERE id = ?").get(v.booking_id) || {};
@@ -568,6 +569,13 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
     }
     if (!loggedIn) return json(res, 401, { error: "Bitte legen Sie zuerst Ihr Konto an bzw. melden Sie sich an." });
     if (v.answered_at) return json(res, 409, { error: "Vielen Dank – Ihre Angaben liegen uns schon vor." });
+    // Keine Website, sondern App, Web-App oder KI-Assistent: weiter zum Software-Fragebogen derselben Buchung
+    if (mm[2] === "wechsel") {
+      const d = await readJson(req);
+      if (!["webapp", "app", "ki", "anderes"].includes(d.art)) return json(res, 400, { error: "Unbekannte Auswahl." });
+      const t = softwareStattWebsite(v.booking_id, c.id, d.art, v.id);
+      return json(res, 200, { link: `/portal/onboarding.html#${t}` });
+    }
     const a = cleanAnswers(await readJson(req, 40 * 1024));
     db.prepare("UPDATE vorab SET answers = ?, status = 'beantwortet', answered_at = datetime('now') WHERE id = ?").run(JSON.stringify(a), v.id);
     // Die Antworten beschreiben das Website-Projekt der Buchung (für ältere Buchungen entsteht es hier)

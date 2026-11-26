@@ -342,7 +342,8 @@ textarea.inp{min-height:100px;resize:vertical}
 
   const STEP = {
     kind: { e: "Ihr Vorhaben", t: "Was planen Sie?", l: "Wählen Sie, was am besten passt – Details klären wir im Gespräch.", ok: () => !!A.kind,
-      html: () => `<div class="grid">${Object.entries(C().kind).map(([k, v]) => card("kind", k, `<span class="ico">${svg(ICON[k])}</span>`, v, DESC[k], "card--plain")).join("")}</div>` },
+      html: () => `<div class="grid">${Object.entries(C().kind).map(([k, v]) => card("kind", k, `<span class="ico">${svg(ICON[k])}</span>`, v, DESC[k], "card--plain")).join("")}</div>
+        <p class="why" id="swHinweis" style="margin-top:22px" ${A.kind && A.kind !== "website" ? "" : "hidden"}><i>i</i><span>Gute Wahl. Für Apps, Web-Apps und KI-Assistenten haben wir einen eigenen Fragebogen – mit „Weiter“ geht es direkt dorthin. Ihr Konto bleibt dasselbe.</span></p>` },
     about: { e: "Über Sie", t: "Erzählen Sie uns kurz von sich.", l: "Damit alle Beispiele in diesem Fragebogen schon nach Ihnen aussehen.", ok: () => A.company.trim().length > 1,
       why: "Ihren Namen und Ihre Branche setzen wir ab jetzt in die Beispiele ein.",
       html: () => `<div class="two"><label class="f">Name Ihres Unternehmens oder Ihrer Praxis<input class="inp" data-in="company" value="${esc(A.company)}" maxlength="120"></label>
@@ -433,7 +434,9 @@ textarea.inp{min-height:100px;resize:vertical}
     ro.disconnect(); $$(".scr").forEach(x => ro.observe(x)); scaleAll(); counters(); beobachten(); sync(); save();
     if (scroll) scrollTo({ top: 0, behavior: "instant" });
   }
-  const sync = () => { $("#next").disabled = !STEP[steps[at]].ok(); };
+  const sync = () => { $("#next").disabled = !STEP[steps[at]].ok();
+    // Erste Frage: Bei App, Web-App, KI oder Sonstigem geht es mit dem Software-Fragebogen weiter – das vorher sagen
+    if (steps[at] === "kind") { const sw = A.kind && A.kind !== "website"; $("#barmid").textContent = sw ? "Für Ihr Vorhaben geht es mit passenden Fragen weiter." : ""; $("#swHinweis")?.toggleAttribute("hidden", !sw); } };
   const rerenderKeepScroll = () => { const y = scrollY; render(); scrollTo({ top: y, behavior: "instant" }); };
   app.addEventListener("click", e => {
     const c = e.target.closest("[data-k]"); if (c) { A[c.dataset.k] = c.dataset.v;
@@ -459,6 +462,18 @@ textarea.inp{min-height:100px;resize:vertical}
   });
   $("#back").addEventListener("click", () => { if (at) { at--; render(true); } });
   $("#next").addEventListener("click", async () => {
+    // Keine Website, sondern App, Web-App, KI-Assistent oder etwas anderes: Die Website-Fragen passen nicht – weiter zum Software-Fragebogen
+    if (steps[at] === "kind" && A.kind && A.kind !== "website") {
+      const b = $("#next"); b.disabled = true; b.textContent = "Einen Moment …";
+      try {
+        const r = await fetch(`/api/vorab/${token}/wechsel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ art: A.kind }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 401) { meta.loggedIn = false; save(); return account(); }
+        if (!r.ok || !d.link) throw new Error(d.error || "Das hat nicht geklappt – bitte noch einmal versuchen.");
+        try { localStorage.removeItem(KEY); } catch {}
+        location.href = d.link; return;
+      } catch (err) { $("#err").textContent = err.message; $("#err").hidden = false; b.disabled = false; b.innerHTML = "Weiter <i>→</i>"; return; }
+    }
     if (at < steps.length - 1) { at++; render(true); return; }
     const b = $("#next"); b.disabled = true; b.textContent = "Wird gesendet …";
     try {
