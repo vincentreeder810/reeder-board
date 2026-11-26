@@ -122,13 +122,19 @@ function lesbar(f, a) {
 }
 /** Antworten gegliedert fürs Board – dieselbe Form wie beim Website-Fragebogen */
 /** Stand des Fragebogens eines Kontakts: "ausgefuellt", "offen" (verschickt, noch nicht ausgefüllt) oder null (nie verschickt) */
-export function fragebogenStand(clientId) {
-  let fb = null;
-  try { const ob = db.prepare("SELECT o.status FROM onboarding o LEFT JOIN bookings bb ON bb.id = o.booking_id WHERE o.client_id = ? OR bb.client_id = ? ORDER BY (o.status = 'ausgefuellt') DESC, o.id DESC LIMIT 1").get(clientId, clientId);
-    if (ob) fb = ob.status === "ausgefuellt" ? "ausgefuellt" : "offen"; } catch {}
-  try { if (fb !== "ausgefuellt") { const v = db.prepare("SELECT v.answered_at FROM vorab v JOIN bookings bb ON bb.id = v.booking_id WHERE bb.client_id = ? ORDER BY v.id DESC LIMIT 1").get(clientId);
-    if (v) fb = v.answered_at ? "ausgefuellt" : (fb || "offen"); } } catch {}
-  return fb;
+/** Stand des Fragebogens: "ausgefuellt" | "offen" | null (keiner verschickt).
+ *  Mit bookingId zählt nur der Fragebogen zu genau dieser Buchung – ein früher ausgefüllter Fragebogen gilt nicht für einen neuen Termin.
+ *  Ohne bookingId zählt der zuletzt verschickte Fragebogen des Kontakts. */
+export function fragebogenStand(clientId, bookingId = null) {
+  const alle = [];
+  try { for (const o of db.prepare("SELECT o.status, o.invited_at, o.booking_id FROM onboarding o LEFT JOIN bookings bb ON bb.id = o.booking_id WHERE o.client_id = ? OR bb.client_id = ?").all(clientId, clientId))
+    alle.push({ fertig: o.status === "ausgefuellt", zeit: o.invited_at || "", buchung: o.booking_id }); } catch {}
+  try { for (const v of db.prepare("SELECT v.answered_at, v.invited_at, v.booking_id FROM vorab v LEFT JOIN bookings bb ON bb.id = v.booking_id WHERE v.client_id = ? OR bb.client_id = ?").all(clientId, clientId))
+    alle.push({ fertig: !!v.answered_at, zeit: v.invited_at || "", buchung: v.booking_id }); } catch {}
+  if (bookingId) { const l = alle.filter(x => x.buchung === bookingId); return l.length ? (l.every(x => x.fertig) ? "ausgefuellt" : "offen") : null; }
+  if (!alle.length) return null;
+  alle.sort((x, y) => String(y.zeit).localeCompare(String(x.zeit)));
+  return alle[0].fertig ? "ausgefuellt" : "offen";
 }
 
 export function antwortenView(bereich, a) {

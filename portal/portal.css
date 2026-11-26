@@ -479,3 +479,11 @@ a.tile:hover{transform:translateY(-3px)}
 .qsig__h{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
 .qsig canvas{width:100%;height:auto;aspect-ratio:640/220;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1.5px #d2d2d7;touch-action:none;cursor:crosshair}
 .qsig small{color:var(--muted);font-size:12.5px}
+
+/* Anfragen ohne Projekt, Video-Link am Termin */
+.pcard--anfrage{display:grid;gap:12px;cursor:default}
+.pcard--anfrage .btn{justify-self:start}
+.pcard__hin{margin:0;color:var(--ink2,#424245);font-size:15px;line-height:1.5}
+.pill--anfrage{background:#f3efff;color:#6d28d9}
+.appt__video{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 16px;border-radius:14px;background:#f3efff}
+.appt__video span{font-size:13.5px;color:var(--ink2,#424245)}

@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { fragebogenStand } from "./onboarding.mjs";
 import { createProjects } from "./projects.mjs";
 import { createRequests } from "./requests.mjs";
 import { clientIdsFor, memberProjectIds } from "./access.mjs";
@@ -197,11 +198,7 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
             const b = db.prepare("SELECT id, message, start, status, type FROM bookings WHERE client_id = ? ORDER BY id DESC LIMIT 1").get(r.id);
             o.lead = { text: q?.description || b?.message || "", kinds: q?.kinds || "", budget: q?.budget || "", booking: b ? { id: b.id, start: b.start, status: b.status, type: b.type } : null };
             // Hat der Kontakt den Fragebogen schon ausgefüllt? (Onboarding für Software/Hardware, Vorab-Fragebogen für Websites)
-            let fb = null;
-            try { const ob = db.prepare("SELECT o.status FROM onboarding o LEFT JOIN bookings bb ON bb.id = o.booking_id WHERE o.client_id = ? OR bb.client_id = ? ORDER BY (o.status = 'ausgefuellt') DESC, o.id DESC LIMIT 1").get(r.id, r.id);
-              if (ob) fb = ob.status === "ausgefuellt" ? "ausgefuellt" : "offen"; } catch {}
-            try { if (fb !== "ausgefuellt") { const v = db.prepare("SELECT v.answered_at FROM vorab v JOIN bookings bb ON bb.id = v.booking_id WHERE bb.client_id = ? ORDER BY v.id DESC LIMIT 1").get(r.id);
-              if (v) fb = v.answered_at ? "ausgefuellt" : (fb || "offen"); } } catch {}
+            const fb = (b?.id && fragebogenStand(r.id, b.id)) || fragebogenStand(r.id);
             o.lead.fragebogen = fb;
             const ang = db.prepare("SELECT id, number, gross, issue_date, valid_until, title FROM invoices WHERE client_id = ? AND kind = 'angebot' AND locked = 1 AND status = 'versendet' ORDER BY id DESC LIMIT 1").get(r.id);
             const entwurf = ang ? null : db.prepare("SELECT id, title FROM invoices WHERE client_id = ? AND kind = 'angebot' AND locked = 0 ORDER BY id DESC LIMIT 1").get(r.id);

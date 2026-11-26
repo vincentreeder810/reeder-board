@@ -194,6 +194,18 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
     }
     if (p === "/appointments" && m === "GET")
       return json(res, 200, db.prepare("SELECT a.*, p.title project_title FROM appointments a LEFT JOIN projects p ON p.id = a.project_id WHERE a.client_id = ? ORDER BY a.start DESC").all(c.id).map(apptOut));
+    // Anfragen des Kunden, zu denen es noch kein Projekt gibt: verschickte und ausgefüllte Fragebögen (Website, Software, Hardware)
+    if (p === "/anfragen" && m === "GET") {
+      const out = [], termin = id => (id ? db.prepare("SELECT start FROM bookings WHERE id = ? AND status IN ('neu','bestaetigt')").get(id)?.start : null) || null;
+      try { for (const o of db.prepare("SELECT o.* FROM onboarding o LEFT JOIN bookings b ON b.id = o.booking_id WHERE o.client_id = ? OR b.client_id = ? ORDER BY o.id DESC").all(c.id, c.id)) {
+        const fertig = o.status === "ausgefuellt"; let kinds = [], ids = []; try { kinds = JSON.parse(o.kinds || "[]"); ids = JSON.parse(o.project_ids || "[]"); } catch {}
+        if (fertig && ids.length) continue;   // steht schon als Projekt in der Liste
+        out.push({ art: kinds.map(k => k === "hardware" ? "Hardware" : "Software").join(" & ") || "Software", fertig, am: (fertig ? o.answered_at : o.invited_at) || null, link: fertig ? null : `/portal/onboarding.html#${o.token}`, termin: termin(o.booking_id) });
+      } } catch {}
+      try { for (const v of db.prepare("SELECT v.* FROM vorab v LEFT JOIN bookings b ON b.id = v.booking_id WHERE v.client_id = ? OR b.client_id = ? ORDER BY v.id DESC").all(c.id, c.id))
+        out.push({ art: "Website", fertig: !!v.answered_at, am: v.answered_at || v.invited_at || null, link: v.answered_at ? null : `/portal/fragebogen.html#${v.token}`, termin: termin(v.booking_id) }); } catch {}
+      return json(res, 200, out);
+    }
     if (p === "/documents" && m === "GET")
       return json(res, 200, db.prepare("SELECT d.*, p.title project_title FROM documents d LEFT JOIN projects p ON p.id = d.project_id WHERE d.client_id = ? ORDER BY COALESCE(d.doc_date, d.created_at) DESC").all(c.id).map(d => docOut(d, base)));
     mm = p.match(/^\/documents\/(\d+)\/file$/);

@@ -108,7 +108,7 @@ function stepsBar(p) {
 }
 function projectCard(p) {
   return `<a class="pcard" href="#projekt/${p.id}">
-    <div class="pcard__top"><div><h3>${esc(p.title)}</h3><div class="pcard__kind">${esc(p.kind || "Projekt")}${p.model ? " · " + esc(p.model) : ""}</div></div><span class="pill pill--${p.status}">${esc(p.status)}</span></div>
+    <div class="pcard__top"><div><h3>${esc(p.title)}</h3><div class="pcard__kind">${esc(p.kind || "Projekt")}${p.model ? " · " + esc(p.model) : ""}</div></div><span class="pill pill--${p.status}">${esc({ anfrage: "Angefragt", aktiv: "Läuft", pausiert: "Pausiert", abgeschlossen: "Abgeschlossen" }[p.status] || p.status)}</span></div>
     ${stepsBar(p)}
     <div class="pcard__meta">
       ${p.next ? `<span>Nächster Termin: <b>${fmt(p.next.start, { day: "numeric", month: "short" })}</b></span>` : ""}
@@ -129,6 +129,7 @@ function apptCard(a, next) {
       <div><h3>${esc(a.title)}</h3><p>${fmt(a.start, { weekday: "long", hour: "2-digit", minute: "2-digit" })} Uhr${a.minutes ? ` · ${a.minutes} Min.` : ""}${a.kind ? " · " + esc(a.kind) : ""}${a.project ? " · " + esc(a.project) : ""}</p></div>
       <span class="pill apill apill--${state}">${pill}</span></summary>
     <div class="appt__body">
+      ${a.video_url && new Date(a.start).getTime() + 3 * 3600e3 > Date.now() ? `<div class="appt__video"><a class="btn btn--grad btn--sm" href="${esc(a.video_url)}" target="_blank" rel="noopener">Zum Videogespräch</a><span>Einfach zur Uhrzeit anklicken – ohne Anmeldung, ohne Installation.</span></div>` : ""}
       <div><h4>Zusammenfassung</h4><p>${a.summary ? esc(a.summary) : `<span class="muted">${new Date(a.start) > new Date() ? "Nach dem Termin finden Sie hier unsere Zusammenfassung." : "Noch keine Zusammenfassung hinterlegt."}</span>`}</p></div>
       <div><h4>Nächste Schritte</h4><p>${a.next_steps ? esc(a.next_steps) : `<span class="muted">–</span>`}</p></div>
     </div></details>`;
@@ -306,8 +307,16 @@ async function viewQuote(id) {
 
 /* ---------- Projekte ---------- */
 async function viewProjects() {
-  const list = await api("/projects");
-  $("#projList").innerHTML = list.length ? list.map(projectCard).join("") : `<div class="empty">Noch keine Projekte.</div>`;
+  const [list, anfragen] = await Promise.all([api("/projects"), api("/anfragen").catch(() => [])]);
+  // Anfragen: Fragebögen, aus denen noch kein Projekt geworden ist – damit der Kunde sieht, was bei uns angekommen ist und was noch fehlt
+  const tag = z => { const t = String(z || ""); return fmt(t.includes("T") ? t : t.replace(" ", "T") + "Z", { day: "numeric", month: "long" }); };
+  const anfrageCard = a => `<div class="pcard pcard--anfrage">
+    <div class="pcard__top"><div><h3>${esc(a.art)} – Ihre Anfrage</h3><div class="pcard__kind">${a.termin ? "Erstgespräch am " + fmt(a.termin, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) + " Uhr" : "Anfrage"}</div></div>
+      <span class="pill ${a.fertig ? "pill--bezahlt" : "pill--offen"}">${a.fertig ? "✓ Fragebogen ausgefüllt" : "Fragebogen offen"}</span></div>
+    <p class="pcard__hin">${a.fertig ? `Ihre Angaben${a.am ? " vom " + tag(a.am) : ""} liegen uns vor. Wir bereiten damit das Gespräch vor. Nach dem Gespräch wird daraus Ihr Projekt.` : "Damit wir uns gut vorbereiten können, fehlen uns noch Ihre Angaben. Das dauert etwa fünf Minuten."}</p>
+    ${a.link ? `<a class="btn btn--grad btn--sm" href="${esc(a.link)}">Fragebogen ausfüllen</a>` : ""}</div>`;
+  $("#projList").innerHTML = (anfragen.length ? `<p class="listhead" style="margin-top:0">Ihre Anfragen</p>` + anfragen.map(anfrageCard).join("") + (list.length ? `<p class="listhead">Projekte</p>` : "") : "")
+    + (list.length ? list.map(projectCard).join("") : anfragen.length ? "" : `<div class="empty">Noch keine Projekte. Sobald Sie etwas bei uns anfragen, sehen Sie es hier.</div>`);
 }
 let project = null, ptab = "ueberblick";
 async function viewProject(id) {
