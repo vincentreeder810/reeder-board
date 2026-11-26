@@ -23,7 +23,6 @@
     $("#wpBody").innerHTML = `
       <div class="wpgrid">
         <div class="stack">
-          <div class="card timer ${W.timer ? "on" : ""}" id="wpTimer">${timerHtml()}</div>
           <div class="card"><div class="chead" style="margin-bottom:6px"><div><h2 style="font-size:18px">Meine Aufgaben</h2><p>${mine.length} offen${W.doneToday ? ` · heute ${W.doneToday} erledigt ✓` : ""}</p></div></div>
             ${mine.length ? groups.map(([l, f]) => { const g = mine.filter(f); return g.length ? `<p class="wpsec ${l === "Überfällig" ? "late" : ""}">${l} <em>${g.length}</em></p>${g.map(t => taskRow(t)).join("")}` : ""; }).join("")
               : `<div class="allclear"><b>Alles erledigt.</b><span>Ihnen ist gerade keine offene Aufgabe zugeordnet.</span></div>`}
@@ -46,6 +45,8 @@
           ${W.unassigned?.length ? `<div class="card"><h2 style="font-size:18px">Ohne Zuständigkeit</h2>${W.unassigned.map(t => taskRow(t)).join("")}</div>` : ""}
         </div>
       </div>`;
+    // Die Stoppuhr steht ganz oben auf der Seite, über den Vorgängen
+    const slot = $("#wpTimerSlot"); if (slot) slot.innerHTML = `<div class="card timer ${W.timer ? "on" : ""}" id="wpTimer">${timerHtml()}</div>`;
     startTick();
   }
   const taskRow = (x, inProj) => `<div class="task task--${x.status} ${x.priority === "hoch" ? "task--hi" : ""}" data-task="${x.id}">

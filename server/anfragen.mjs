@@ -34,6 +34,9 @@ export function projekteFuerBuchung(b, arten) {
   for (const art of arten) {
     const A = ARTEN[art]; if (!A) continue;
     let p = projektZurAnfrage(b.id, art);
+    // Gibt es beim Kunden schon eine offene Anfrage derselben Art ohne Buchung (z. B. aus einem früheren Fragebogen)? Dann gehört sie zu dieser Buchung – kein zweites Projekt.
+    if (!p) { const lose = db.prepare("SELECT id FROM projects WHERE client_id = ? AND status = 'anfrage' AND booking_id IS NULL AND (anfrage_art = ? OR (anfrage_art IS NULL AND bereich = ? AND ? != 'website')) ORDER BY id DESC LIMIT 1").get(b.client_id, art, A.bereich, art);
+      if (lose) { db.prepare("UPDATE projects SET booking_id = ?, anfrage_art = ? WHERE id = ?").run(b.id, art, lose.id); p = lose; } }
     if (!p) {
       const titel = `${A.name} für ${wer}`.slice(0, 110);
       const id = Number(db.prepare("INSERT INTO projects(client_id, title, kind, description, phase, status, bereich, booking_id, anfrage_art) VALUES(?, ?, ?, '', 'Erstgespräch', 'anfrage', ?, ?, ?)")
@@ -78,7 +81,8 @@ export function anfragenNachziehen(hardwareTermin = () => false) {
       let kinds = [], ids = []; try { kinds = JSON.parse(o.kinds || "[]"); ids = JSON.parse(o.project_ids || "[]"); } catch {}
       ids.forEach((id, i) => { if (kinds[i]) n += db.prepare("UPDATE projects SET booking_id = ?, anfrage_art = ? WHERE id = ? AND booking_id IS NULL").run(o.booking_id, kinds[i], id).changes; });
     }
-    for (const b of db.prepare("SELECT * FROM bookings WHERE client_id IS NOT NULL AND status IN ('neu','bestaetigt')").all()) {
+    // Nur kommende Termine: Für vergangene Buchungen entsteht nachträglich kein Projekt mehr
+    for (const b of db.prepare("SELECT * FROM bookings WHERE client_id IS NOT NULL AND status IN ('neu','bestaetigt') AND start >= ? ORDER BY id").all(new Date().toISOString())) {
       const kunde = db.prepare("SELECT stage FROM clients WHERE id = ?").get(b.client_id); if (!kunde || !["anfrage", "interessent"].includes(kunde.stage)) continue;
       const arten = themenDerBuchung(b, hardwareTermin(b.type)).filter(a => !projektZurAnfrage(b.id, a));
       if (arten.length) n += projekteFuerBuchung(b, arten).length;

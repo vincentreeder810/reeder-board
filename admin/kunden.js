@@ -1,7 +1,7 @@
 /* Admin-Board – Kunden (Mandanten), Kundenakte, Projektseite, Vertrieb (nutzt $, $$, esc, api, toast, DD aus admin.js) */
 (() => {
   const C = window.RSChat;
-  let clients = [], current = null, msgs = [], tab = "ueberblick", listMode = "mandant", search = "", sortBy = "aktivitaet", stopPoll = null, pending = null, projects = [], project = null, annFilter = "offen";
+  let clients = [], current = null, msgs = [], tab = "ueberblick", listMode = "alle", search = "", sortBy = "aktivitaet", stopPoll = null, pending = null, projects = [], project = null, annFilter = "offen";
   const initials = n => String(n || "").replace(/\b(Dr|Prof|GmbH|AG|KG|UG|e\.V)\b\.?/g, "").split(/[\s&+\-–]+/).filter(w => /^[A-Za-zÄÖÜäöü0-9]/.test(w)).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
   const STATUS_LABEL = { aktiv: "Portal aktiv", eingeladen: "Eingeladen", "Einladung abgelaufen": "Einladung abgelaufen", "kein Zugang": "kein Zugang" };
   const EMPTY = `<b>Noch keine Nachrichten.</b>Schreiben Sie dem Kunden eine erste Nachricht – oder laden Sie einen Prototyp hoch.`;
@@ -55,7 +55,10 @@
   const activeProjects = c => (c.projects || []).filter(p => p.status === "aktiv");
   function listClients() {
     const q = search.trim().toLowerCase(), last = c => c.last_at || c.created_at || "";
-    const l = clients.filter(c => (listMode === "archiv" ? c.stage === "archiv" : c.stage === "mandant") && (!q || `${c.company} ${c.name} ${c.email}`.toLowerCase().includes(q)));
+    // Ansichten: alle (ohne Archiv), Kunden mit Auftrag, Interessenten (Anfrage oder Gespräch, noch kein Auftrag), Archiv.
+    // Die Suche geht immer über alle Kontakte samt Archiv – wer einen Namen eintippt, findet ihn, egal in welcher Ansicht.
+    const passt = c => listMode === "archiv" ? c.stage === "archiv" : listMode === "mandant" ? c.stage === "mandant" : listMode === "interessent" ? (c.stage === "anfrage" || c.stage === "interessent") : c.stage !== "archiv";
+    const l = clients.filter(c => q ? `${c.company} ${c.name} ${c.email}`.toLowerCase().includes(q) : passt(c));
     const sorters = { aktivitaet: (a, b) => String(last(b)).localeCompare(String(last(a))), name: (a, b) => a.company.localeCompare(b.company, "de"),
       projekte: (a, b) => activeProjects(b).length - activeProjects(a).length, offen: (a, b) => (b.open_net || 0) - (a.open_net || 0),
       termin: (a, b) => (a.next?.start || "9").localeCompare(b.next?.start || "9") };
@@ -63,23 +66,23 @@
   }
   async function loadClients() { clients = await api("/clients"); renderList(); }
   function renderList() {
-    const mand = clients.filter(c => c.stage === "mandant"), arch = clients.filter(c => c.stage === "archiv");
-    $("#kTitle").textContent = ME.owner ? "Ihre Kunden" : "Meine Kunden";
-    $("#kSub").innerHTML = `${mand.length} Kunde${mand.length === 1 ? "" : "n"} · ${mand.reduce((s, c) => s + activeProjects(c).length, 0)} aktive Projekte${ME.owner ? ` · Neue Anfragen und Interessenten stehen im <a href="#anfragen">Vertrieb</a>` : ""}`;
-    if (!$("#kSearch")) $("#kCtl").innerHTML = `<input type="search" id="kSearch" class="lsearch" placeholder="Kunde, Ansprechpartner oder E-Mail suchen …" autocomplete="off"><div class="lctl__dd" id="kDD"></div>`;
-    $("#kDD").innerHTML = (ME.owner ? DD.html("kMode", [{ v: "mandant", l: "Aktive Kunden", n: mand.length }, { v: "archiv", l: "Archiv", n: arch.length }], listMode, { label: "Ansicht" }) : "")
+    const mand = clients.filter(c => c.stage === "mandant"), arch = clients.filter(c => c.stage === "archiv"), inter = clients.filter(c => c.stage === "anfrage" || c.stage === "interessent");
+    $("#kTitle").textContent = ME.owner ? "Kunden & Kontakte" : "Meine Kunden";
+    $("#kSub").innerHTML = `${mand.length} Kunde${mand.length === 1 ? "" : "n"} · ${mand.reduce((s, c) => s + activeProjects(c).length, 0)} aktive Projekte${ME.owner ? ` · ${inter.length} Interessent${inter.length === 1 ? "" : "en"} · der Weg bis zum Auftrag steht im <a href="#anfragen">Vertrieb</a>` : ""}`;
+    if (!$("#kSearch")) $("#kCtl").innerHTML = `<input type="search" id="kSearch" class="lsearch" placeholder="Name, Firma oder E-Mail suchen – findet alle Kontakte …" autocomplete="off"><div class="lctl__dd" id="kDD"></div>`;
+    $("#kDD").innerHTML = (ME.owner ? DD.html("kMode", [{ v: "alle", l: "Alle Kontakte", n: mand.length + inter.length }, { v: "mandant", l: "Kunden mit Auftrag", n: mand.length }, { v: "interessent", l: "Interessenten", n: inter.length }, { v: "archiv", l: "Archiv", n: arch.length }], listMode, { label: "Ansicht" }) : "")
       + DD.html("kSort", [{ v: "aktivitaet", l: "Zuletzt aktiv" }, { v: "name", l: "Name A–Z" }, { v: "projekte", l: "Meiste Projekte" }, ...(ME.owner ? [{ v: "offen", l: "Höchster offener Betrag" }] : []), { v: "termin", l: "Nächster Termin" }], sortBy, { label: "Sortierung" });
     const list = listClients();
     $("#clients").innerHTML = list.length ? `<div class="ltab__h kgrid"><span>Kunde</span><span>Projekte</span><span>Team</span><span>Nächster Termin</span>${ME.owner ? `<span class="num">Offen (netto)</span>` : ""}<span>Letzter Kontakt</span></div>`
       + list.map(c => { const ap = activeProjects(c);
         return `<a class="ltab__r kgrid ${c.active ? "" : "is-off"}" href="#kunden/${c.id}">
-          <span class="lmain"><span class="avatar avatar--${(STAGE[c.stage] || STAGE.mandant)[1]}">${esc(initials(c.company))}</span><span class="lmain__t"><b>${esc(c.company)}${c.unread ? `<em class="dot" title="${c.unread} ungelesene Nachricht(en)">${c.unread}</em>` : ""}</b><small>${esc(c.name)}${c.status !== "aktiv" ? ` · <span class="warn">${esc(STATUS_LABEL[c.status] || c.status)}</span>` : ""}</small></span></span>
-          <span class="lc">${ap.length ? `<b>${ap.length} aktiv ${bereicheTags(c)}</b><small>${esc(ap.map(p => p.phase).join(" · "))}</small>` : `<small class="muted">${(c.projects || []).length ? "keine aktiven" : "noch kein Projekt"}</small>`}</span>
+          <span class="lmain"><span class="avatar avatar--${(STAGE[c.stage] || STAGE.mandant)[1]}">${esc(initials(c.company))}</span><span class="lmain__t"><b>${esc(c.company)} ${c.stage !== "mandant" ? stagePill(c.stage) : ""}${c.unread ? `<em class="dot" title="${c.unread} ungelesene Nachricht(en)">${c.unread}</em>` : ""}</b><small>${esc(c.name)}${c.status !== "aktiv" ? ` · <span class="warn">${esc(STATUS_LABEL[c.status] || c.status)}</span>` : ""}</small></span></span>
+          <span class="lc">${ap.length ? `<b>${ap.length} aktiv ${bereicheTags(c)}</b><small>${esc(ap.map(p => p.phase).join(" · "))}</small>` : (() => { const an = (c.projects || []).filter(p => p.status === "anfrage"); return an.length ? `<b>${an.length} angefragt ${bereicheTags(c)}</b><small>${esc(an.map(p => p.title).join(" · ").slice(0, 60))}</small>` : `<small class="muted">${(c.projects || []).length ? "keine aktiven" : "noch kein Projekt"}</small>`; })()}</span>
           <span class="pteam">${teamAv(c.team) || `<small class="muted">–</small>`}</span>
           <span class="lc">${c.next ? `<b>${C.fmt(c.next.start, { day: "numeric", month: "short" })}</b><small>${esc(c.next.title)}</small>` : `<small class="muted">–</small>`}</span>
           ${ME.owner ? `<span class="num">${c.open_net ? moneyR(c.open_net) : "–"}</span>` : ""}
           <span class="lc"><small>${c.last_at ? ago(c.last_at) : "–"}</small></span></a>`; }).join("")
-      : `<div class="empty">${search ? "Kein Kunde gefunden." : listMode === "archiv" ? "Das Archiv ist leer." : "Noch keine Kunden."}</div>`;
+      : `<div class="empty">${search ? "Kein Kontakt gefunden." : listMode === "archiv" ? "Das Archiv ist leer." : listMode === "interessent" ? "Keine Interessenten." : listMode === "mandant" ? "Noch keine Kunden mit Auftrag." : "Noch keine Kontakte."}</div>`;
   }
   DD.on("kMode", v => { listMode = v; renderList(); });
   DD.on("kSort", v => { sortBy = v; renderList(); });

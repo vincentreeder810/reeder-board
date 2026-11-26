@@ -1406,3 +1406,21 @@ label.auf__item{cursor:pointer}
 .ctl .ctl__ico{display:grid;place-items:center;width:36px;height:36px;font-size:16px;line-height:1;color:var(--ink2)}
 .ctl .ctl__ico svg{width:18px;height:18px;display:block}
 .ctl--future .ctl__ico{color:#fff}
+
+/* ===================== Mein Arbeitsplatz: kompakte Vorgangskarten, Stoppuhr oben ===================== */
+#wpTimerSlot{margin-bottom:18px}
+#wpTimerSlot:empty{display:none}
+.vkarte{grid-template-columns:minmax(0,1fr) minmax(200px,300px);gap:8px 20px;padding:14px 18px;margin-bottom:8px;border-radius:18px;align-items:center}
+.vkarte__kopf b{font-size:16px}
+.vkarte__kopf p{margin-top:2px;font-size:13px}
+.vkarte>.vzusatz,.vkarte>.vkarte__fuss{grid-column:1/-1}
+.vkarte__fuss{padding-top:8px;border-top:1px solid var(--line)}
+.vkarte__fuss p{font-size:13.5px}
+.vweg{display:grid;grid-template-columns:1fr;gap:6px}
+.vweg__b{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}
+.vweg__b i{height:5px;border-radius:999px;background:#e8e8ed}
+.vweg__b i.ok{background:#34c38f}
+.vweg__b i.jetzt{background:var(--grad);box-shadow:0 0 0 3px rgba(139,92,246,.16)}
+.vweg span{padding:0;background:none;color:var(--muted);font-size:12px;text-align:left;white-space:normal;border-radius:0}
+.vweg span b{color:var(--ink);font-weight:600}
+@media (max-width:760px){.vkarte{grid-template-columns:1fr}.vweg{grid-template-columns:1fr}}

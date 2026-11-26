@@ -11,7 +11,8 @@
   // Ein Vorgang = ein Vorhaben eines Kunden. Er kommt genau einmal vor, zeigt seinen Weg (Termin … Prototyp) und den einen nächsten Schritt.
   // Den Stand rechnet der Server aus (vorgang in /projects); hier wird nur gezeichnet.
   const HW_SEITE = { anforderungen: ["anforderungen", "Anforderungen klären"], analyse: ["varianten", "Varianten entscheiden"], module: ["module", "Module festlegen"], detail: ["modell", "3D-Modell ausarbeiten"], beschaffung: ["einkauf", "Stückliste und Bauanleitung"], pruefung: ["pruefung", "Konzept-Dokument erstellen"] };
-  const WEG = { hardware: ["Termin", "Gespräch", "Angebot", "Auftrag", "Konzept", "Prototyp"], software: ["Termin", "Gespräch", "Angebot", "Auftrag", "Umsetzung", "Abnahme"] };
+  // Der Weg eines Vorhabens. Der erste Schritt heißt „Anfrage“ (früher „Termin“ – das las sich, als hätte das Gespräch schon stattgefunden).
+  const WEG = { hardware: ["Anfrage", "Gespräch", "Angebot", "Auftrag", "Konzept", "Prototyp"], software: ["Anfrage", "Gespräch", "Angebot", "Auftrag", "Umsetzung", "Abnahme"] };
   let heuteDaten = { karten: [] };
   async function heute() {
     const box = $("#ckHeute"); if (!box) return;
@@ -66,9 +67,10 @@
       }
       const weg = WEG[bereich];
       const html = `<div class="vkarte"><div class="vkarte__kopf"><a href="${href}"><b>${esc(p?.title || c.company)}</b> ${p ? bereichTag(p) : ""}</a><p>${esc(c.company)}${c.name && c.name !== c.company ? " · " + esc(c.name) : ""} · ${stand}</p></div>
-        <div class="vweg">${weg.map((w, i) => `<span class="${i < schritt ? "ok" : i === schritt ? "jetzt" : ""}">${w}</span>`).join("")}</div>
+        <div class="vweg" title="${weg.map((w, i) => (i < schritt ? "✓ " : i === schritt ? "→ " : "") + w).join("  ·  ")}"><div class="vweg__b">${weg.map((w, i) => `<i class="${i < schritt ? "ok" : i === schritt ? "jetzt" : ""}"></i>`).join("")}</div>
+          <span>Schritt ${Math.min(schritt, weg.length - 1) + 1} von ${weg.length} · <b>${weg[Math.min(schritt, weg.length - 1)]}</b>${schritt < weg.length - 1 ? ` · danach ${weg[schritt + 1]}` : ""}</span></div>
         ${zusatz ? `<div class="vzusatz">${zusatz}</div>` : ""}
-        <div class="vkarte__fuss"><p>${wer === "ich" ? "Nächster Schritt: " : ""}${naechstes}</p><div>${neben.filter(Boolean).join("")}${p && !haupt.includes("Weiterarbeiten") && !neben.join("").includes("Vorarbeiten") ? `<a class="vneben" href="${href}">Projekt öffnen</a>` : ""}${haupt}</div></div></div>`;
+        <div class="vkarte__fuss"><p>${wer === "ich" ? "Nächster Schritt: " : ""}${naechstes}</p><div>${p && schritt >= 4 ? `<button class="vneben" data-ptime-start data-pid="${p.id}" title="Stoppuhr für dieses Projekt starten">▶ Zeit starten</button>` : ""}${neben.filter(Boolean).join("")}${p && !haupt.includes("Weiterarbeiten") && !neben.join("").includes("Vorarbeiten") ? `<a class="vneben" href="${href}">Projekt öffnen</a>` : ""}${haupt}</div></div></div>`;
       // Reihenfolge: erst Termine von heute, dann je näher am Geld, desto weiter oben
       const heuteT = v.termin && new Date(v.termin.start).toDateString() === new Date().toDateString();
       const mein = !p || p.status === "anfrage" || !(p.members || []).length || (p.members || []).some(u => u.id === ME.id);
