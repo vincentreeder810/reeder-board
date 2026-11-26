@@ -1460,3 +1460,22 @@ label.auf__item{cursor:pointer}
 .ws__vorschau{padding:12px 14px;border-radius:14px;background:var(--paper);font-size:14px;line-height:1.5}
 .ws__vorschau p{margin:0 0 6px}
 @media (max-width:760px){.ws__zwei{grid-template-columns:1fr}}
+
+/* Projektseite, neu geordnet: Website-Knöpfe im Kopf, eine Anmerkungsliste, ältere Wege und Nebensachen zugeklappt */
+.pweb{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.pweb__leer{font-size:13.5px;color:var(--muted);margin-right:4px}
+.pcount{font-style:normal;display:inline-block;min-width:22px;padding:1px 8px;border-radius:999px;background:var(--grad);color:#fff;font-size:13px;text-align:center;vertical-align:2px}
+#pAnn .ann{grid-template-columns:30px minmax(0,1fr);align-items:start}
+#pAnn .ann .acts{grid-column:2;justify-content:flex-start}
+#pAnn .ann__body p{overflow-wrap:anywhere}
+.pmehr{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.pmehr>summary,.pklapp>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px}
+.pmehr>summary::-webkit-details-marker,.pklapp>summary::-webkit-details-marker{display:none}
+.pmehr>summary{font-size:13.5px;color:var(--ink2);font-weight:500}
+.pmehr>summary::before,.pklapp>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .2s;flex:none}
+.pmehr[open]>summary::before,.pklapp[open]>summary::after{transform:rotate(45deg)}
+.pmehr__in{margin-top:12px}
+.pklapp>summary h2{margin:0;font-size:18px}
+.pklapp>summary span{font-size:13px;color:var(--muted);margin-right:auto}
+/* Schmale Fenster: erst Anmerkungen, Arbeitsbereich und Website, danach Team, Zeit und Zahlungen */
+@media (max-width:1280px){.pgrid{grid-template-areas:"main" "side" "more"}}

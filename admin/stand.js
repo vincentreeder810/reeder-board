@@ -162,8 +162,8 @@
     W = await api(`/projects/${p.id}/workspace`).catch(() => null); if (!W) return;
     box.dataset.pid = p.id; box.hidden = false;
     const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div>
-      <div class="acts">${$('[data-act="openProto"]') ? `<button class="btn btn--ghost btn--sm" data-ws="website">Website ansehen</button><button class="btn btn--grad btn--sm" data-ws="anmerkungen">Website mit Anmerkungen</button>` : ""}</div></div>`;
-    if (W.leer) { box.innerHTML = kopf("Stand, Notizen und offene Fragen aus der Arbeit mit Claude") + `<p class="ws__leer">Noch nichts da. Öffne das Projekt unten mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Wenige Sekunden später steht hier, wo das Projekt steht, was zuletzt gemacht wurde und welche Fragen an den Kunden offen sind.</p>`; return; }
+      </div>`;
+    if (W.leer) { box.innerHTML = kopf("Stand, Notizen und offene Fragen aus der Arbeit mit Claude") + `<p class="ws__leer">Noch nichts da. Öffne das Projekt oben mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Wenige Sekunden später steht hier, wo das Projekt steht, was zuletzt gemacht wurde und welche Fragen an den Kunden offen sind.</p>`; return; }
     const offen = W.fragen.filter(f => f.status === "offen"), klar = W.fragen.filter(f => f.status !== "offen");
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
     box.innerHTML = kopf(`Von Claude aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `

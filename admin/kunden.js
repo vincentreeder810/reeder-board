@@ -408,32 +408,41 @@
           <div class="khead__acts">
             ${current.stage === "mandant" ? `<a class="btn btn--ghost btn--sm" href="#kunden/${current.id}/chat">Nachricht an Kunden</a>` : ""}
             <button class="btn btn--ghost btn--sm" data-act="schedule">Termin</button>
-            <button class="btn btn--grad btn--sm" data-act="editProject">Bearbeiten</button>
+            <button class="btn btn--ghost btn--sm" data-act="editProject">Bearbeiten</button>
             ${ME.owner ? DD.html("pMore", more, "", { trigger: "Mehr", align: "right" }) : ""}</div></div>
+        <div class="pweb">${p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="0">Website ansehen</button><button class="btn btn--ghost btn--sm" data-web="1">Website mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--grad btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}</div>
         <div class="pphase" role="list">${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
       </div>
       <div class="pgrid">
         <div class="stack p-main">
-          <div class="card ws" id="pWs" hidden></div>
-          <div class="card" id="pTasks"></div>
-          <div class="card">
-            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Prototypen &amp; Anmerkungen</h2><p>${openAnns.length ? `<b class="warn">${openAnns.length} offene Anmerkung${openAnns.length === 1 ? "" : "en"}</b> vom Kunden` : "Keine offenen Anmerkungen."}</p></div>
-              <div class="acts"><button class="btn btn--grad btn--sm" data-act="uploadProto">Hochladen</button></div></div>
-            <div id="pStand"></div>
-            <div id="pAuftrag"></div>
-            <div class="plist">${p.prototypes.length ? p.prototypes.map((g, gi) => protoGroupRow(g, gi)).join("") : `<div class="empty">Noch kein Prototyp.</div>`}</div>
-            ${openAnns.length ? `<div class="annlist annlist--compact">${openAnns.sort((a, b) => a.id - b.id).map(a => `
-              <div class="ann" data-act="jump" data-id="${a.id}"><span class="ann__no">${byProto[a.prototype_id].indexOf(a.id) + 1}</span>
-                <div class="ann__body"><p>${esc(a.comment || "(nur Zeichnung)")}</p>${a.ai ? `<p class="ann__ai"><span class="kpill kpill--${esc(a.ai.kind || "x")}">${esc({ klein: "Klein", mittel: "Mittel", gross: "Groß" }[a.ai.kind] || (a.ai.status === "rueckfrage" ? "Rückfrage offen" : "KI"))}</span>${esc(a.ai.summary || "")}</p>` : ""}${a.change && a.comment !== window.RSViewer?.changeText(a.change) ? `<p class="ann__chg">→ ${esc(window.RSViewer.changeText(a.change))}</p>` : a.change ? `<p class="ann__chg">Mit Live-Vorschau gewählt · im Viewer „Vorschau zeigen“</p>` : ""}<span>${esc(a.proto_title)} V${a.proto_version} · ${esc(a.page || "Startseite")} · ${esc(a.author)} · ${ago(a.created_at)}</span></div>
-                <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle →</button><button class="btn btn--sm" data-ann-task="${a.id}" title="Als Aufgabe übernehmen – erledigt sich mit der Aufgabe">→ Aufgabe</button><button class="btn btn--ok btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="offen">✓ Erledigt</button></div></div>`).join("")}</div>` : ""}
+          <div class="card" id="pAnn">
+            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Anmerkungen${openAnns.length ? ` <em class="pcount">${openAnns.length}</em>` : ""}</h2><p>${openAnns.length ? "Was Kunde und Team an der Website angepinnt haben. Claude findet dieselbe Liste im Projektordner." : "Keine offenen Anmerkungen."}</p></div>
+              ${openAnns.length ? `<div class="acts"><button class="btn btn--grad btn--sm" data-web="1">Auf der Website ansehen</button></div>` : ""}</div>
+            ${openAnns.length ? `<div class="annlist">${[...openAnns].sort((a, b) => String(a.page).localeCompare(String(b.page)) || a.id - b.id).map((a, i) => `
+              <div class="ann" data-act="jump" data-id="${a.id}"><span class="ann__no">${i + 1}</span>
+                <div class="ann__body"><p>${esc(a.comment || "(nur eingezeichnet, ohne Text)")}</p>${a.change && a.comment !== window.RSViewer?.changeText(a.change) ? `<p class="ann__chg">Wunsch: ${esc(window.RSViewer.changeText(a.change))}</p>` : ""}<span>${esc(seiteName(a.page))} · ${a.author_kind === "team" ? "Team" : "Kunde"}: ${esc(a.author)} · ${ago(a.created_at)} · zu Version ${a.proto_version}</span></div>
+                <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-ann-task="${a.id}" title="Als Aufgabe übernehmen – erledigt sich mit der Aufgabe">→ Aufgabe</button><button class="btn btn--ok btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="offen">✓ Erledigt</button></div></div>`).join("")}</div>` : ""}
           </div>
+          <div class="card ws" id="pWs" hidden></div>
+          <div class="card">
+            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Website-Versionen</h2><p>${p.prototypes.length ? "Die oberste Version ist die aktuelle. Der Kunde sieht sie im Kundenportal." : "Noch keine Version hochgeladen."}</p></div>
+              ${ME.owner ? `<div class="acts"><button class="btn btn--grad btn--sm" data-br="stand">Neuen Stand hochladen</button></div>` : ""}</div>
+            <div class="plist">${p.prototypes.length ? p.prototypes.map((g, gi) => protoGroupRow(g, gi)).join("") : `<div class="empty">Noch keine Version. Mit „Mit Claude arbeiten“ entsteht die Website im Projektordner, „Neuen Stand hochladen“ bringt sie hierher.</div>`}</div>
+            <details class="pmehr" id="pWege"><summary>Brücke, Ordner und weitere Wege zum Hochladen</summary>
+              <div class="pmehr__in"><div class="acts" style="justify-content:flex-start;margin:0 0 10px"><button class="btn btn--ghost btn--sm" data-act="uploadProto">Dateien von Hand hochladen</button></div>
+                <div id="pStand"></div>
+                <div id="pAuftrag"></div></div></details>
+          </div>
+          <div class="card" id="pTasks"></div>
           <div class="card" id="pTests"></div>
-          <div class="card"><div class="chead" style="margin-bottom:10px"><h2 style="font-size:18px">Termine</h2><div class="acts"><button class="btn btn--ghost btn--sm" data-act="newAppt">Termin eintragen</button></div></div>
-            <div class="plist">${p.appointments.length ? [...p.appointments].sort((x, y) => y.start.localeCompare(x.start)).map(apptRow).join("") : `<div class="empty">Noch keine Termine.</div>`}</div></div>
-          <div class="card"><div class="chead" style="margin-bottom:10px"><h2 style="font-size:18px">Dokumente</h2><div class="acts"><button class="btn btn--ghost btn--sm" data-act="newDoc">Hochladen</button></div></div>
-            <div class="plist">${p.documents.length ? p.documents.map(docRow).join("") : `<div class="empty">Noch keine Dokumente.</div>`}</div></div>
+          <details class="card pklapp" ${p.appointments.some(a => new Date(a.start) > new Date()) ? "open" : ""}><summary><h2>Termine</h2><span>${p.appointments.length || "keine"}</span></summary>
+            <div class="acts" style="justify-content:flex-start;margin:12px 0 10px"><button class="btn btn--ghost btn--sm" data-act="newAppt">Termin eintragen</button></div>
+            <div class="plist">${p.appointments.length ? [...p.appointments].sort((x, y) => y.start.localeCompare(x.start)).map(apptRow).join("") : `<div class="empty">Noch keine Termine.</div>`}</div></details>
+          <details class="card pklapp"><summary><h2>Dokumente</h2><span>${p.documents.length || "keine"}</span></summary>
+            <div class="acts" style="justify-content:flex-start;margin:12px 0 10px"><button class="btn btn--ghost btn--sm" data-act="newDoc">Hochladen</button></div>
+            <div class="plist">${p.documents.length ? p.documents.map(docRow).join("") : `<div class="empty">Noch keine Dokumente.</div>`}</div></details>
         </div>
-        <div class="stack p-side">
+<div class="stack p-side">
           <div class="card astand" id="pArbeit" hidden></div>
           <div class="card" id="pVerein" hidden></div>
           <div class="card"><div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Team</h2>${ME.owner ? `<div class="acts"><button class="btn btn--ghost btn--sm" data-act="assign">${p.members.length ? "Ändern" : "Zuweisen"}</button></div>` : ""}</div>
@@ -453,7 +462,7 @@
         </div>
       </div>`;
     window.WORK?.projectCards(p);
-    window.STAND?.projectCard(p).then(() => { window.AUFTRAG?.load(p); window.STAND.workspace(p); });
+    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) $("#pWege").open = true; });
     window.PRUEF?.load(p);
     window.BOARD?.arbeitsstand?.(p);
     window.BOARD?.vereinbarungen?.(p);
@@ -469,6 +478,12 @@
     <select data-f="status" class="paystate paystate--${x.status || "offen"}">${[["offen", "offen"], ["berechnet", "Rechnung gestellt"], ["bezahlt", "bezahlt"]].map(([v, l]) => `<option value="${v}" ${v === (x.status || "offen") ? "selected" : ""}>${l}</option>`).join("")}</select>
     <span class="payinv payinv--none"></span>
     <button type="button" class="x" data-act="delPay" title="Entfernen">✕</button></div>`;
+  const seiteName = pg => !pg || /^index\.html?$/i.test(pg) ? "Startseite" : "Seite „" + String(pg).replace(/\.html?$/i, "").replace(/[-_/]+/g, " ") + "“";
+  // Website direkt öffnen: ohne oder mit Anmerkungsliste
+  document.addEventListener("click", e => { const b = e.target.closest("[data-web]"); if (!b || !project?.prototypes.length) return; const mit = b.dataset.web === "1";
+    // Mit Anmerkungen: die neueste Version öffnen, an der noch offene Anmerkungen hängen (sie bleiben an der Version, an der sie angepinnt wurden)
+    const gi = mit ? Math.max(0, project.prototypes.findIndex(x => x.some(v => v.openNotes))) : 0, g = groupVersions(gi), v = (mit && g.find(x => x.openNotes)) || g[0];
+    window.RSViewer.open(C.protoData(v), { versions: g.map(C.protoData), showList: mit }); });
   function protoGroupRow(g, gi) {
     const v = g[0];
     return `<div class="prow ${v.active ? "" : "off"}">
