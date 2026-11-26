@@ -95,7 +95,7 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
   const pendingIn = groupId => groupId ? db.prepare("SELECT * FROM prototypes WHERE group_id = ? AND state = 'kandidat' ORDER BY id DESC LIMIT 1").get(groupId) : null;
   function targetGroup(p) {
     if (p.stand_group && latestIn(p.stand_group)) return p.stand_group;
-    const groups = db.prepare("SELECT DISTINCT COALESCE(group_id, id) g FROM prototypes WHERE project_id = ?").all(p.id);
+    const groups = db.prepare("SELECT DISTINCT COALESCE(group_id, id) g FROM prototypes WHERE project_id = ? AND NOT (COALESCE(source, '') = 'vorab' AND COALESCE(state, '') = 'kandidat')").all(p.id);
     return groups.length === 1 ? groups[0].g : null;                 // mehrere Entwürfe → eigener Strang „Aktueller Stand“
   }
   async function checkDir(dir) {

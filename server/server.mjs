@@ -31,6 +31,7 @@ import { createVereinbarungen } from "./vereinbarungen.mjs";
 import { createOnboarding, fragebogenStand, setVorabEinladen } from "./onboarding.mjs";
 import { projekteFuerBuchung, themenDerBuchung, anfragenNachziehen } from "./anfragen.mjs";
 import { createBruecke } from "./bruecke.mjs";
+import { createBrueckeSoftware } from "./bruecke-software.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
 
@@ -112,6 +113,7 @@ portal.extend(subs.portal);
 const support = createSupport({ json, readJson, clean, SITE_URL });
 const vereinbarungen = createVereinbarungen({ json, readJson, clean });
 const bruecke = createBruecke({ json, send, readJson });
+const brueckeSw = createBrueckeSoftware({ json, send, readJson, clean, publish: (...a) => stand.publish(...a) });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });
 const onboarding = createOnboarding({ json, readJson, clean, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient: (...a) => portal.currentClient(...a), clientLogin: (...a) => portal.clientLogin(...a) });
 portal.extend(support.portal);
@@ -462,7 +464,7 @@ async function adminApi(req, res, url) {
   if (p.startsWith("/support")) { const r = await support.admin(req, res, url, p, m, user); if (r !== null) return; }
   if (p.startsWith("/hardware")) { const r = await hardware.api(req, res, url, p, m, user); if (r !== null) return; }
   if (p.startsWith("/onboarding")) { if (!owner) return json(res, 403, { error: "Nur für Inhaber." }); const r = await onboarding.admin(req, res, p, m); if (r !== null) return; }
-  if (p.startsWith("/bruecke")) { if (!owner) return json(res, 403, { error: "Nur für Inhaber." }); const r = await bruecke.admin(req, res, p, m); if (r !== null) return; }
+  if (p.startsWith("/bruecke")) { if (!owner) return json(res, 403, { error: "Nur für Inhaber." }); const r0 = await brueckeSw.admin(req, res, p, m, user); if (r0 !== null) return; const r = await bruecke.admin(req, res, p, m); if (r !== null) return; }
   if (p === "/health" || p.startsWith("/betrieb")) { const r = await ops.api(req, res, url, p, m, user); if (r !== null) return; }
   if (p === "/kpi") { const r = await kpi.api(req, res, url, p, m, user); if (r !== null) return; }
   if (p.startsWith("/vertraege") || p.startsWith("/produkte")) { const r = await subs.admin(req, res, p, m, url, user); if (r !== null) return; }
@@ -642,6 +644,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/api/login/2fa" || url.pathname.startsWith("/api/password/")) { const r = await security.publicRoutes(req, res, url); if (r !== null) return; }
     if (url.pathname === "/login" || url.pathname === "/login/") return send(res, 302, "", { Location: "/portal/" + (url.search || "") });
     if (url.pathname.startsWith("/api/onboarding/")) { const r = await onboarding.publicRoute(req, res, url); if (r !== null) return; }
+    if (url.pathname.startsWith("/api/bruecke/software/")) return await brueckeSw.publicRoute(req, res, url);
     if (url.pathname.startsWith("/api/bruecke/")) return await bruecke.publicRoute(req, res, url);
     if (url.pathname.startsWith("/api/vorab/")) { const r = await vorab.publicRoute(req, res, url); if (r !== null) return; }
     if (url.pathname === "/api/stand" || url.pathname === "/api/stand/auftrag") return await stand.publicRoute(req, res, url);

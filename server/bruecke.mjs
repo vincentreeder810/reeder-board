@@ -16,10 +16,20 @@ const auftraege = [];
 
 export const brueckeEingerichtet = () => !!getSetting("bruecke", {}).keyHash;
 export const brueckeVerbunden = () => Date.now() - gesehen < FRIST;
-/** Auftrag für die Brücke vormerken: art = "app" | "terminal" | "ordner" */
-export function brueckeAuftrag(projekt, art, auftrag = "") {
-  auftraege.push({ id: ++nr, projekt, art, auftrag: String(auftrag || "").slice(0, 12000), at: Date.now() });
+/** Auftrag für die Brücke vormerken. Hardware: art = "app" | "terminal" | "ordner" | "anlegen";
+ *  Software/Website (bruecke-software.mjs): "sw-app" | "sw-ordner" | "sw-stand" (daten: { changes, announce }) */
+export function brueckeAuftrag(projekt, art, auftrag = "", daten = null) {
+  auftraege.push({ id: ++nr, projekt, art, auftrag: String(auftrag || "").slice(0, 12000), daten, at: Date.now() });
   return nr;
+}
+/** Schlüssel der Brücke prüfen (Kopf „Authorization: Bearer …“); bei Erfolg gilt sie als verbunden */
+export function brueckePruefen(req) {
+  const hash = getSetting("bruecke", {}).keyHash, m = String(req.headers.authorization || "").match(/^Bearer\s+([a-f0-9]{64})$/);
+  if (!hash || !m) return false;
+  const a = Buffer.from(sha(m[1]), "hex"), b = Buffer.from(hash, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
+  gesehen = Date.now();
+  return true;
 }
 
 export function createBruecke({ json, send, readJson }) {

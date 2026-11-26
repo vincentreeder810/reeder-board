@@ -10,10 +10,29 @@
     const box = $("#pStand"); if (!box) return;
     box.dataset.pid = p.id;
     try { S = await api(`/projects/${p.id}/stand`); } catch (err) { box.innerHTML = ""; return; }
+    BR = ME.owner ? await api("/bruecke").catch(() => null) : null;
     render(box);
   }
+  // Brücke zum Rechner des Inhabers: Ordner anlegen, Claude öffnen, neuen Stand hochladen – auch vom Online-Board aus
+  const BR_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V9a8 8 0 0 1 16 0v8"/><path d="M2 17h20"/><path d="M8 17v-5M12 17V9M16 17v-5"/></svg>`;
+  function brueckeKarte() {
+    if (!S?.canEdit || !BR) return "";
+    const st = BR.verbunden ? `<span style="color:#16774f">● Brücke verbunden</span>` : BR.eingerichtet ? `<span class="warn">● Brücke nicht verbunden</span> – auf deinem Rechner „Bruecke im Hintergrund starten“ ausführen` : `Noch nicht eingerichtet: <a href="#einstellungen/livegang">Einstellungen → Livegang → Brücke zu Claude</a>`;
+    return `<div class="stand stand--bruecke"><div class="stand__ic">${BR_ICON}</div>
+      <div style="min-width:0"><b>Mit Claude am Projekt arbeiten</b>
+        <p>Legt auf deinem Rechner den Projektordner an – mit den Angaben des Kunden und dem bisherigen Entwurf – und öffnet Claude darin. Fertige Arbeit lädst du von hier als neuen Stand hoch.</p>
+        <p class="stand__st">${st}</p></div>
+      <div class="acts"><button class="btn btn--grad btn--sm" data-br="claude" ${BR.verbunden ? "" : "disabled"}>Mit Claude arbeiten</button>
+        <button class="btn btn--ghost btn--sm" data-br="stand" ${BR.verbunden ? "" : "disabled"}>Neuen Stand hochladen</button>
+        <button class="btn btn--ghost btn--sm" data-br="ordner" ${BR.verbunden ? "" : "disabled"}>Ordner öffnen</button></div></div>`;
+  }
+  let BR = null;
   function render(box = $("#pStand")) {
     if (!box || !S) return;
+    renderAlt(box);
+    box.insertAdjacentHTML("afterbegin", brueckeKarte());
+  }
+  function renderAlt(box) {
     const linked = S.source_dir || S.key;
     if (!linked) {
       box.innerHTML = S.canEdit ? `<div class="stand stand--empty"><div class="stand__ic">${ICON}</div><div><b>Täglicher Stand</b><p>Projektordner verknüpfen oder Claude Code verbinden – dann genügt ein Klick oder ein Befehl, und der Kunde sieht den neuen Stand mit Änderungsliste.</p></div>
@@ -105,6 +124,28 @@
   let CLI = "server/stand-cli.mjs";
   fetch("/api/admin/stand-cli", { credentials: "same-origin" }).then(r => r.ok ? r.json() : null).then(d => { if (d?.path) CLI = d.path; }).catch(() => {});
 
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-br]"); if (!b || b.closest(".modal") || !S) return;
+    const pid = S.project_id, art = b.dataset.br;
+    try {
+      if (art === "stand") {
+        const d = modal(`<h2 class="span2">Neuen Stand hochladen</h2>
+          <p class="hint span2" style="margin:0">Die Brücke lädt den Inhalt des Ordners <code>website</code> aus dem Projektordner auf deinem Rechner hoch. Das Board vergleicht mit der letzten Version; hat sich nichts geändert, entsteht keine neue.</p>
+          <label class="span2">Was hat sich geändert? (sieht der Kunde – leer lassen für die automatische Liste)<textarea name="changes" rows="3" placeholder="z. B. Startseite überarbeitet, Leistungen ergänzt, Kontaktformular eingebaut"></textarea></label>
+          <label class="check span2"><input type="checkbox" name="announce" checked> Kunden im Chat und per Neuigkeiten-Mail benachrichtigen</label>
+          <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Hochladen</button></div>`);
+        d.f.addEventListener("submit", async ev => { ev.preventDefault();
+          try { await api(`/bruecke/projekt/${pid}/stand`, { method: "POST", body: { changes: d.f.changes.value, announce: d.f.announce.checked } });
+            d.close(); toast("Die Brücke lädt den Stand hoch. Die Seite aktualisiert sich gleich …"); setTimeout(reloadPage, 9000); }
+          catch (err) { d.fail(err.message); } });
+        return;
+      }
+      b.disabled = true;
+      await api(`/bruecke/projekt/${pid}/${art}`, { method: "POST", body: {} });
+      toast(art === "claude" ? "Die Claude-App öffnet sich auf deinem Rechner. Dort den Ordner bestätigen, dann abschicken." : "Der Ordner öffnet sich auf deinem Rechner.");
+      setTimeout(() => { b.disabled = false; }, 2500);
+    } catch (err) { toast(err.message); b.disabled = false; }
+  });
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-stand]"); if (!b || b.closest(".modal")) return;
     Promise.resolve(actions[b.dataset.stand]?.()).catch(err => toast(err.message));

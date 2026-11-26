@@ -1424,3 +1424,7 @@ label.auf__item{cursor:pointer}
 .vweg span{padding:0;background:none;color:var(--muted);font-size:12px;text-align:left;white-space:normal;border-radius:0}
 .vweg span b{color:var(--ink);font-weight:600}
 @media (max-width:760px){.vkarte{grid-template-columns:1fr}.vweg{grid-template-columns:1fr}}
+
+/* Brücke zu Claude auf der Projektseite */
+.stand--bruecke{margin-bottom:10px;background:linear-gradient(120deg,#f3efff,#fff 55%)}
+.stand--bruecke .acts{flex-wrap:wrap;justify-content:flex-end}
