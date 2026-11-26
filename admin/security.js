@@ -84,7 +84,16 @@
         <div class="loginlog">${logins.slice(0, 25).map(l => `<div><span>${l.ok ? "✓" : "✕"}</span><span>${esc(l.who || l.email || "unbekannt")}<small> · ${l.kind === "client" ? "Kunde" : l.kind === "team" ? "Team" : "?"} · ${esc(l.reason || "")} · ${esc(l.ip || "")}</small></span><small>${fmt(l.created_at.replace(" ", "T") + "Z", { dateStyle: "short", timeStyle: "short" })}</small></div>`).join("") || `<p class="hint">Noch keine Einträge.</p>`}</div></div>
       <div class="card"><h2>Komplettsicherung</h2><p class="hint" style="margin:-6px 0 12px">Datenbank und alle Dateien (Dokumente, Belege, Prototypen) in einer ZIP-Datei – zum Ablegen außerhalb des Servers oder für den Umzug.</p>
         <a class="btn btn--ghost btn--sm" href="/api/admin/betrieb/komplett" download>Komplettsicherung herunterladen</a></div>
+      <div class="card"><h2>Testbetrieb: von vorn beginnen</h2><p class="hint" style="margin:-6px 0 12px">Entfernt alle Kunden, Kontakte, Termine, Fragebögen, Projekte, Angebote, Rechnungen und Dateien. Ihr Zugang, die Einstellungen (Firma, E-Mail, Verfügbarkeit) und die Vertragstexte bleiben. Vorher entsteht automatisch eine Sicherung. Nur für die Testphase – im echten Betrieb müssen Rechnungen aufbewahrt werden.</p>
+        <button class="btn btn--danger btn--sm" id="allesLeeren">Alle Testdaten löschen …</button></div>
     </div></div>`;
+    $("#allesLeeren")?.addEventListener("click", async () => {
+      const t = await UI.prompt("Alle Testdaten löschen", { text: "Alle Kunden und alles, was dazugehört, wird entfernt. Das lässt sich nur über die Sicherung rückgängig machen.", label: "Zur Bestätigung bitte eintippen: ALLES LÖSCHEN", value: "", ok: "Endgültig löschen" });
+      if (t === null) return;
+      try { const r = await api("/betrieb/leeren", { method: "POST", body: { bestaetigung: t } });
+        toast(`Geleert. Sicherung: ${r.sicherung}.${r.neustart ? " Der Server startet kurz neu." : ""}`); setTimeout(() => location.reload(), r.neustart ? 9000 : 1200); }
+      catch (err) { toast(err.message); }
+    });
     $$("#goBody [data-go]").forEach(cb => cb.addEventListener("change", async () => { try { await api("/livegang", { method: "PUT", body: { [cb.dataset.go]: cb.checked } }); loadGoLive(); } catch (err) { toast(err.message); } }));
   }
   window.AUTH = { askCode, fromHash, loadTfa, loadGoLive };

@@ -113,6 +113,32 @@ export function createOps({ json, send, readJson, clean, automationStatus = () =
     if (!isOwner(user)) return json(res, 403, { error: "Nur für Inhaber" });
     if (p === "/betrieb" && m === "GET") return json(res, 200, { ...(await status()), monitors: db.prepare("SELECT m.*, c.company, pr.title project_title FROM monitors m LEFT JOIN clients c ON c.id = m.client_id LEFT JOIN projects pr ON pr.id = m.project_id ORDER BY m.name").all().map(monOut) });
     if (p === "/betrieb/backup" && m === "POST") return json(res, 200, await backup(true));
+    // Testbetrieb: alle Kunden und alles Zugehörige entfernen, um von vorn zu beginnen.
+    // Bleibt erhalten: Zugänge des Teams, Einstellungen (Firma, E-Mail, Verfügbarkeit …), Vertragsfassungen, Produkte, Protokolle.
+    // Vorher entsteht automatisch eine Sicherung der Datenbank. Nötig ist die ausgeschriebene Bestätigung.
+    if (p === "/betrieb/leeren" && m === "POST") {
+      const d = await readJson(req);
+      if (String(d.bestaetigung || "").trim().toUpperCase() !== "ALLES LÖSCHEN") return json(res, 400, { error: "Bitte zur Bestätigung genau „ALLES LÖSCHEN“ eintippen." });
+      const sicherung = await backup(true);
+      const LEEREN = ["acceptances", "agreement_reports", "agreements", "annotations", "appointment_requests", "appointments", "assistant_threads", "bookings", "build_jobs", "client_sessions", "clients", "contracts", "covered_sync",
+        "documents", "events", "expenses", "firm_locks", "invoice_items", "invoices", "job_log", "messages", "monitor_days", "monitors", "nudges", "number_sequences", "onboarding", "outages", "outbox", "password_resets", "payments",
+        "period_locks", "project_members", "projects", "proto_seen", "prototypes", "requests", "tasks", "test_cells", "test_findings", "test_runs", "test_shots", "ticket_messages", "tickets", "time_entries", "timers", "vorab"];
+      const da = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map(x => x.name)), zahl = {};
+      db.exec("PRAGMA foreign_keys = OFF");
+      // Die Löschsperren für festgeschriebene Belege legt das Board beim nächsten Start neu an (CREATE TRIGGER IF NOT EXISTS)
+      for (const t of ["trg_invoice_nodelete", "trg_items_immutable_d", "trg_accept_d", "trg_expense_nodelete"]) db.exec(`DROP TRIGGER IF EXISTS ${t}`);
+      db.exec("BEGIN");
+      try { for (const t of LEEREN) if (da.has(t)) { const n = db.prepare(`DELETE FROM "${t}"`).run().changes; if (n) zahl[t] = n; } db.exec("COMMIT"); }
+      catch (e) { db.exec("ROLLBACK"); db.exec("PRAGMA foreign_keys = ON"); return json(res, 500, { error: "Das Leeren ist fehlgeschlagen, es wurde nichts gelöscht: " + e.message }); }
+      db.exec("PRAGMA foreign_keys = ON");
+      // Dateien der gelöschten Einträge: Prototypen, Dokumente, Belege, Fragebogen-Uploads, Hardware-Konzepte, Prüfbilder
+      for (const o of ["prototypes", "documents", "finance", "onboarding", "hardware", "pruefung"]) await rm(path.join(DATA, o), { recursive: true, force: true }).catch(() => {});
+      db.prepare("INSERT INTO audit_log(actor, action, entity, entity_id, summary) VALUES(?, 'testdaten geleert', 'system', NULL, ?)").run(user.name, `Sicherung ${sicherung.name}`);
+      console.log(`Testdaten geleert durch ${user.name} · Sicherung ${sicherung.name}`);
+      // Auf dem Server neu starten, damit die Löschsperren sofort wieder gelten
+      if (process.env.RENDER) setTimeout(() => process.exit(0), 1200);
+      return json(res, 200, { ok: true, sicherung: sicherung.name, geloescht: zahl, neustart: !!process.env.RENDER });
+    }
     if (p === "/betrieb/komplett" && m === "GET") {   // Datenbank + alle Dateien als ZIP (für die Sicherung außerhalb des Servers)
       const tmp = path.join(BACKUPS, `export-${Date.now()}.db`); await mkdir(BACKUPS, { recursive: true });
       db.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
