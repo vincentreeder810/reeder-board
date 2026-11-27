@@ -320,6 +320,19 @@
             <div class="card"><h2>Postausgang</h2><p class="hint">Alle E-Mails, die das System verschickt hat oder verschicken wollte.</p><div id="outbox" class="list outbox"></div></div>
           </div>
         </div>
+        <div class="card mv" id="mailVorschau">
+          <h2>So sehen unsere E-Mails aus</h2>
+          <p class="hint">Jede automatische E-Mail mit Beispieldaten – so, wie sie beim Empfänger ankommt.</p>
+          <div class="mv__grid">
+            <nav class="mv__liste" id="mvListe" aria-label="E-Mail-Vorlagen"><div class="empty">Wird geladen …</div></nav>
+            <div class="mv__ansicht">
+              <div class="mv__meta" id="mvMeta"></div>
+              <div class="mv__leiste"><div class="seg" id="mvFirma"><button type="button" data-f="software" class="on">Reeder Software</button><button type="button" data-f="hardware">Reeder Hardware</button></div><div class="seg" id="mvGeraet"><button type="button" data-g="desktop" class="on">Desktop</button><button type="button" data-g="handy">Handy</button></div></div>
+              <p class="mv__hinweis" id="mvHinweis" hidden></p>
+              <div class="mv__buehne"><iframe id="mvFrame" class="mv__frame" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" title="Vorschau der E-Mail"></iframe></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div data-set="kalender" hidden>
@@ -371,6 +384,7 @@
 <script src="/portal/chat.js"></script>
 <script src="/portal/viewer.js"></script>
 <script src="/admin/admin.js"></script>
+<script src="/admin/mails.js"></script>
 <script src="/admin/kunden.js"></script>
 <script src="/admin/board.js"></script>
 <script src="/admin/kalender.js"></script>

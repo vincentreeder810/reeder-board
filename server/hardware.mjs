@@ -11,6 +11,8 @@ import fs from "node:fs";
 import { db, getSetting, DEFAULT_COMPANY } from "./db.mjs";
 import { randomBytes } from "node:crypto";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
+import { firmaVonProjekt } from "./firmen.mjs";
 import { renderKonzeptPdf } from "./konzept-pdf.mjs";
 import { isOwner, memberProjectIds, canProject, clientIdsFor } from "./access.mjs";
 import { spawn } from "node:child_process";
@@ -409,10 +411,9 @@ export function createHardware({ json, send, readJson, clean, logEvent = () => {
         const titel = `Entwicklungskonzept ${x.title} (V${version})`.slice(0, 160), datei = `Entwicklungskonzept-${safeName(x.title)}-V${version}.pdf`;
         db.prepare("INSERT INTO documents(client_id, project_id, kind, title, doc_date, file_token, file_name, mime, bytes) VALUES(?,?,?,?,date('now'),?,?,?,?)")
           .run(c.id, id, "Konzept", titel, token, datei, "application/pdf", buf.length);
-        const firma = getSetting("company", DEFAULT_COMPANY);
-        const portal = c.stage === "mandant" && SITE_URL ? `\n\nSie finden das Dokument auch in Ihrem Kundenportal: ${SITE_URL}/portal/` : "";
-        const text = `Guten Tag ${c.name},\n\nim Anhang finden Sie das Entwicklungskonzept zu „${x.title}“: die Anforderungen, die gewählte Lösung, den Aufbau mit Ansichten aus dem 3D-Modell, die geschätzten Materialkosten sowie die Prüfpunkte und offenen Punkte.\n\nSchauen Sie es in Ruhe durch. Ihre Fragen und Anmerkungen besprechen wir gern in einem Termin.${portal}\n\nFreundliche Grüße\n${firma.name || "Reeder Hardware"}`;
-        const mailed = await sendMail({ to: c.email, subject: `Entwicklungskonzept ${x.title}`, text, attachments: [{ filename: datei, content: buf, contentType: "application/pdf" }] });
+        const mailed = await sendMail({ to: c.email, ...vorlage("konzept_versand", { name: c.name, titel: x.title, version,
+            portalLink: c.stage === "mandant" && SITE_URL ? `${SITE_URL}/portal/` : "", firma: firmaVonProjekt(id) }),
+          attachments: [{ filename: datei, content: buf, contentType: "application/pdf" }] });
         try { logEvent(c.id, id, "dokument", "Entwicklungskonzept übersendet", titel, false); } catch {}
         const v = versandLesen(id); v[name] = { am: new Date().toISOString(), an: c.email, mail: !!mailed }; fs.writeFileSync(versandDatei(id), JSON.stringify(v, null, 2));
         return json(res, 200, { mailed: !!mailed, liste: konzeptListe(id) });

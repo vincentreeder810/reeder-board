@@ -5,6 +5,7 @@ import os from "node:os";
 import { db } from "./db.mjs";
 import { isOwner } from "./access.mjs";
 import { mailStatus, sendMail } from "./mail.mjs";
+import { vorlage, SEITE } from "./mail-vorlagen.mjs";
 import { createZip } from "./zip.mjs";
 
 const DATA = path.resolve(process.env.DATA_DIR || "data"), BACKUPS = path.join(DATA, "backups");
@@ -72,7 +73,8 @@ export function createOps({ json, send, readJson, clean, automationStatus = () =
           title: `Nicht erreichbar · ${cur.name}`, text: `${cur.url} – ${cur.last_error || "Fehler"} · seit ${new Date(cur.down_since.replace(" ", "T") + "Z").toLocaleString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} Uhr${cur.company ? " · " + cur.company : ""}` });
       }
       if (r && r.was !== 0 && !r.ok || r && r.was === 0 && r.ok) for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all())
-        await sendMail({ to: u.email, subject: r.ok ? `✅ Wieder erreichbar: ${cur.name}` : `🔴 Nicht erreichbar: ${cur.name}`, text: `${cur.url}\n${r.ok ? `Antwortet wieder (${r.ms} ms).` : `Fehler: ${r.err}`}\n\nDas Board prüft alle ${cur.interval_min} Minuten.` }).catch(() => {});
+        await sendMail({ to: u.email, ...vorlage(r.ok ? "status_wieder" : "status_ausfall", { name: cur.name, url: cur.url, ms: r.ms, fehler: r.err || "", unternehmen: cur.company || "",
+          intervall: cur.interval_min, link: `${SEITE}/admin/#einstellungen/betrieb` }) }).catch(() => {});
     }
     settle("ausfall", keys);
   }

@@ -8,6 +8,7 @@ import { db, getSetting, setSetting, DEFAULT_AVAILABILITY, DEFAULT_MAIL, DEFAULT
 import { guard, isOwner, ROLES, memberProjectIds, clientIdsFor } from "./access.mjs";
 import { freeSlots, isSlotFree, formatDe, zonedParts, ACTIVE_STATES } from "./slots.mjs";
 import { sendMail, mailStatus, icsFor, icsCalendar, reloadSmtp, testSmtp } from "./mail.mjs";
+import { vorlage, firmaVonBuchung, firmaVonTermin } from "./mail-vorlagen.mjs";
 import { createPortal } from "./portal.mjs";
 import { createFinance } from "./finance.mjs";
 import { createAutomation } from "./automation.mjs";
@@ -33,6 +34,7 @@ import { projekteFuerBuchung, themenDerBuchung, anfragenNachziehen } from "./anf
 import { createBruecke } from "./bruecke.mjs";
 import { createBrueckeSoftware } from "./bruecke-software.mjs";
 import { createWorkspace } from "./workspace.mjs";
+import { createMailVorschau } from "./mail-vorschau.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
 
@@ -116,6 +118,7 @@ const vereinbarungen = createVereinbarungen({ json, readJson, clean });
 const bruecke = createBruecke({ json, send, readJson });
 const brueckeSw = createBrueckeSoftware({ json, send, readJson, clean, publish: (...a) => stand.publish(...a), stand: { discardCandidate: (...a) => stand.discardCandidate(...a), releaseCandidate: (...a) => stand.releaseCandidate(...a) } });
 const workspace = createWorkspace({ json, readJson, clean, SITE_URL });
+const mailVorschau = createMailVorschau({ json, send });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });
 const onboarding = createOnboarding({ json, readJson, clean, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient: (...a) => portal.currentClient(...a), clientLogin: (...a) => portal.clientLogin(...a) });
 portal.extend(support.portal);
@@ -146,22 +149,19 @@ const sig = () => `\n\nViele Grüße\nIhr Team der Reeder Software GmbH\n${SITE_
 const typePrice = key => +(getSetting("availability", DEFAULT_AVAILABILITY).types[key]?.price || 0);
 // Info an Reeder: neuer Termin direkt über die Website gebucht (ist schon bestätigt)
 async function mailNewBookingToTeam(b) {
-  const when = formatDe(b.start), cfg = getSetting("mail", DEFAULT_MAIL), price = typePrice(b.type);
-  await sendMail({ to: cfg.notifyAddress, subject: `Neuer Termin gebucht: ${typeLabel(b.type)} mit ${b.name} – ${when}`,
-    text: `${typeLabel(b.type)}${b.product ? " – " + b.product : ""}\n${when} (${b.minutes} Min)${price ? `\nKostenpflichtig: ${price} € zzgl. MwSt. – Rechnung nach dem Termin` : ""}\n\nName: ${b.name}\nE-Mail: ${b.email}\nTelefon: ${b.phone || "–"}\nUnternehmen: ${b.company || "–"}\nGespräch: ${b.channel || "–"}${b.video_url ? `\nVideo: ${b.video_url}` : ""}\n\n${b.message || ""}\n\nDer Termin ist bereits bestätigt und steht im Kalender: ${SITE_URL}/admin/#termine` });
+  const cfg = getSetting("mail", DEFAULT_MAIL);
+  await sendMail({ to: cfg.notifyAddress, ...vorlage("termin_neu_team", { name: b.name, unternehmen: b.company || "", email: b.email, telefon: b.phone || "", art: typeLabel(b.type), produkt: b.product || "",
+    start: b.start, minuten: b.minutes, preis: typePrice(b.type), kanal: b.channel || "", videoUrl: b.video_url || "", nachricht: b.message || "", link: `${SITE_URL}/admin/#termine`, firma: firmaVonBuchung(b) }) });
 }
 async function mailForStatus(b, status) {
-  const when = formatDe(b.start);
   if (status === "bestaetigt") {
     const ics = icsCalendar([icsFor({ ...b, status, typeLabel: typeLabel(b.type) }, { title: `${typeLabel(b.type)} – Reeder Software` })]);
-    const price = typePrice(b.type);
-    return sendMail({ to: b.email, subject: `Bestätigt: ${typeLabel(b.type)} am ${when}`,
-      text: `Hallo ${b.name},\n\nIhr Termin ist bestätigt:\n\n${typeLabel(b.type)}${b.product ? " – " + b.product : ""}\n${when} (${b.minutes} Minuten)\n${b.video_url && (b.channel || "Video").includes("Video") ? `\nZum Videogespräch (einfach zur Uhrzeit anklicken – ohne Anmeldung, ohne Installation):\n${b.video_url}\n` : `Gesprächsart: ${b.channel}\n`}${price ? `\nKosten: ${price} € zzgl. MwSt. Die Rechnung bekommen Sie nach dem Termin.\n` : ""}${b.type === "erstgespraech" ? `\nIn einer zweiten E-Mail schicken wir Ihnen gleich einen kurzen Fragebogen. Daraus bereiten wir schon vor dem Termin einen ersten Entwurf für Sie vor.\n` : ""}\nDen Termin für Ihren Kalender finden Sie im Anhang. Falls Sie den Termin verschieben müssen, antworten Sie einfach auf diese E-Mail.${sig()}`,
+    return sendMail({ to: b.email, ...vorlage("termin_bestaetigt", { name: b.name, art: typeLabel(b.type), produkt: b.product || "", start: b.start, minuten: b.minutes, kanal: b.channel || "",
+        videoUrl: b.video_url || "", preis: typePrice(b.type), erstgespraech: b.type === "erstgespraech", firma: firmaVonBuchung(b) }),
       attachments: [{ filename: "termin-reeder-software.ics", content: ics, contentType: "text/calendar" }] });
   }
   if (status === "abgesagt") {
-    return sendMail({ to: b.email, subject: `Ihr Termin am ${when}`,
-      text: `Hallo ${b.name},\n\nleider können wir den Termin am ${when} nicht wahrnehmen. Bitte wählen Sie einen neuen Termin unter ${SITE_URL}/termin.html – oder antworten Sie einfach auf diese E-Mail.${sig()}` });
+    return sendMail({ to: b.email, ...vorlage("termin_abgesagt", { name: b.name, start: b.start, terminLink: `${SITE_URL}/termin.html`, firma: firmaVonBuchung(b) }) });
   }
 }
 
@@ -233,8 +233,9 @@ async function publicApi(req, res, url) {
       .run(q.kinds, q.model, q.budget, q.timing, q.description, q.name, q.email, q.phone, q.company);
     const cfg = getSetting("mail", DEFAULT_MAIL);
     Promise.all([
-      sendMail({ to: q.email, subject: "Ihre Projektanfrage bei Reeder Software", text: `Hallo ${q.name},\n\nvielen Dank für Ihre Anfrage. Wir melden uns innerhalb eines Werktags mit ersten Gedanken und einem Terminvorschlag.\n\nIhre Angaben:\n${q.kinds || "–"}\nModell: ${q.model || "–"}\n\n${q.description}${sig()}` }),
-      sendMail({ to: cfg.notifyAddress, subject: `Neue Projektanfrage: ${q.name}${q.company ? " (" + q.company + ")" : ""}`, text: `Art: ${q.kinds || "–"}\nModell: ${q.model || "–"}\nBudget: ${q.budget || "–"}\nStart: ${q.timing || "–"}\n\nName: ${q.name}\nE-Mail: ${q.email}\nTelefon: ${q.phone || "–"}\nUnternehmen: ${q.company || "–"}\n\n${q.description}\n\n${SITE_URL}/admin` }),
+      sendMail({ to: q.email, ...vorlage("projektanfrage_eingang", { name: q.name, arten: q.kinds, modell: q.model, beschreibung: q.description }) }),
+      sendMail({ to: cfg.notifyAddress, ...vorlage("projektanfrage_team", { name: q.name, unternehmen: q.company, email: q.email, telefon: q.phone, arten: q.kinds, modell: q.model, budget: q.budget,
+        start: q.timing, beschreibung: q.description, link: `${SITE_URL}/admin/#anfragen` }) }),
     ]).catch(e => console.warn("Mail:", e.message));
     db.prepare("UPDATE requests SET client_id = ? WHERE id = ?").run(upsertLead({ email: q.email, name: q.name, company: q.company, phone: q.phone, source: "Projektanfrage" }), r.lastInsertRowid);
     return json(res, 201, { ok: true, id: r.lastInsertRowid });
@@ -386,8 +387,7 @@ async function teamApi(req, res, p, m, user) {
   }
   if (p === "/team" && m === "GET") return json(res, 200, db.prepare("SELECT * FROM users ORDER BY active DESC, role, name").all().map(out));
   const invite = id => { const t = randomBytes(24).toString("hex"); db.prepare("UPDATE users SET invite_token = ?, invite_expires = ? WHERE id = ?").run(t, Date.now() + 14 * 86400000, id); return `${SITE_URL}/admin/#einladung=${t}`; };
-  const inviteMail = (u, link) => sendMail({ to: u.email, subject: "Einladung ins Team-Board von Reeder Software",
-    text: `Hallo ${u.name},\n\ndu wurdest als ${ROLES[u.role]} ins Board der Reeder Software GmbH eingeladen. Über diesen Link legst du dein Passwort fest (14 Tage gültig):\n${link}\n\nViele Grüße\n${user.name}` });
+  const inviteMail = (u, link) => sendMail({ to: u.email, ...vorlage("team_einladung", { name: u.name, rolle: ROLES[u.role] || u.role, link, von: user.name }) });
   if (p === "/team" && m === "POST") {
     const d = await readJson(req), email = clean(d.email, 160).toLowerCase(), name = clean(d.name, 120), role = ROLES[d.role] ? d.role : "entwickler";
     if (!name || !isEmail(email)) return json(res, 400, { error: "Bitte Name und eine gültige E-Mail angeben." });
@@ -455,6 +455,8 @@ async function adminApi(req, res, url) {
   if (p.startsWith("/automation")) { const r = await automation.api(req, res, p, m, user); if (r !== null) return; }
   if (p.startsWith("/contracts")) { const r = await contracts.admin(req, res, p, m, user); if (r !== null) return; }
   if (/^\/(arbeitsplatz|tasks|timer|time|zeiten)(\/|$)|^\/projects\/\d+\/(tasks|time)$|^\/annotations\/\d+\/task$|^\/appointments\/\d+\/tasks$/.test(p)) { const r = await work.api(req, res, url, p, m, user); if (r !== null) return; }
+  // Vorschau aller Mail-Vorlagen und der HTML-Fassung versendeter Mails (Einstellungen → E-Mail, Postausgang)
+  if (p.startsWith("/mail-vorlagen") || p.startsWith("/postausgang/")) { const r = await mailVorschau.admin(req, res, p, m, user); if (r !== null) return; }
   if (p.startsWith("/covered")) { if (!owner) return json(res, 403, { error: "Nur für Inhaber." }); const r = await covered.api(req, res, p, m); if (r !== null) return; }
   if (p === "/vorab" || /^\/vorab\/(\d+\/neu|kunde\/\d+)$/.test(p)) { if (!owner) return json(res, 403, { error: "Nur für Inhaber." }); const r = await vorab.admin(req, res, p, m); if (r !== null) return; }
   if (/^\/projects\/\d+\/(pruefung|pruefbericht)$|^\/pruefung\//.test(p)) { const r = await pruefung.admin(req, res, p, m, user, url); if (r !== null) return; }
@@ -500,8 +502,7 @@ async function adminApi(req, res, url) {
       if (a.booking_id) db.prepare("UPDATE bookings SET status = 'abgesagt', updated_at = datetime('now') WHERE id = ?").run(a.booking_id);
       db.prepare("DELETE FROM appointments WHERE id = ?").run(a.id);
       const grund = clean(d.grund, 600);
-      const mailed = mitMail ? await sendMail({ to: a.email, subject: `Ihr Termin am ${alt}`,
-        text: `Hallo ${anrede},\n\nleider können wir den Termin „${a.title}“ am ${alt} nicht wahrnehmen.${grund ? "\n\n" + grund : ""}\n\nBitte wählen Sie einen neuen Termin unter ${SITE_URL}/termin.html – oder antworten Sie einfach auf diese E-Mail.${sig()}` }) : null;
+      const mailed = mitMail ? await sendMail({ to: a.email, ...vorlage("termin_abgesagt", { name: anrede, titel: a.title, start: a.start, grund, terminLink: `${SITE_URL}/termin.html`, firma: firmaVonTermin(a) }) }) : null;
       return json(res, 200, { ok: true, mailed, ohneAdresse: !a.email });
     }
     const zeit = new Date(String(d.start || "")), neu = Number.isFinite(zeit.getTime()) ? zeit.toISOString() : null;
@@ -509,8 +510,8 @@ async function adminApi(req, res, url) {
     db.prepare("UPDATE appointments SET start = ? WHERE id = ?").run(neu, a.id);
     if (a.booking_id) db.prepare("UPDATE bookings SET start = ?, updated_at = datetime('now') WHERE id = ?").run(neu, a.booking_id);
     const wann = formatDe(neu), ics = icsCalendar([icsFor({ id: a.id, start: neu, minutes: a.minutes || 30, name: anrede, email: a.email || "", status: "bestaetigt", video_url: a.video_url }, { title: `${a.title} – Reeder` })]);
-    const mailed = mitMail ? await sendMail({ to: a.email, subject: `Neuer Termin: ${wann}`,
-      text: `Hallo ${anrede},\n\nwir müssen den Termin „${a.title}“ verlegen.\n\nBisher: ${alt}\nNeu: ${wann}${a.minutes ? ` (${a.minutes} Minuten)` : ""}\n${a.video_url ? `\nDer Link zum Videogespräch bleibt gleich:\n${a.video_url}\n` : ""}\nDen neuen Termin für Ihren Kalender finden Sie im Anhang. Passt er Ihnen nicht, wählen Sie einfach einen anderen unter ${SITE_URL}/termin.html – oder antworten Sie auf diese E-Mail.${sig()}`,
+    const mailed = mitMail ? await sendMail({ to: a.email, ...vorlage("termin_verschoben", { name: anrede, titel: a.title, alt: a.start, neu, minuten: a.minutes || 0, videoUrl: a.video_url || "",
+        terminLink: `${SITE_URL}/termin.html`, firma: firmaVonTermin(a) }),
       attachments: [{ filename: "termin-reeder.ics", content: ics, contentType: "text/calendar" }] }) : null;
     return json(res, 200, { ok: true, mailed, start: neu, ohneAdresse: !a.email });
   }
@@ -610,7 +611,7 @@ async function adminApi(req, res, url) {
     db.prepare("DELETE FROM sessions WHERE user_id = ? AND token != ?").run(u.id, cookies(req)[ADMIN_CK]);
     return json(res, 200, { ok: true });
   }
-  if (p === "/outbox" && m === "GET") return json(res, 200, db.prepare("SELECT * FROM outbox ORDER BY id DESC LIMIT 100").all());
+  if (p === "/outbox" && m === "GET") return json(res, 200, db.prepare("SELECT id, to_addr, subject, body, status, error, created_at, art FROM outbox ORDER BY id DESC LIMIT 100").all());
   if (/^\/(clients|projects|appointments|documents|prototypes|annotations|requests|slots)(\/|$)/.test(p)) {
     if ((await portal.requestsAdmin(req, res, url, p, user)) !== null) return;
     if ((await portal.projectsAdmin(req, res, url, p, user)) !== null) return;

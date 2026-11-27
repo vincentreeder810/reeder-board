@@ -7,6 +7,7 @@ import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
 import { vereinbarungLesen, vereinbarungSpeichern, vereinbarungAusAngebot } from "./vereinbarungen.mjs";
 import { firmaDaten, firmaVonProjekt, firmaSql, hardwareAktiv, DEFAULT_HARDWARE } from "./firmen.mjs";
 import { callModel, assistantStatus, DEFAULT_ASSISTANT } from "./assistant.mjs";
@@ -131,10 +132,14 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
     return r.lastInsertRowid;
   }
   async function mailInvoice(inv, buf, kind, extraText = "") {
-    const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(inv.client_id), s = firmaDaten(inv.locked ? inv.firma : firmaVonProjekt(inv.project_id));
-    const what = kind === "angebot" ? "unser Angebot" : kind === "storno" ? "die Stornorechnung" : "unsere Rechnung";
-    const text = `${c.name ? `Guten Tag ${c.name},` : "Guten Tag,"}\n\n${extraText || `anbei erhalten Sie ${what} ${inv.number}${inv.title ? ` („${inv.title}“)` : ""} über ${euro(Math.abs(inv.gross))}.`}${kind === "rechnung" && !extraText ? `\nBitte überweisen Sie den Betrag bis zum ${new Date(inv.due_date + "T00:00:00Z").toLocaleDateString("de-DE", { timeZone: "UTC" })}.` : ""}\n\n${kind === "angebot" ? (c.pw_hash || !inviteLink ? `Ansehen, unterschreiben und verbindlich annehmen können Sie das Angebot in Ihrem Kundenportal: ${SITE_URL}/portal/#angebot/${inv.id}` : `Ansehen, unterschreiben und verbindlich annehmen können Sie das Angebot online. Legen Sie dafür über diesen Link in einer Minute Ihren Zugang an (14 Tage gültig): ${inviteLink(c.id)}`) : `Sie finden das Dokument jederzeit auch in Ihrem Kundenportal: ${SITE_URL}/portal/#dokumente`}\n\nViele Grüße\n${s.name}`;
-    return sendMail({ to: c.email, subject: `${kind === "angebot" ? "Angebot" : kind === "storno" ? "Stornorechnung" : "Rechnung"} ${inv.number} – ${s.name}`, text,
+    const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(inv.client_id), firma = firmaDaten(inv.locked ? inv.firma : firmaVonProjekt(inv.project_id)).firma;
+    const basis = { name: c.name, nummer: inv.number, titel: inv.title || "", freitext: extraText || "", firma };
+    const mail = kind === "angebot"
+      ? vorlage("angebot_versand", { ...basis, betrag: Math.abs(inv.gross), ...(c.pw_hash || !inviteLink ? { portalLink: `${SITE_URL}/portal/#angebot/${inv.id}` } : { zugangLink: inviteLink(c.id) }) })
+      : kind === "storno"
+        ? vorlage("storno_versand", { ...basis, betrag: inv.gross, storniert: inv.cancels_number || "", portalLink: `${SITE_URL}/portal/#dokumente` })
+        : vorlage("rechnung_versand", { ...basis, betrag: Math.abs(inv.gross), faellig: inv.due_date || "", portalLink: `${SITE_URL}/portal/#dokumente` });
+    return sendMail({ to: c.email, ...mail,
       attachments: [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] });
   }
   const pdfOf = async inv => inv.pdf_token ? readFile(path.join(FILE_DIR, inv.pdf_token + ".pdf")) : renderInvoicePdf(draftView(inv));
@@ -425,12 +430,12 @@ Regeln:
       if (act === "remind" && m === "POST") {
         if (inv.kind !== "rechnung" || inv.status !== "offen") return json(res, 409, { error: "Nur offene Rechnungen können gemahnt werden." });
         const level = Math.min(inv.dunning_level, DUNNING.length - 1), label = DUNNING[level].label, buf = await pdfOf(inv);
-        const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(inv.client_id), s = company();
-        const due = addDays(today(), 7).split("-").reverse().join(".");
-        const text = level === 0
-          ? `sicher ist es Ihnen im Alltag nur durchgerutscht: Unsere Rechnung ${inv.number} vom ${inv.issue_date.split("-").reverse().join(".")} über ${euro(inv.gross)} war am ${inv.due_date.split("-").reverse().join(".")} fällig. Wir bitten Sie, den Betrag bis zum ${due} zu überweisen. Sollte sich Ihre Zahlung mit dieser Nachricht überschnitten haben, betrachten Sie sie bitte als gegenstandslos.`
-          : `trotz unserer Zahlungserinnerung ist der Betrag aus Rechnung ${inv.number} über ${euro(inv.gross)} bisher nicht bei uns eingegangen. Bitte überweisen Sie den offenen Betrag bis spätestens ${due}${s.iban ? ` auf das Konto IBAN ${s.iban}` : ""}. Bei Fragen melden Sie sich gern direkt bei uns.`;
-        const mailed = await sendMail({ to: c.email, subject: `${label}: Rechnung ${inv.number}`, text: `Guten Tag ${c.name},\n\n${text}\n\nViele Grüße\n${s.name}`, attachments: [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] });
+        const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(inv.client_id), s = firmaDaten(inv.firma);   // Absender und Konto der Firma, die die Rechnung gestellt hat
+        const frist = addDays(today(), 7);
+        const mail = level === 0
+          ? vorlage("zahlungserinnerung", { name: c.name, nummer: inv.number, datum: inv.issue_date, betrag: inv.gross, faellig: inv.due_date, frist, firma: s.firma })
+          : vorlage("mahnung", { name: c.name, stufe: label, nummer: inv.number, betrag: inv.gross, frist, iban: s.iban || "", firma: s.firma });
+        const mailed = await sendMail({ to: c.email, ...mail, attachments: [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] });
         db.prepare("UPDATE invoices SET dunning_level = dunning_level + 1, last_dunning_at = datetime('now') WHERE id = ?").run(id);
         audit(user.name, label, "rechnung", id, inv.number);
         return json(res, 200, { mailed, label });

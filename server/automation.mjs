@@ -2,6 +2,7 @@
 // Alles wird in job_log festgehalten (Schlüssel = nichts doppelt). Vorschläge erledigen sich selbst, sobald der Anlass weg ist.
 import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage, firmaVonTermin } from "./mail-vorlagen.mjs";
 import { formatDe, zonedParts } from "./slots.mjs";
 import { isOwner, memberProjectIds } from "./access.mjs";
 import { draftForPayment } from "./contracts.mjs";
@@ -62,8 +63,6 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
     const open = db.prepare("SELECT id, key FROM nudges WHERE kind = ? AND status = 'offen'").all(kind), keep = new Set(keys);
     for (const n of open) if (!keep.has(n.key)) db.prepare("UPDATE nudges SET status = 'erledigt', done_at = datetime('now'), done_by = ? WHERE id = ?").run(by, n.id);
   };
-  const greet = c => `Guten Tag ${c.name},`;
-  const sign = () => `Viele Grüße\n${company().name}`;
 
   /* ---------- Regeln ---------- */
   async function reminders(S, out) {
@@ -74,15 +73,14 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
     for (const a of list) {
       if (!a.active || !a.email) continue;
       const left = Date.parse(a.start) - now, lead = Date.parse(a.start) - ts(a.created_at);
-      const portal = a.stage === "mandant" ? ` oder schreiben Sie uns im Kundenportal: ${SITE_URL}/portal/` : "";
-      const video = a.video_url ? `\nZum Videogespräch (ohne Anmeldung, einfach im Browser): ${a.video_url}\n` : "";
-      const send = async (key, subject, when) => {
+      const daten = { name: a.name, titel: a.title, start: a.start, videoUrl: a.video_url || "", portalLink: a.stage === "mandant" ? `${SITE_URL}/portal/` : "", firma: firmaVonTermin(a) };
+      const send = async (key, art, when) => {
         if (!log(key, "erinnerung", a.client_id, `Terminerinnerung (${when}) an ${a.email}: ${a.title}`)) return;
-        await sendMail({ to: a.email, subject, text: `${greet(a)}\n\nkurz zur Erinnerung an unseren Termin ${when}:\n\n${a.title}\n${formatDe(a.start)}\n${video}\nFalls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail${portal}.\n\n${sign()}` });
+        await sendMail({ to: a.email, ...vorlage(art, daten) });
         out.mails++;
       };
-      if (S.reminder24 && left > 3 * H && left <= D + 5 * 60e3 && lead > 26 * H) await send(`remind24:${a.id}`, `Erinnerung: ${a.title} am ${dayShort(a.start)} um ${hm(a.start)} Uhr`, "morgen");
-      if (S.reminder1 && left > 5 * 60e3 && left <= 65 * 60e3 && lead > 3 * H) await send(`remind1:${a.id}`, `Gleich geht's los: ${a.title} um ${hm(a.start)} Uhr`, "in einer Stunde");
+      if (S.reminder24 && left > 3 * H && left <= D + 5 * 60e3 && lead > 26 * H) await send(`remind24:${a.id}`, "termin_erinnerung_tag", "morgen");
+      if (S.reminder1 && left > 5 * 60e3 && left <= 65 * 60e3 && lead > 3 * H) await send(`remind1:${a.id}`, "termin_erinnerung_stunde", "in einer Stunde");
     }
   }
   async function leads(S, out) {
@@ -94,8 +92,7 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
       const age = now - ts(r.created_at);
       if (S.leadFollowup && age >= S.leadHours * H && age < 30 * D && !logged(`lead:${r.id}`)) {
         log(`lead:${r.id}`, "nachfassen", r.client_id, `Nachfass-Mail zur Projektanfrage an ${r.ce}`);
-        await sendMail({ to: r.ce, subject: `Ihre Anfrage bei ${company().name}: Wann passt Ihnen ein kurzes Gespräch?`,
-          text: `${greet({ name: r.cn })}\n\nvielen Dank noch einmal für Ihre Anfrage${r.kinds ? ` (${r.kinds})` : ""}. Am schnellsten kommen wir in einem kostenlosen Erstgespräch weiter – 30 Minuten per Video, ganz unverbindlich.\n\nHier können Sie sich direkt einen freien Termin aussuchen:\n${SITE_URL}/termin.html\n\nLieber telefonieren oder Fragen vorab? Antworten Sie einfach auf diese E-Mail.\n\n${sign()}` });
+        await sendMail({ to: r.ce, ...vorlage("anfrage_nachfassen", { name: r.cn, arten: r.kinds || "", terminLink: `${SITE_URL}/termin.html` }) });
         out.mails++;
       }
       if (age >= S.leadNudgeDays * D) {
@@ -271,7 +268,6 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
     const top = db.prepare("SELECT title, text FROM nudges WHERE status = 'offen' AND (snooze_until IS NULL OR snooze_until <= datetime('now')) ORDER BY CASE kind WHEN 'mahnung' THEN 0 WHEN 'buchung' THEN 1 WHEN 'angebot' THEN 2 WHEN 'lead' THEN 3 WHEN 'summary' THEN 4 ELSE 5 END, created_at LIMIT 5").all();
     const kw = (() => { const d = new Date(); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); return Math.ceil(((t - new Date(Date.UTC(t.getUTCFullYear(), 0, 1))) / D + 1) / 7); })();
     const L = [];
-    L.push(`Wochenbericht ${company().name} · KW ${kw}`, "");
     L.push("VERTRIEB (letzte 7 Tage)", `· Neue Anfragen: ${bookings + reqs} (Website-Termine ${bookings}, Projektanfragen ${reqs})`, `· Termine geführt: ${meetings}`,
       `· Neue Kunden: ${newClients.length}${newClients.length ? " – " + newClients.map(c => c.company).join(", ") : ""}`, `· Offene Angebote: ${openQuotes.n} über ${euro0(openQuotes.s)}`, "");
     L.push("GELD", `· Eingegangen in den letzten 7 Tagen: ${euro0(paidWeek)} · im laufenden Monat: ${euro0(paidMonth)}`,
@@ -286,9 +282,8 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
     const hfmt = m => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")} Std.`;
     L.push("TEAM", ...team.map(u => { const h = hrs.find(x => x.name === u.name); return `· ${u.name}: ${u.n} aktive Projekte · ${euro0(u.v)} Auftragsvolumen${h ? ` · letzte Woche ${hfmt(h.m)} erfasst, ${h.done} Aufgaben erledigt` : ""}`; }), "");
     L.push(`DIESE WOCHE: ${week.length} Termin${week.length === 1 ? "" : "e"}`, ...week.slice(0, 8).map(a => `· ${dayShort(a.start)}, ${hm(a.start)} Uhr – ${a.title} (${a.company})`), ...(week.length > 8 ? [`· … und ${week.length - 8} weitere`] : []), "");
-    L.push(`DIE ${top.length || ""} DINGE, DIE SIE DIESE WOCHE BRAUCHEN`.replace("DIE  DINGE", "OFFENE PUNKTE"), ...(top.length ? top.map((t, i) => `${i + 1}. ${t.title}\n   ${t.text}`) : ["Nichts offen – sehr gut."]), "");
-    L.push(`Alles im Board: ${SITE_URL}/admin/#cockpit`);
-    return { subject: `Wochenbericht KW ${kw} · ${active} aktive Projekte · ${euro0(openInv.s)} offen`, text: L.join("\n") };
+    L.push(top.length ? `DIE ${top.length} WICHTIGSTEN PUNKTE DIESER WOCHE` : "OFFENE PUNKTE", ...(top.length ? top.map((t, i) => `${i + 1}. ${t.title}\n   ${t.text}`) : ["Nichts offen – sehr gut."]));
+    return vorlage("wochenbericht", { kw, aktiv: active, offen: openInv.s, zeilen: L, link: `${SITE_URL}/admin/#cockpit` });
   }
   async function weekly(S, out, force) {
     if (!S.weekly && !force) return;
@@ -296,7 +291,7 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
     if (!force && (wd !== +S.weeklyDay || +t.slice(0, 2) < +S.weeklyHour)) return;
     if (!force && !log(`weekly:${ymd}`, "bericht", null, "Wochenbericht verschickt")) return;
     const r = weeklyReport();
-    for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all()) { await sendMail({ to: u.email, subject: r.subject, text: r.text }); out.mails++; }
+    for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all()) { await sendMail({ to: u.email, ...r }); out.mails++; }
     if (force) log(`weekly-manual:${Date.now()}`, "bericht", null, "Wochenbericht manuell verschickt");
   }
 
@@ -346,9 +341,8 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
         if (!isOwner(user)) return json(res, 403, { error: "Nur für Inhaber" });
         if (n.kind === "angebot") {
           const q = db.prepare("SELECT i.*, c.name, c.email, c.stage FROM invoices i JOIN clients c ON c.id = i.client_id WHERE i.id = ?").get(n.ref_id);
-          const portal = q.stage === "mandant" ? `\n\nSie finden das Angebot auch in Ihrem Kundenportal: ${SITE_URL}/portal/` : "";
-          const mailed = await sendMail({ to: q.email, subject: `Kurze Nachfrage zu unserem Angebot ${q.number}`,
-            text: `${greet(q)}\n\nvor ein paar Tagen haben wir Ihnen unser Angebot ${q.number}${q.title ? ` für „${q.title}“` : ""} geschickt. Passt alles für Sie, oder gibt es noch offene Fragen?\n\nGern gehen wir alles in einem kurzen Gespräch durch – hier können Sie sich einen Termin aussuchen: ${SITE_URL}/termin.html${portal}\n\n${sign()}` });
+          const mailed = await sendMail({ to: q.email, ...vorlage("angebot_nachfrage", { name: q.name, nummer: q.number, titel: q.title || "", terminLink: `${SITE_URL}/termin.html`,
+            portalLink: q.stage === "mandant" ? `${SITE_URL}/portal/` : "", firma: q.firma }) });
           log(`angebot-erinnerung:${q.id}:${Date.now()}`, "nachfassen", q.client_id, `Nachfrage zum Angebot ${q.number} an ${q.email} (von ${user.name})`);
           db.prepare("UPDATE nudges SET status = 'erledigt', done_at = datetime('now'), done_by = ? WHERE id = ?").run(user.name, n.id);
           return json(res, 200, { mailed });

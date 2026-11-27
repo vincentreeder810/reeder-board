@@ -4,6 +4,8 @@
 // dem Team. Der Kunde sieht nichts davon – außer den Fragen, die der Inhaber ausdrücklich an ihn schickt.
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
+import { firmaVonProjekt } from "./firmen.mjs";
 import { isOwner, canProject } from "./access.mjs";
 import crypto from "node:crypto";
 
@@ -123,9 +125,8 @@ export function createWorkspace({ json, readJson, clean, SITE_URL }) {
       const liste = fragen.map((f, i) => `${fragen.length > 1 ? `${i + 1}. ` : ""}${f.text}`).join("\n");
       const text = `Hallo ${pr.client_name},\n\n${einleitung}\n\n${liste}\n\nAntworten Sie gern direkt hier.`;
       db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(pr.client_id, user.name, text);
-      const cfg = getSetting("mail", DEFAULT_MAIL);
-      const mailed = pr.client_email ? await sendMail({ to: pr.client_email, subject: `Rückfragen zu Ihrem Projekt „${pr.title}“`,
-        text: `Hallo ${pr.client_name},\n\n${einleitung}\n\n${liste}\n\nSie können einfach auf diese E-Mail antworten oder im Kundenportal schreiben:\n${SITE_URL}/portal/#chat\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` }) : false;
+      const mailed = pr.client_email ? await sendMail({ to: pr.client_email, ...vorlage("rueckfragen", { name: pr.client_name, projekt: pr.title, einleitung, fragen: fragen.map(f => f.text),
+        link: `${SITE_URL}/portal/#chat`, firma: firmaVonProjekt(pr.id) }) }) : false;
       const r = db.prepare("SELECT gesendet FROM project_workspace WHERE project_id = ?").get(pr.id);
       let g = {}; try { g = JSON.parse(r?.gesendet || "{}"); } catch {}
       const jetzt = new Date().toISOString(); for (const f of fragen) g[f.id] = jetzt;

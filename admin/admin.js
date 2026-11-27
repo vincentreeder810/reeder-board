@@ -331,7 +331,7 @@ async function loadSettings() {
   if (setTab === "covered") return window.COVUI.load();
   if (setTab === "konto") window.AUTH.loadTfa();
   const ob = await api("/outbox");
-  $("#outbox").innerHTML = ob.length ? ob.map(m => `<div class="ob"><h4>${esc(m.subject)}</h4><p>an ${esc(m.to_addr)} · ${fmt(m.created_at.replace(" ", "T") + "Z", { dateStyle: "short", timeStyle: "short" })} · ${esc(m.status)}${m.error ? " – " + esc(m.error) : ""}</p><details><summary>Inhalt</summary><pre>${esc(m.body).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')}</pre></details></div>`).join("") : `<div class="empty">Noch keine E-Mails.</div>`;
+  $("#outbox").innerHTML = ob.length ? ob.map(m => `<div class="ob"><h4>${esc(m.subject)}</h4><p>an ${esc(m.to_addr)} · ${fmt(m.created_at.replace(" ", "T") + "Z", { dateStyle: "short", timeStyle: "short" })} · ${esc(m.status)}${m.error ? " – " + esc(m.error) : ""}</p><button type="button" class="link ob__ansehen" data-mail-id="${+m.id}">Ansehen</button><details><summary>Inhalt</summary><pre>${esc(m.body).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')}</pre></details></div>`).join("") : `<div class="empty">Noch keine E-Mails.</div>`;
 }
 $("#setTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { history.replaceState(null, "", "#einstellungen/" + b.dataset.t); setTab = b.dataset.t; loadSettings().catch(err => toast(err.message)); } });
 $("#companyForm").addEventListener("submit", async e => {

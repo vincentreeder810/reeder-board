@@ -2,6 +2,8 @@
 // nach Dringlichkeit (Geschäftszeiten Mo–Fr), eine zuständige Person und einen Verlauf mit Antworten und internen Notizen.
 import { db, getSetting, setSetting } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
+import { firmaVonProjekt } from "./firmen.mjs";
 import { isOwner, memberProjectIds, clientIdsFor } from "./access.mjs";
 
 db.exec(`
@@ -59,9 +61,12 @@ export function createSupport({ json, readJson, clean, SITE_URL, onChange = () =
   const msgs = (id, internal) => db.prepare(`SELECT id, author_kind, author, body, internal, created_at FROM ticket_messages WHERE ticket_id = ? ${internal ? "" : "AND internal = 0"} ORDER BY id`).all(id).map(m => ({ ...m, internal: !!m.internal, created_at: iso(m.created_at) }));
   const addMsg = (tid, kind, author, body, internal = 0) => db.prepare("INSERT INTO ticket_messages(ticket_id, author_kind, author, body, internal) VALUES(?,?,?,?,?)").run(tid, kind, author, body, internal ? 1 : 0).lastInsertRowid;
   const owners = () => db.prepare("SELECT id, name, email FROM users WHERE role = 'inhaber' AND active = 1").all();
-  const mailTeam = async (t, subject, text) => { const to = new Map(owners().map(u => [u.email, u]));
+  // Firma einer Anfrage: die des Projekts, sonst Software
+  const firmaOf = t => t.project_id ? firmaVonProjekt(t.project_id) : "software";
+  const mailTeam = async (t, art, daten) => { const to = new Map(owners().map(u => [u.email, u]));
     if (t.assignee_id) { const a = db.prepare("SELECT email, name FROM users WHERE id = ? AND active = 1").get(t.assignee_id); if (a) to.set(a.email, a); }
-    for (const u of to.values()) await sendMail({ to: u.email, subject, text: `${text}\n\n${SITE_URL}/admin/#support/${t.id}` }).catch(e => console.warn(e.message)); };
+    const mail = vorlage(art, { id: t.id, unternehmen: t.company, betreff: t.subject, link: `${SITE_URL}/admin/#support/${t.id}`, firma: firmaOf(t), ...daten });
+    for (const u of to.values()) await sendMail({ to: u.email, ...mail }).catch(e => console.warn(e.message)); };
   const visibleFor = user => { if (isOwner(user)) return () => true; const pids = memberProjectIds(user), cids = clientIdsFor(user);
     return t => t.assignee_id === user.id || (t.project_id ? pids.includes(t.project_id) : cids.includes(t.client_id)); };
 
@@ -84,8 +89,8 @@ export function createSupport({ json, readJson, clean, SITE_URL, onChange = () =
         .run(c.id, pid, subject, cat, prio, assignee, c.name, dueFrom(Date.now(), prio)).lastInsertRowid;
       const mid = addMsg(id, "client", c.name, body); db.prepare("UPDATE tickets SET client_seen_id = ? WHERE id = ?").run(mid, id);
       const t = byId(id);
-      await mailTeam(t, `${prio === "kritisch" ? "🔴 KRITISCH: " : ""}Support-Anfrage #${id} · ${c.company}: ${subject}`,
-        `${c.name} (${c.company}) hat eine ${CATEGORIES[cat]}-Meldung erstellt${t.project_title ? ` zum Projekt „${t.project_title}“` : ""}.\nDringlichkeit: ${PRIORITIES[prio]}\nAntwort fällig bis: ${new Date(t.due_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}\n\n${body}`);
+      await mailTeam(t, "support_neu_team", { name: c.name, unternehmen: c.company, betreff: subject, kategorie: CATEGORIES[cat], prioritaet: PRIORITIES[prio], kritisch: prio === "kritisch",
+        projekt: t.project_title || "", faellig: t.due_at, nachricht: body });
       onChange(); return json(res, 201, { id });
     }
     let mm = p.match(/^\/support\/(\d+)(?:\/(reply|solved|reopen))?$/);
@@ -102,7 +107,7 @@ export function createSupport({ json, readJson, clean, SITE_URL, onChange = () =
       if (t.status === "geschlossen") return json(res, 409, { error: "Diese Anfrage ist geschlossen – bitte eine neue erstellen." });
       const mid = addMsg(t.id, "client", c.name, body);
       db.prepare("UPDATE tickets SET client_seen_id = ?, status = CASE WHEN status IN ('wartet','geloest') THEN 'in_bearbeitung' ELSE status END, solved_at = CASE WHEN status = 'geloest' THEN NULL ELSE solved_at END, reminded_at = NULL WHERE id = ?").run(mid, t.id);
-      await mailTeam(t, `Antwort zu Support #${t.id} · ${t.company}: ${t.subject}`, `${c.name} hat geantwortet:\n\n${body}`);
+      await mailTeam(t, "support_antwort_team", { name: c.name, nachricht: body });
       onChange(); return json(res, 200, { ok: true });
     }
     if (mm[2] === "solved") { db.prepare("UPDATE tickets SET status = 'geschlossen', closed_at = datetime('now'), solved_at = COALESCE(solved_at, datetime('now')) WHERE id = ?").run(t.id);
@@ -145,7 +150,7 @@ export function createSupport({ json, readJson, clean, SITE_URL, onChange = () =
       if (d.priority && PRIORITIES[d.priority] && d.priority !== t.priority) { db.prepare("UPDATE tickets SET priority = ?, due_at = CASE WHEN first_response_at IS NULL THEN ? ELSE due_at END WHERE id = ?").run(d.priority, dueFrom(Date.parse(t.created_at), d.priority), t.id); changes.push(`Dringlichkeit: ${PRIORITIES[d.priority].split(" –")[0]}`); }
       if (d.assignee_id !== undefined && (+d.assignee_id || null) !== t.assignee_id) { db.prepare("UPDATE tickets SET assignee_id = ? WHERE id = ?").run(+d.assignee_id || null, t.id);
         const nm = +d.assignee_id ? db.prepare("SELECT name, email FROM users WHERE id = ?").get(+d.assignee_id) : null; changes.push(`Zuständig: ${nm?.name || "niemand"}`);
-        if (nm && +d.assignee_id !== user.id) await sendMail({ to: nm.email, subject: `Support #${t.id} an dich übergeben: ${t.subject}`, text: `${user.name} hat dir die Anfrage von ${t.company} zugewiesen.\n\n${SITE_URL}/admin/#support/${t.id}` }).catch(() => {}); }
+        if (nm && +d.assignee_id !== user.id) await sendMail({ to: nm.email, ...vorlage("support_zugewiesen", { id: t.id, unternehmen: t.company, betreff: t.subject, von: user.name, link: `${SITE_URL}/admin/#support/${t.id}`, firma: firmaOf(t) }) }).catch(() => {}); }
       if (d.project_id !== undefined && (+d.project_id || null) !== t.project_id) { db.prepare("UPDATE tickets SET project_id = ? WHERE id = ? AND (? IS NULL OR EXISTS (SELECT 1 FROM projects WHERE id = ? AND client_id = ?))").run(+d.project_id || null, t.id, +d.project_id || null, +d.project_id || null, t.client_id); changes.push("Projekt geändert"); }
       if (changes.length) addMsg(t.id, "system", user.name, changes.join(" · "), 1);
       onChange(); return json(res, 200, byId(t.id));
@@ -157,8 +162,8 @@ export function createSupport({ json, readJson, clean, SITE_URL, onChange = () =
         const next = STATUS[d.status] ? d.status : t.status === "neu" ? "in_bearbeitung" : t.status;
         db.prepare("UPDATE tickets SET first_response_at = COALESCE(first_response_at, datetime('now')), status = ?, assignee_id = COALESCE(assignee_id, ?), solved_at = CASE WHEN ? = 'geloest' THEN datetime('now') ELSE solved_at END, reminded_at = NULL WHERE id = ?").run(next, user.id, next, t.id);
         const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(t.client_id);
-        if (c?.email && c.active) await sendMail({ to: c.email, subject: `Re: ${t.subject} [Support #${t.id}]`,
-          text: `Guten Tag ${c.name},\n\n${body}\n\n${next === "geloest" ? "Wir haben die Anfrage als gelöst markiert. Falls doch noch etwas ist, antworten Sie einfach im Kundenportal – dann öffnet sie sich wieder.\n\n" : ""}Antworten und den ganzen Verlauf finden Sie im Kundenportal: ${SITE_URL}/portal/#support/${t.id}\n\nViele Grüße\n${user.name}` }).catch(e => console.warn(e.message));
+        if (c?.email && c.active) await sendMail({ to: c.email, ...vorlage("support_antwort", { name: c.name, id: t.id, betreff: t.subject, nachricht: body, geloest: next === "geloest",
+          link: `${SITE_URL}/portal/#support/${t.id}`, absender: user.name, firma: firmaOf(t) }) }).catch(e => console.warn(e.message));
       }
       onChange(); return json(res, 200, byId(t.id));
     }
@@ -191,7 +196,7 @@ export function createSupport({ json, readJson, clean, SITE_URL, onChange = () =
       if (!lastTeam || Date.now() - Date.parse(iso(lastTeam)) < cfg.waitReminderDays * 864e5) continue;
       db.prepare("UPDATE tickets SET reminded_at = datetime('now') WHERE id = ?").run(t.id);
       if (log(`support-erinnerung:${t.id}:${lastTeam}`, "nachfassen", t.client_id, `Erinnerung an Kunden zu Support #${t.id}`))
-        await sendMail({ to: t.client_email, subject: `Wir warten auf Ihre Rückmeldung [Support #${t.id}]`, text: `Guten Tag ${t.client_name},\n\nzu Ihrer Anfrage „${t.subject}“ brauchen wir noch eine kurze Rückmeldung von Ihnen. Antworten Sie einfach im Kundenportal:\n${SITE_URL}/portal/#support/${t.id}\n\nViele Grüße\nIhr Team der Reeder Software GmbH` }).catch(() => {});
+        await sendMail({ to: t.client_email, ...vorlage("support_erinnerung", { name: t.client_name, id: t.id, betreff: t.subject, link: `${SITE_URL}/portal/#support/${t.id}`, firma: firmaOf(t) }) }).catch(() => {});
     }
     for (const t of db.prepare("SELECT * FROM tickets WHERE status = 'geloest' AND solved_at < datetime('now', ?)").all(`-${cfg.autoCloseDays} days`)) {
       db.prepare("UPDATE tickets SET status = 'geschlossen', closed_at = datetime('now') WHERE id = ?").run(t.id);

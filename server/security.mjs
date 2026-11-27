@@ -4,6 +4,7 @@ import { randomBytes, createHash, createHmac, timingSafeEqual } from "node:crypt
 import { existsSync, readFileSync } from "node:fs";
 import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
 import { sendMail, mailStatus } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
 import { isOwner } from "./access.mjs";
 import { DEFAULT_CONTRACT } from "./contracts.mjs";
 import { listBackups } from "./ops.mjs";
@@ -70,8 +71,7 @@ export function createSecurity({ json, readJson, clean, limited, ipOf, hashPw, c
       db.prepare("DELETE FROM password_resets WHERE kind = ? AND ref_id = ? AND used_at IS NULL").run(kind, who.id);
       db.prepare("INSERT INTO password_resets(token_hash, kind, ref_id, expires) VALUES(?,?,?,?)").run(sha(token), kind, who.id, Date.now() + 3600e3);
       const link = `${SITE_URL}/${u ? "admin" : "portal"}/#passwort=${token}`;
-      await sendMail({ to: who.email, subject: `Neues Passwort für Ihren Zugang – ${company().name}`,
-        text: `Guten Tag ${who.name},\n\nfür Ihren Zugang wurde ein neues Passwort angefordert. Über diesen Link legen Sie es fest (eine Stunde gültig):\n\n${link}\n\nWenn Sie das nicht waren, ignorieren Sie diese E-Mail einfach – Ihr bisheriges Passwort bleibt gültig.\n\nViele Grüße\n${company().name}` }).catch(e => console.warn(e.message));
+      await sendMail({ to: who.email, ...vorlage("passwort_link", { name: who.name, link }) }).catch(e => console.warn(e.message));
       log(kind, who.id, who.email, req, true, "Passwort-Link angefordert");
       return json(res, 200, generic);
     }

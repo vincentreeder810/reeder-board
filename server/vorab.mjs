@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL, upsertLead } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
 import { assistantStatus } from "./assistant.mjs";
 import { projektZurAnfrage, projekteFuerBuchung } from "./anfragen.mjs";
 import { anfrageBeschreiben } from "./projektname.mjs";
@@ -460,7 +461,6 @@ async function repair(html, issues) {
 
 export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient, clientLogin }) {
   const row = token => /^[a-f0-9]{48}$/.test(token || "") ? db.prepare("SELECT * FROM vorab WHERE token = ?").get(token) : null;
-  const sig = () => `\n\nViele Grüße\n${getSetting("company", {}).name || "Ihr Team der Reeder Software GmbH"}`;
   // Kontakt zum Fragebogen: aus der Buchung (wird beim Bestätigen angelegt), sonst jetzt anlegen
   const clientOf = (v, b) => {
     let cid = v.client_id || b.client_id;
@@ -475,8 +475,7 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
     const token = randomBytes(24).toString("hex");
     db.prepare("INSERT INTO vorab(booking_id, client_id, token) VALUES(?,?,?)").run(b.id, b.client_id || null, token);
     const link = `${SITE_URL}/portal/fragebogen.html#${token}`;
-    await sendMail({ to: b.email, subject: "Damit wir uns gut vorbereiten können – Ihr Fragebogen",
-      text: `Hallo ${b.name},\n\nwir freuen uns auf unser Gespräch! Damit wir die Zeit bestmöglich nutzen, haben wir einen Fragebogen mit Beispielen vorbereitet – Sie klicken einfach an, was Ihnen gefällt: erster Eindruck, Bilder, Farben, Schrift, Bewegung und die Funktionen, die Ihnen wichtig sind.\n\nZuerst legen Sie mit einem Klick Ihr persönliches Kundenkonto an. Dort sind Ihre Angaben sicher gespeichert, und später finden Sie dort alles zu Ihrem Projekt an einem Ort.\n\nAus Ihren Angaben bereiten wir schon vor dem Termin einen ersten Eindruck vor, den wir Ihnen im Gespräch zeigen.\n\nZum Fragebogen (ca. 6 Minuten):\n${link}${sig()}` });
+    await sendMail({ to: b.email, ...vorlage("fragebogen_website", { name: b.name, link }) });   // Website: immer Software GmbH
     return token;
   }
 
@@ -534,8 +533,8 @@ export function createVorab({ json, readJson, limited, ipOf, SITE_URL, hashPw, c
       db.prepare("UPDATE vorab SET status = 'fertig', prototype_id = ?, cost = ?, built_at = datetime('now') WHERE id = ?").run(r.lastInsertRowid, cost + extra, v.id);
       const url = `${SITE_URL}/p/${token}/index.html`;
       const cfg = getSetting("mail", DEFAULT_MAIL);
-      if (cfg.notifyAddress) sendMail({ to: cfg.notifyAddress, subject: `Vorab-Entwurf bereit: ${a.company || b.name}`,
-        text: `Der Vorab-Entwurf für das Gespräch mit ${b.name}${b.company ? " (" + b.company + ")" : ""} ist fertig:\n${url}\n\nAngaben aus dem Fragebogen:\n${answersText(a)}` }).catch(() => {});
+      if (cfg.notifyAddress) sendMail({ to: cfg.notifyAddress, ...vorlage("vorab_entwurf_team", { name: b.name || "", unternehmen: b.company || "", titel: a.company || b.name || "", start: b.start || "",
+        url, angaben: answersText(a) }) }).catch(() => {});
     } catch (e) {
       db.prepare("UPDATE vorab SET status = 'fehler', error = ? WHERE id = ?").run(String(e.message).slice(0, 300), v.id);
       console.warn("Vorab-Entwurf:", e.message);

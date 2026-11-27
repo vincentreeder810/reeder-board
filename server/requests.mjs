@@ -3,6 +3,8 @@
 import { db, getSetting, DEFAULT_AVAILABILITY, DEFAULT_MAIL, videoUrl } from "./db.mjs";
 import { freeSlots, isSlotFree, formatDe, zonedParts } from "./slots.mjs";
 import { sendMail, icsFor, icsCalendar } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
+import { firmaVonProjekt } from "./firmen.mjs";
 
 export const onBooked = new Set();   // z. B. Vorab-Fragebogen nach einem vom Team eingeplanten Erstgespräch
 export function createRequests({ json, readJson, clean, logEvent, SITE_URL }) {
@@ -29,25 +31,8 @@ export function createRequests({ json, readJson, clean, logEvent, SITE_URL }) {
     let mailed = null;
     if (notify) {
       const ics = icsCalendar([icsFor({ id: b.lastInsertRowid, start, minutes, type, name: c.name, email: c.email, company: c.company, channel, status: "bestaetigt", video_url: video, typeLabel: typeLabel(type) }, { title: `${title} – Reeder Software` })]);
-      mailed = await sendMail({ to: c.email, subject: `Einladung: ${title} am ${formatDe(start)}`,
-        text: `Hallo ${c.name},
-
-wir freuen uns auf das Gespräch:
-
-${title}
-${formatDe(start)} (${minutes} Minuten)
-${video ? `
-Zum Videogespräch (zur Uhrzeit einfach anklicken – ohne Anmeldung, ohne Installation):
-${video}
-` : `Gesprächsart: ${channel}
-`}${note ? `
-${note}
-` : ""}
-Den Termin für Ihren Kalender finden Sie im Anhang.
-
-Viele Grüße
-${user.name}
-Reeder Software GmbH`,
+      mailed = await sendMail({ to: c.email, ...vorlage("termin_einladung", { name: c.name, titel: title, start, minuten: minutes, videoUrl: video || "", kanal: channel, notiz: note,
+          absender: user.name, firma: projectId ? firmaVonProjekt(projectId) : av().types[type]?.bereich === "hardware" ? "hardware" : "software" }),
         attachments: [{ filename: "termin-reeder-software.ics", content: ics, contentType: "text/calendar" }] });
     }
     if (notify) { const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(b.lastInsertRowid); for (const fn of onBooked) Promise.resolve().then(() => fn(row)).catch(e => console.warn("Nach Buchung:", e.message)); }
@@ -83,8 +68,8 @@ Reeder Software GmbH`,
       // Im Chat sichtbar machen (Kunde und Team sehen die Anfrage im Verlauf)
       db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'client', ?, ?)").run(c.id, c.name,
         `📅 Terminanfrage: ${t.label} (${t.minutes} Min.)${proj ? "\nProjekt: " + proj : ""}\n${slots.length ? "Wunschtermine:\n" + slots.map(s => "• " + short(s)).join("\n") : "Ich bin flexibel – bitte schlagen Sie mir einen Termin vor."}${d.flexible && slots.length ? "\n(Andere Zeiten gehen auch.)" : ""}${message ? "\n\n" + message : ""}`);
-      sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, subject: `Terminanfrage: ${c.name} (${c.company}) – ${t.label}`,
-        text: `${c.name} (${c.company}) möchte einen Termin: ${t.label}, ${t.minutes} Min.${proj ? "\nProjekt: " + proj : ""}\n\n${slots.length ? "Wunschtermine:\n" + slots.map(s => "• " + formatDe(s)).join("\n") : "Flexibel – bitte Termin vorschlagen."}\n\n${message}\n\nAnnehmen im Admin-Board: ${SITE_URL}/admin#kunden` }).catch(e => console.warn("Mail:", e.message));
+      sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, ...vorlage("terminanfrage_team", { name: c.name, unternehmen: c.company, art: t.label, minuten: t.minutes, projekt: proj || "",
+        wunsch: slots, nachricht: message, link: `${SITE_URL}/admin/#kunden/${c.id}/termine`, firma: projectId ? firmaVonProjekt(projectId) : "software" }) }).catch(e => console.warn("Mail:", e.message));
       return json(res, 201, reqOut(db.prepare(`${SELECT} WHERE r.id = ?`).get(r.lastInsertRowid)));
     }
     const mm = p.match(/^\/requests\/(\d+)$/);

@@ -10,6 +10,7 @@ import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage, firmaVonBuchung } from "./mail-vorlagen.mjs";
 import { projektnamenPflegen, anfrageBeschreiben } from "./projektname.mjs";
 import { hardwareKonzeptAnlegen, hardwareDateiOrdner, hardwareKonzeptFelder } from "./hardware.mjs";
 
@@ -268,9 +269,9 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     const token = randomBytes(24).toString("hex");
     db.prepare("INSERT INTO onboarding(booking_id, client_id, token, kinds) VALUES(?,?,?,?)").run(b.id, b.client_id || null, token, JSON.stringify(kinds));
     const link = `${SITE_URL}/portal/onboarding.html#${token}`;
-    const cfg = getSetting("mail", DEFAULT_MAIL);
-    await sendMail({ to: b.email, subject: "Damit wir uns gut vorbereiten können – ein paar Fragen zu Ihrem Vorhaben",
-      text: `Hallo ${b.name},\n\nwir freuen uns auf unser Gespräch! Damit wir die Zeit bestmöglich nutzen, haben wir ein paar Fragen zu Ihrem Vorhaben vorbereitet (${kinds.map(k => BEREICHE[k]).join(" und ")}). Das dauert etwa acht Minuten – das meiste tippen Sie einfach an.\n\n${link}\n\nZuerst legen Sie dort mit einem Passwort Ihren persönlichen Bereich an. Dort finden Sie später auch Termine, Unterlagen und unser Angebot.\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
+    // Absender: Hardware GmbH nur, wenn es ausschließlich um Hardware geht (z. B. Hardware-Terminart oder nur „Hardware“ gewählt)
+    await sendMail({ to: b.email, ...vorlage("fragebogen_vorhaben", { name: b.name, bereiche: kinds.map(k => BEREICHE[k]).join(" und "), link,
+      firma: kinds.every(k => k === "hardware") ? "hardware" : firmaVonBuchung(b) }) });
     return token;
   }
 
@@ -401,8 +402,8 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
         ids = projekteAnlegen(o, antworten, JSON.parse(db.prepare("SELECT files FROM onboarding WHERE id = ?").get(o.id).files || "[]"));
         db.prepare("UPDATE onboarding SET project_ids = ? WHERE id = ?").run(JSON.stringify(ids), o.id);
         const cfg = getSetting("mail", DEFAULT_MAIL);
-        sendMail({ to: cfg.notifyAddress, subject: `Onboarding ausgefüllt: ${b?.name || "Interessent"}${b?.company ? " (" + b.company + ")" : ""}`,
-          text: `${b?.name || "Ein Interessent"} hat das Onboarding ausgefüllt (${kinds.map(k => BEREICHE[k]).join(", ")}).\n\n${ids.length ? `Im Board ist dazu ${ids.length === 1 ? "ein Projekt" : ids.length + " Projekte"} im Status „Anfrage“ entstanden:\n${SITE_URL}/admin/#projekte` : "Es konnte kein Projekt angelegt werden, weil kein Kontakt zugeordnet ist."}` }).catch(e => console.warn("Mail:", e.message));
+        sendMail({ to: cfg.notifyAddress, ...vorlage("fragebogen_ausgefuellt_team", { name: b?.name || "", unternehmen: b?.company || "", bereiche: kinds.map(k => BEREICHE[k]).join(", "),
+          projekte: ids.length, link: `${SITE_URL}/admin/#projekte${ids.length === 1 ? "/" + ids[0] : ""}`, firma: kinds.every(k => k === "hardware") ? "hardware" : "software" }) }).catch(e => console.warn("Mail:", e.message));
       }
       return json(res, 200, { ok: true });
     }
@@ -414,11 +415,10 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(clientId);
     if (!c?.email) return { error: "Zu diesem Kontakt ist keine E-Mail-Adresse hinterlegt." };
     const o = db.prepare("SELECT o.* FROM onboarding o LEFT JOIN bookings b ON b.id = o.booking_id WHERE (o.client_id = ? OR b.client_id = ?) AND o.status != 'ausgefuellt' ORDER BY o.id DESC LIMIT 1").get(clientId, clientId);
-    const cfg = getSetting("mail", DEFAULT_MAIL);
     if (o) {
       const link = `${SITE_URL}/portal/onboarding.html#${o.token}`;
-      const mailed = await sendMail({ to: c.email, subject: "Kurze Erinnerung: ein paar Fragen zu Ihrem Vorhaben",
-        text: `Hallo ${c.name},\n\ndamit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Antworten auf ein paar Fragen. Das dauert etwa acht Minuten:\n\n${link}\n\nSie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
+      const mailed = await sendMail({ to: c.email, ...vorlage("fragebogen_erinnerung", { name: c.name, link,
+        firma: JSON.parse(o.kinds || "[]").every(k => k === "hardware") && JSON.parse(o.kinds || "[]").length ? "hardware" : "software" }) });
       return { mailed: !!mailed, link };
     }
     // Website-Buchung: Dazu gehört der bildhafte Website-Fragebogen (vorab.mjs), nicht die Software-Fragen.
@@ -426,8 +426,7 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     const offenWeb = db.prepare("SELECT v.token FROM vorab v JOIN bookings bb ON bb.id = v.booking_id WHERE bb.client_id = ? AND v.answered_at IS NULL AND COALESCE(v.status, '') != 'gewechselt' ORDER BY v.id DESC LIMIT 1").get(clientId);
     if (offenWeb) {
       const link = `${SITE_URL}/portal/fragebogen.html#${offenWeb.token}`;
-      const mailed = await sendMail({ to: c.email, subject: "Kurze Erinnerung: Ihr Fragebogen zur Website",
-        text: `Hallo ${c.name},\n\ndamit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Angaben zur Website. Sie klicken einfach an, was Ihnen gefällt – das dauert etwa sechs Minuten:\n\n${link}\n\nViele Grüße\n${cfg.fromName || "Reeder Software"}` });
+      const mailed = await sendMail({ to: c.email, ...vorlage("fragebogen_website_erinnerung", { name: c.name, link }) });
       return { mailed: !!mailed, link };
     }
     const b = db.prepare("SELECT * FROM bookings WHERE client_id = ? ORDER BY id DESC LIMIT 1").get(clientId);

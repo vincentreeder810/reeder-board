@@ -7,6 +7,7 @@ import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
 import { firmaDaten } from "./firmen.mjs";
 import { vereinbarungAusAngebot, vereinbarungLesen } from "./vereinbarungen.mjs";
 import { isOwner } from "./access.mjs";
@@ -282,13 +283,13 @@ export function createContracts({ json, readJson, clean, logEvent, SITE_URL }) {
     const owner = db.prepare("SELECT name FROM users WHERE role = 'inhaber' AND active = 1 ORDER BY id LIMIT 1").get()?.name || "Ihr Team";
     db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(c.id, owner,
       `Vielen Dank für Ihren Auftrag, ${c.name.split(" ")[0]}! Wir haben die Annahme von Angebot ${inv.number} erhalten. Die Auftragsbestätigung liegt unter „Dokumente“. Wir melden uns in Kürze mit den nächsten Schritten.`);
-    const s = company();
-    await sendMail({ to: c.email, subject: `Auftragsbestätigung ${inv.number} – ${s.name}`,
-      text: `Guten Tag ${c.name},\n\nvielen Dank für Ihren Auftrag! Sie haben unser Angebot ${inv.number}${inv.title ? ` („${inv.title}“)` : ""} über ${euro(inv.gross)} brutto am ${new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" })} angenommen.\n\nIm Anhang finden Sie die Auftragsbestätigung mit den vereinbarten Bedingungen${inv.avv ? " und der Vereinbarung zur Auftragsverarbeitung" : ""}. Alles liegt außerdem in Ihrem Kundenportal: ${SITE_URL}/portal/#dokumente\n\nViele Grüße\n${s.name}`,
+    const firma = inv.firma || "software";   // dieselbe Firma wie auf dem Angebot und der Auftragsbestätigung (PDF)
+    await sendMail({ to: c.email, ...vorlage("auftrag_bestaetigung", { name: c.name, nummer: inv.number, titel: inv.title || "", betrag: inv.gross, angenommenAm: new Date().toISOString(),
+        avv: !!inv.avv, portalLink: `${SITE_URL}/portal/#dokumente`, firma }),
       attachments: buf ? [{ filename: `Auftragsbestaetigung-${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] : [] }).catch(e => console.warn(e.message));
     for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all())
-      await sendMail({ to: u.email, subject: `Auftrag erhalten: ${c.company} – ${euro(inv.net)} netto`,
-        text: `${name}${position ? ` (${position})` : ""} hat Angebot ${inv.number}${inv.title ? ` „${inv.title}“` : ""} im Kundenportal angenommen.\n\nAuftragswert: ${euro(inv.net)} netto / ${euro(inv.gross)} brutto\n${result.planned ? "Zahlungsplan und Rechnungsentwurf für die erste Rate sind angelegt – bitte im Board freigeben." : "Hinweis: Der Projekt-Zahlungsplan war schon in Bearbeitung und wurde nicht überschrieben."}\n\n${SITE_URL}/admin/#projekte/${result.pid}` }).catch(e => console.warn(e.message));
+      await sendMail({ to: u.email, ...vorlage("auftrag_team", { name, position, unternehmen: c.company, nummer: inv.number, titel: inv.title || "", netto: inv.net, brutto: inv.gross,
+        geplant: result.planned, link: `${SITE_URL}/admin/#projekte/${result.pid}`, firma }) }).catch(e => console.warn(e.message));
     try { await onChange(); } catch {}
     return { ok: true, project_id: result.pid, doc_id: docId };
   }
@@ -306,7 +307,7 @@ export function createContracts({ json, readJson, clean, logEvent, SITE_URL }) {
     logEvent(c.id, inv.project_id, "angebot", "Angebot abgelehnt", `${inv.number}${reason ? " – " + reason : ""}`, false);
     db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'client', ?, ?)").run(c.id, c.name, `Ich habe das Angebot ${inv.number} abgelehnt.${reason ? "\n\nGrund: " + reason : ""}`);
     for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all())
-      await sendMail({ to: u.email, subject: `Angebot abgelehnt: ${c.company} – ${inv.number}`, text: `${c.name} hat Angebot ${inv.number} im Kundenportal abgelehnt.${reason ? `\n\nBegründung:\n${reason}` : "\n\n(ohne Begründung)"}\n\n${SITE_URL}/admin/#kunden/${c.id}` }).catch(e => console.warn(e.message));
+      await sendMail({ to: u.email, ...vorlage("angebot_abgelehnt_team", { name: c.name, unternehmen: c.company, nummer: inv.number, grund: reason, link: `${SITE_URL}/admin/#kunden/${c.id}`, firma: inv.firma || "software" }) }).catch(e => console.warn(e.message));
     try { await onChange(); } catch {}
     return { ok: true };
   }

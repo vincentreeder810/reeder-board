@@ -9,6 +9,8 @@ import { callModel, assistantStatus } from "./assistant.mjs";
 import { db } from "./db.mjs";
 import { isOwner, memberProjectIds, FINANCE_DOC_KINDS, FINANCE_EVENT_KINDS } from "./access.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
+import { firmaVonProjekt } from "./firmen.mjs";
 
 const DOC_DIR = path.resolve(process.env.DATA_DIR || "data", "documents");
 export const PHASES = ["Erstgespräch", "Konzept", "Prototyp", "Umsetzung", "Launch", "Betreuung"];
@@ -55,10 +57,10 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
     if (!events.length || !c.pw_hash || !c.active || !c.notify_email) return;
     const projects = [...new Set(events.map(e => e.project_id).filter(Boolean))];
     const one = projects.length === 1 ? events.find(e => e.project_id === projects[0]).project_title : null;
-    const lines = events.map(e => `• ${e.title}${e.detail ? " – " + e.detail : ""}${!one && e.project_title ? ` (${e.project_title})` : ""}`).join("\n");
+    const punkte = events.map(e => `${e.title}${e.detail ? " – " + e.detail : ""}${!one && e.project_title ? ` (${e.project_title})` : ""}`);
     const link = `${SITE_URL}/portal/${projects.length === 1 ? "#projekt/" + projects[0] : "#uebersicht"}`;
-    await sendMail({ to: c.email, subject: one ? `Neuigkeiten zu Ihrem Projekt „${one}“` : "Neuigkeiten in Ihrem Kundenportal",
-      text: `Hallo ${c.name},\n\nes gibt Neuigkeiten in Ihrem Kundenportal:\n\n${lines}\n\nAlle Details finden Sie hier:\n${link}\n\nViele Grüße\nIhr Team der Reeder Software GmbH\n\n—\nDiese Benachrichtigungen können Sie im Kundenportal unter „Konto“ abschalten.` });
+    // Firma: die des Projekts, wenn alle Neuigkeiten zu einem Projekt gehören – sonst Software
+    await sendMail({ to: c.email, ...vorlage("projekt_neuigkeiten", { name: c.name, projekt: one || "", punkte, link, firma: projects.length === 1 ? firmaVonProjekt(projects[0]) : "software" }) });
   }
   // Nach einem Neustart liegengebliebene Neuigkeiten nachholen
   setTimeout(() => {

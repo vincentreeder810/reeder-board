@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
 import { fragebogenStand } from "./onboarding.mjs";
 import { createProjects } from "./projects.mjs";
 import { createRequests } from "./requests.mjs";
@@ -38,7 +39,6 @@ const PICK = `<script>${readFileSync(new URL("./proto-pick.js", import.meta.url)
 export function createPortal({ json, send, readJson, clean, isEmail, limited, ipOf, cookies, hashPw, checkPw, SITE_URL }) {
   const secure = SITE_URL.startsWith("https") ? "; Secure" : "";
   const portalUrl = `${SITE_URL}/portal/`;
-  const sig = `\n\nViele Grüße\nIhr Team der Reeder Software GmbH`;
 
   /* ---------- Helfer ---------- */
   const publicClient = c => c && ({ id: c.id, company: c.company, name: c.name, email: c.email, phone: c.phone || "", active: !!c.active, stage: c.stage || "mandant", source: c.source || null,
@@ -63,20 +63,17 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
     return `${portalUrl}#einladung=${token}`;
   }
   function inviteMail(c, link) {
-    return sendMail({ to: c.email, subject: "Ihr Zugang zum Kundenportal von Reeder Software",
-      text: `Hallo ${c.name},\n\nfür ${c.company} haben wir Ihnen einen Zugang zu unserem Kundenportal eingerichtet. Dort schreiben Sie direkt mit unserem Team und klicken sich durch die Prototypen, die wir für Sie bauen.\n\nÜber diesen Link legen Sie Ihr Passwort fest (gültig ${INVITE_DAYS} Tage):\n${link}${sig}` });
+    return sendMail({ to: c.email, ...vorlage("portal_zugang", { name: c.name, unternehmen: c.company, tage: INVITE_DAYS, link }) });
   }
   function notifyClient(c) {
     if (!c.pw_hash || !c.notify_email || (c.notified_client_at && Date.now() - c.notified_client_at < NOTIFY_PAUSE)) return;
     db.prepare("UPDATE clients SET notified_client_at = ? WHERE id = ?").run(Date.now(), c.id);
-    sendMail({ to: c.email, subject: "Neue Nachricht von Reeder Software",
-      text: `Hallo ${c.name},\n\nin Ihrem Kundenportal wartet eine neue Nachricht von unserem Team.\n\n${portalUrl}${sig}` }).catch(e => console.warn("Mail:", e.message));
+    sendMail({ to: c.email, ...vorlage("portal_nachricht", { name: c.name, link: portalUrl }) }).catch(e => console.warn("Mail:", e.message));
   }
   function notifyTeam(c, body) {
     if (c.notified_team_at && Date.now() - c.notified_team_at < NOTIFY_PAUSE) return;
     db.prepare("UPDATE clients SET notified_team_at = ? WHERE id = ?").run(Date.now(), c.id);
-    sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, subject: `Neue Chat-Nachricht: ${c.name} (${c.company})`,
-      text: `${c.name} schreibt:\n\n${body}\n\nAntworten im Admin-Board: ${SITE_URL}/admin#kunden` }).catch(e => console.warn("Mail:", e.message));
+    sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, ...vorlage("chat_team", { name: c.name, unternehmen: c.company, nachricht: body, link: `${SITE_URL}/admin/#kunden/${c.id}/chat` }) }).catch(e => console.warn("Mail:", e.message));
   }
   const listMessages = (clientId, after) =>
     db.prepare("SELECT * FROM messages WHERE client_id = ? AND id > ? ORDER BY id LIMIT 500").all(clientId, after).map(msgOut);
