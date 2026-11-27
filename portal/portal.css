@@ -554,3 +554,12 @@ body.im-chat .main{padding-bottom:34px}
   body.im-chat .chat--full .chat__log{padding:16px 14px 10px}
   body.im-chat .chat--full .composer{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
 }
+/* Chat randlos: auf großen Bildschirmen füllt der Chat die ganze Fläche rechts neben der Leiste – ohne Ränder */
+@media (min-width:861px){
+  body.im-chat .main{padding:0}
+  body.im-chat .chat.chat--full{height:var(--vvh,100dvh);min-height:0;border-radius:0;box-shadow:none}
+  body.im-chat .chat--full .chat__head{padding:18px 32px}
+  body.im-chat .chat--full .chat__threads{padding:10px 28px 0}
+  body.im-chat .chat--full .chat__log{padding:24px max(32px,calc((100% - 860px) / 2)) 12px}
+  body.im-chat .chat--full .composer{padding:14px max(28px,calc((100% - 860px) / 2)) 18px}
+}
