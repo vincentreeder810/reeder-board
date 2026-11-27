@@ -169,6 +169,7 @@ async function start() {
   $("#mailBanner").hidden = ME.mail.ready || !ME.owner;
   $("#meAv").textContent = ME.name.split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
   $("#meName").textContent = ME.name; $("#meRole").textContent = ME.roleLabel;
+  if ($("#nameForm")) $("#nameForm").name.value = ME.name;
   route(); refreshBadges();
   clearInterval(start.h); start.h = setInterval(() => { if (!document.hidden) refreshBadges().catch(() => {}); }, 20000);
 }
@@ -357,6 +358,13 @@ $("#meetForm")?.addEventListener("change", e => { if (e.target.name === "mode") 
 $("#meetForm")?.addEventListener("submit", async e => { e.preventDefault(); const f = e.target; try { await api("/settings/meeting", { method: "PUT", body: { mode: f.mode.value, url: f.url.value } }); toast("Gespeichert – neue Einladungen verwenden diese Einstellung."); } catch (err) { toast(err.message); } });
 $("#copyCal").addEventListener("click", () => { navigator.clipboard?.writeText($("#calUrl").value); toast("Adresse kopiert"); });
 $("#resetCal").addEventListener("click", async () => { if (!(await UI.confirm("Bestehende Kalender-Abos funktionieren danach nicht mehr.", { title: "Neue Adresse erzeugen?", ok: "Neu erzeugen", danger: true }))) return; const r = await api("/calendar/reset", { method: "POST", body: {} }); $("#calUrl").value = r.calendarUrl; toast("Neue Adresse erzeugt"); });
+// Eigener Name: steht im Board und im Gruß jeder Kundenmail
+$("#nameForm").addEventListener("submit", async e => {
+  e.preventDefault(); const f = e.target, name = f.name.value.trim(); if (!name) return;
+  try { const r = await api("/me", { method: "PATCH", body: { name } }); ME.name = r.name;
+    $("#meName").textContent = r.name; $("#meAv").textContent = r.name.split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase(); toast("Name gespeichert"); }
+  catch (err) { toast(err.message); }
+});
 $("#pwForm").addEventListener("submit", async e => {
   e.preventDefault(); const f = e.target;
   try { await api("/password", { method: "POST", body: { current: f.current.value, next: f.next.value } }); f.reset(); toast("Passwort geändert"); } catch (err) { toast(err.message); }

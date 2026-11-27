@@ -452,6 +452,10 @@ async function adminApi(req, res, url) {
     db.prepare("DELETE FROM sessions WHERE token = ?").run(cookies(req)[ADMIN_CK]);
     return json(res, 200, { ok: true }, { "Set-Cookie": `${ADMIN_CK}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0` });
   }
+  // Eigenen Namen ändern (Einstellungen → Mein Zugang) – steht auch im Gruß der Kundenmails
+  if (p === "/me" && m === "PATCH") { const d = await readJson(req), name = clean(d.name, 120);
+    if (name.length < 2) return json(res, 400, { error: "Bitte einen Namen eintragen." });
+    db.prepare("UPDATE users SET name = ? WHERE id = ?").run(name, user.id); return json(res, 200, { name }); }
   if (p === "/me") return json(res, 200, { id: user.id, email: user.email, name: user.name, role: user.role, roleLabel: ROLES[user.role] || user.role, owner, mail: mailStatus() });
   if (p === "/cockpit") return json(res, 200, { ...cockpit(user), timer: !!db.prepare("SELECT 1 FROM timers WHERE user_id = ?").get(user.id), support: support.unreadFor(user) });
   if (p === "/kalender") { const d = s => /^\d{4}-\d{2}-\d{2}/.test(s || "") ? new Date(s).toISOString() : null;

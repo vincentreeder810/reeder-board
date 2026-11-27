@@ -348,6 +348,11 @@
       </div>
 
       <div data-set="konto" hidden>
+        <form class="card" id="nameForm" style="max-width:520px;display:grid;gap:14px;margin-bottom:16px"><h2>Dein Name</h2>
+          <p class="hint" style="margin:-6px 0 0">Steht im Board und unter jeder E-Mail an Kunden im Gruß („Viele Grüße, …“).</p>
+          <label>Vor- und Nachname<input name="name" autocomplete="name" maxlength="120" required></label>
+          <button class="btn" type="submit" style="justify-self:start">Speichern</button>
+        </form>
         <form class="card" id="pwForm" style="max-width:520px;display:grid;gap:14px"><h2>Passwort ändern</h2>
           <label>Aktuelles Passwort<input type="password" name="current" autocomplete="current-password" required></label>
           <label>Neues Passwort (mind. 10 Zeichen)<input type="password" name="next" autocomplete="new-password" minlength="10" required></label>
