@@ -237,11 +237,28 @@
     const box = $("#pChat"); if (!box) return;
     if (!client || (client.stage !== "mandant" && client.status !== "aktiv")) { box.hidden = true; return; }   // Interessenten ohne Portalzugang haben keinen Chat
     box.hidden = false;
-    box.innerHTML = `<div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Nachrichten</h2><p>Chat mit ${esc(client.name)} zu diesem Projekt${client.status !== "aktiv" ? " · Portalzugang noch nicht aktiv" : ""}</p></div>
-        <div class="acts"><a class="btn btn--ghost btn--sm" href="#chats/${client.id}/${p.id}">Im Chat öffnen</a></div></div><div class="pchat__pane"></div>`;
-    await pane($(".pchat__pane", box), { cid: client.id, th: String(p.id), mini: true, limit: 6, placeholder: `Nachricht an ${client.name} …`,
-      empty: `<b>Noch keine Nachrichten zu diesem Projekt.</b>Was Sie hier schreiben, sieht ${esc(client.name)} im Kundenportal im Chat zu „${esc(p.title)}“.`,
-      onRead: () => window.updateBadges?.() });
+    /* Kompakt: eine Zeile mit letzter Nachricht und Zähler. Aufgeklappt wird der Verlauf (feste, kleine Höhe).
+       Bei ungelesenen Kundennachrichten ist sie hervorgehoben; gelesen wird erst beim Aufklappen. */
+    const th = (await api(`/clients/${client.id}/threads`).catch(() => [])).find(t => thKey(t) === String(p.id)) || {};
+    const neu = th.unread || 0, auf = sessionStorage.getItem("pchat-auf") === "1";
+    box.classList.add("pchat"); box.classList.toggle("pchat--neu", !!neu);
+    box.innerHTML = `<button type="button" class="pchat__zeile" aria-expanded="${auf}">
+        <span class="pchat__ic">${neu ? `<em>${neu}</em>` : ""}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+        <span class="pchat__t"><b>Nachrichten${neu ? ` · ${neu === 1 ? "1 neue" : `${neu} neue`}` : ""}</b><small>${th.last_body ? `${th.last_sender === "team" ? "Sie: " : `${esc(client.name)}: `}${esc(th.last_body)}` : `Chat mit ${esc(client.name)} zu diesem Projekt`}</small></span>
+        <time>${kurzZeit(th.last_at)}</time>${CHEV}</button>
+      <div class="pchat__body" ${auf ? "" : "hidden"}><div class="pchat__pane"></div><a class="link pchat__voll" href="#chats/${client.id}/${p.id}">Im großen Chat öffnen →</a></div>`;
+    let geladen = false;
+    const laden = () => { if (geladen) return; geladen = true;
+      pane($(".pchat__pane", box), { cid: client.id, th: String(p.id), mini: true, limit: 4, placeholder: `Nachricht an ${client.name} …`,
+        empty: `<b>Noch keine Nachrichten zu diesem Projekt.</b>Was Sie hier schreiben, sieht ${esc(client.name)} im Kundenportal im Chat zu „${esc(p.title)}“.`,
+        onRead: () => { box.classList.remove("pchat--neu"); $(".pchat__ic em", box)?.remove(); window.updateBadges?.(); } }).catch(err => toast(err.message)); };
+    $(".pchat__zeile", box).addEventListener("click", e => {
+      const z = e.currentTarget, offen = z.getAttribute("aria-expanded") !== "true";
+      z.setAttribute("aria-expanded", offen); $(".pchat__body", box).hidden = !offen;
+      try { sessionStorage.setItem("pchat-auf", offen ? "1" : "0"); } catch {}
+      if (offen) laden();
+    });
+    if (auf) laden();
   }
 
   window.CHATS = { load, kundenTab, projektKarte, pane };

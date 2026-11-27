@@ -1756,3 +1756,56 @@ label.auf__item{cursor:pointer}
 .fresend{width:36px;padding:0;justify-content:center;font-size:16px}
 .ftable__r--akt:focus-visible{outline:2px solid #8b5cf6;outline-offset:-2px}
 @media (max-width:1100px){.ftable__r--akt{grid-template-columns:1fr auto auto}}
+
+/* Projektseite: Nachrichten kompakt – eine Zeile, aufklappbar, hervorgehoben bei Neuem */
+.pchat{padding:0!important;overflow:hidden}
+.pchat__zeile{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:0;background:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.pchat__zeile:hover{background:var(--paper,#f6f6f8)}
+.pchat__ic{position:relative;flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--paper,#f2f2f5);color:var(--ink2,#555)}
+.pchat__ic svg{width:18px;height:18px}
+.pchat__ic em{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#e11d74;color:#fff;font-style:normal;font-size:11px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--white,#fff)}
+.pchat--neu{box-shadow:0 0 0 1.5px rgba(139,92,246,.45),0 14px 30px -22px rgba(139,92,246,.8)!important}
+.pchat--neu .pchat__ic{background:var(--grad);color:#fff}
+.pchat__t{flex:1;min-width:0;display:grid}
+.pchat__t b{font-size:14.5px}
+.pchat__t small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pchat__zeile time{flex:none;font-size:12px;color:var(--muted)}
+.pchat__zeile .wa__chev{flex:none;width:14px;height:14px;color:var(--muted);transition:transform .25s}
+.pchat__zeile[aria-expanded=true] .wa__chev{transform:rotate(180deg)}
+.pchat__body{border-top:1px solid var(--line)}
+.pchat__body .chat--mini{border-radius:0;box-shadow:none}
+.pchat__body .chat--mini .chat__log{max-height:300px;padding:12px 14px 8px}
+.pchat__body .chat--mini .msg--stand,.pchat__body .chat--mini .msg--karte{max-width:min(100%,380px)}
+.pchat__body .chat--mini .stk__bild{height:96px}
+.pchat__voll{display:block;padding:8px 16px 12px;font-size:13px}
+
+/* Fragen an den Kunden: Gruppen „Beim Kunden“ und „Noch nicht geschickt“ */
+.ws__gruppe{margin:12px 0 4px!important;font-size:12px!important;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)!important}
+.ws__gruppe em{font-style:normal;margin-left:4px;padding:1px 7px;border-radius:999px;background:#f3edff;color:#6d28d9}
+.ws__f--weg{grid-template-columns:20px minmax(0,1fr)}
+.ws__bk{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--grad);color:#fff;margin-top:2px}
+.ws__bk svg{width:11px;height:11px}
+.ws__ok{color:#6d28d9;font-weight:600}
+.ws__fk{flex-wrap:wrap;row-gap:4px}
+
+/* Rechnungs-/Angebotsliste schmal: jede Zeile als kleine Karte (Nummer + Betrag, Kunde, Status + ↻) */
+@media (max-width:1100px){
+  .ftable__r--akt{grid-template-columns:140px minmax(0,1fr) 120px 170px 40px}
+  .ftable__r--akt>span:nth-child(3),.ftable__r--akt>span:nth-child(4){display:none}
+}
+@media (max-width:760px){
+  .ftable__r--akt{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nr br" "ku ku" "st ak";gap:4px 10px;padding:14px 16px}
+  .ftable__r--akt>span:nth-child(1){grid-area:nr;font-size:13px}
+  .ftable__r--akt>span:nth-child(2){grid-area:ku;min-width:0}
+  .ftable__r--akt>span:nth-child(2) b{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+  .ftable__r--akt>span:nth-child(2) small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ftable__r--akt>span:nth-child(5){grid-area:br;font-weight:700}
+  .ftable__r--akt>span:nth-child(6){grid-area:st;min-width:0}
+  .ftable__r--akt>:nth-child(7){grid-area:ak;justify-self:end;align-self:end}
+}
+
+/* Kundenliste auf dem Handy: Name darf umbrechen, Status-Schild bleibt sichtbar */
+@media (max-width:560px){.ltab__r.kgrid .lmain__t b{white-space:normal;overflow:visible;text-overflow:clip;display:flex;flex-wrap:wrap;gap:2px 6px;align-items:center;line-height:1.3}.ltab__r.kgrid .lmain__t small{white-space:normal}}
+@media (max-width:420px){.ws__fk{gap:4px 12px;font-size:13px}}
+/* Chat-Kopf: bei wenig Platz umbrechen statt Knöpfe abzuschneiden */
+@media (max-width:1200px){.wa__head{flex-wrap:wrap;row-gap:8px}.wa__head .wa__hm{flex:1 1 220px;min-width:0}}

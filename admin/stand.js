@@ -166,15 +166,20 @@
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
     // Lange Texte werden auf drei Zeilen gekürzt und lassen sich aufklappen
     const kurz = (t, leer) => !t ? `<p><i>${leer}</i></p>` : `<p class="pclamp">${absatz(t)}</p><button type="button" class="link" data-mehr>ganz anzeigen</button>`;
-    const frage = f => `<div class="ws__f"><input type="checkbox" value="${esc(f.id)}" aria-label="Zum Senden auswählen"><span>${absatz(f.text)}<small>${f.vonTeam ? "von dir" : "von Claude"}${f.gesendet ? ` · <em>an den Kunden geschickt am ${tag(f.gesendet)} · noch nicht beantwortet</em>` : ""}</small></span>
+    const frage = f => `<div class="ws__f"><input type="checkbox" value="${esc(f.id)}" aria-label="Zum Senden auswählen"><span>${absatz(f.text)}<small>${f.vonTeam ? "von dir" : "von Claude"} · noch nicht an den Kunden geschickt</small></span>
       <span class="ws__fk"><button type="button" class="link" data-wsf="antwort" data-id="${esc(f.id)}">Antwort eintragen</button><button type="button" class="link link--leise" data-wsf="loeschen" data-id="${esc(f.id)}">Löschen</button></span></div>`;
+    // Schon geschickt: klar als „beim Kunden“ markiert, mit Datum und „Erneut schicken“
+    const frageWeg = f => `<div class="ws__f ws__f--weg"><span class="ws__bk" title="An den Kunden geschickt">${ICON_PFEIL}</span><span>${absatz(f.text)}<small><b class="ws__ok">An den Kunden geschickt</b> am ${tag(f.gesendet)} · wartet auf Antwort</small></span>
+      <span class="ws__fk"><button type="button" class="link" data-wsf="erneut" data-id="${esc(f.id)}">↻ Erneut schicken</button><button type="button" class="link" data-wsf="antwort" data-id="${esc(f.id)}">Antwort eintragen</button><button type="button" class="link link--leise" data-wsf="loeschen" data-id="${esc(f.id)}">Löschen</button></span></div>`;
+    const neuF = offen.filter(f => !f.gesendet), wegF = offen.filter(f => f.gesendet);
     const ZEIG_N = 3, ZEIG_F = 4;
     const fragenBlock = `<div class="ws__b ws__fragen"><b>Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
-        ${offen.length ? `<p class="ws__woher">Offene Fragen, die nur der Kunde beantworten kann – von Claude gesammelt oder von dir angelegt. Hast du die Antwort schon (z. B. am Telefon), trag sie ein. Zum Senden ankreuzen.</p>`
-          + offen.slice(0, ZEIG_F).map(frage).join("") + weitere(offen.length - ZEIG_F, offen.slice(ZEIG_F).map(frage).join(""), ["weitere Frage", "weitere Fragen"])
-          : `<p>Keine offenen Fragen.</p>`}
+        ${!offen.length ? `<p>Keine offenen Fragen.</p>` : ""}
+        ${wegF.length ? `<p class="ws__gruppe">Beim Kunden – wartet auf Antwort <em>${wegF.length}</em></p>` + wegF.map(frageWeg).join("") : ""}
+        ${neuF.length ? `<p class="ws__gruppe">Noch nicht geschickt <em>${neuF.length}</em></p><p class="ws__woher">Von Claude gesammelt oder von dir angelegt. Zum Senden ankreuzen – oder, wenn du die Antwort schon hast, eintragen.</p>`
+          + neuF.slice(0, ZEIG_F).map(frage).join("") + weitere(neuF.length - ZEIG_F, neuF.slice(ZEIG_F).map(frage).join(""), ["weitere Frage", "weitere Fragen"]) : ""}
         <form class="ws__neu" data-wsf-neu><input name="text" maxlength="600" placeholder="Eigene Frage an den Kunden hinzufügen …" autocomplete="off"><button class="btn btn--ghost btn--sm">Hinzufügen</button></form>
-        ${offen.length && S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen an den Kunden senden</button></div>` : ""}
+        ${neuF.length && S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen an den Kunden senden</button></div>` : ""}
         ${weitere(klar.length, klar.map(f => `<p class="ws__klarf"><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}${f.vomKunden ? `<br><small><em>vom Kunden beantwortet am ${tag(f.vomKunden)}</em></small>` : ""}</p>`).join(""), ["geklärte Frage", "geklärte Fragen"])}</div>`;
     const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div></div>`;
     if (W.leer) { box.innerHTML = kopf("Stand, Notizen und Fragen an den Kunden") + `<p class="ws__leer">Von Claude ist noch nichts da. Öffne das Projekt oben mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Fragen an den Kunden kannst du schon jetzt selbst anlegen.</p>` + fragenBlock; return; }
@@ -198,6 +203,7 @@
     const b = e.target.closest("[data-wsf]"); if (!b) return;
     const pid = +$("#pWs").dataset.pid, id = b.dataset.id, fr = W?.fragen.find(x => x.id === id); if (!fr) return;
     try {
+      if (b.dataset.wsf === "erneut") return fragenSenden(pid, [id], true);
       if (b.dataset.wsf === "antwort") {
         const a = await UI.prompt("Antwort eintragen", { text: fr.text, label: "Was hat der Kunde geantwortet? Die Frage gilt danach als geklärt, Claude bekommt die Antwort im Projektordner.", value: "", multiline: true, ok: "Als geklärt speichern" });
         if (a === null) return;
@@ -246,8 +252,12 @@
     if (b.dataset.ws === "website" || b.dataset.ws === "anmerkungen") { const k = $('[data-act="openProto"]'); if (!k) return; k.dataset.liste = b.dataset.ws === "website" ? "0" : "1"; k.click(); delete k.dataset.liste; return; }
     const box = $("#pWs"), pid = +box.dataset.pid, ids = $$(".ws__f input:checked", box).map(i => i.value);
     if (!ids.length) return toast("Bitte mindestens eine Frage ankreuzen.");
+    fragenSenden(pid, ids, false);
+  });
+  function fragenSenden(pid, ids, erneut) {
     const fragen = W.fragen.filter(f => ids.includes(f.id));
-    const d = modal(`<h2 class="span2">Fragen an den Kunden senden</h2>
+    const d = modal(`<h2 class="span2">${erneut ? "Frage erneut an den Kunden schicken" : "Fragen an den Kunden senden"}</h2>
+      ${erneut ? `<p class="hint span2" style="margin:0">Zuletzt geschickt am ${C.fmt(fragen[0]?.gesendet, { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} Uhr. Die Frage kommt nochmal als Karte in den Projekt-Chat.</p>` : ""}
       <p class="hint span2" style="margin:0">So sieht der Kunde die Fragen – jede mit eigenem Antwortfeld. Sie erscheinen außerdem im Projekt-Chat.</p>
       <div class="span2 wsv" aria-label="Vorschau, wie der Kunde die Fragen sieht">${fragen.map(f => `<div class="wsv__k"><p class="wsv__q">${absatz(f.text)}</p><div class="wsv__feld" aria-hidden="true">Ihre Antwort …</div><span class="wsv__knopf" aria-hidden="true">Antwort senden</span></div>`).join("")}</div>
       ${KANAL.html({ modus: "rueckfragen", titel: "Die Fragen kommen in den Chat – und per E-Mail?", hinweis: "Die E-Mail ist nur ein Hinweis, die Fragen selbst stehen nicht darin." })}
@@ -257,6 +267,7 @@
         d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Kundenportal unter Rückfragen und im Projekt-Chat${r.mailed ? ", mit E-Mail-Hinweis" : ""}.`);
         if (window.KUNDEN?.openProjectPage && $("#pChat")) window.KUNDEN.openProjectPage(pid, true); else workspace({ id: pid }); }   // neu zeichnen, damit die Karte „Nachrichten“ die Rückfragen gleich zeigt
       catch (err) { d.fail(err.message); k.disabled = false; } });
-  });
+  }
+  const ICON_PFEIL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
   window.STAND = { projectCard, workspace, freigabe };
 })();
