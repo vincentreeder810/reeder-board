@@ -156,3 +156,14 @@
 .stk__btn{height:42px;border:0;border-radius:999px;background:var(--grad);color:#fff;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s}
 .stk__btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px -12px rgba(139,92,246,.9)}
 .stk--weg{opacity:.6}
+
+/* Stand-Karte breiter, statt Live-Vorschau das Verlaufsbild mit Bildschirm-Symbol (wie die frühere Prototyp-Kachel) */
+.msg--stand{max-width:min(100%,560px);width:100%}
+.stk__bild{aspect-ratio:auto;height:150px;background:#0b0b10}
+.stk__deko{inset:0;background:radial-gradient(circle at 22% 30%,rgba(79,124,255,.85),transparent 58%),radial-gradient(circle at 78% 75%,rgba(236,72,153,.75),transparent 58%),#07070b}
+.stk__deko svg{width:44px;height:44px;opacity:.95;filter:drop-shadow(0 6px 16px rgba(0,0,0,.35));transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.stk__bild:hover .stk__deko svg{transform:scale(1.08)}
+/* Chat-Auswahl oben klar vom Verlauf getrennt */
+.chat__threads{padding:10px 14px 10px!important;background:var(--white);border-bottom:1px solid var(--line);box-shadow:0 6px 14px -12px rgba(0,0,0,.25);position:relative;z-index:1;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chat__threads::-webkit-scrollbar{display:none}
+.chat__threads .thchip{flex:none}
