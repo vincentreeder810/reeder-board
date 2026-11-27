@@ -36,7 +36,7 @@
       const d = extra => Object.entries({ ...k, ...extra }).map(([n, w]) => `data-${n}="${esc(String(w ?? ""))}"`).join(" ");
       const knopf = (act, text, extra = {}) => `<button class="btn btn--sm btn--grad" data-va="${act}" ${d(extra)}>${text}</button>`;
       const klein = (act, text, extra = {}) => `<button class="vneben" data-va="${act}" ${d(extra)}>${text}</button>`;
-      const href = p ? (h ? `#hardware/projekt/${p.id}` : `#projekte/${p.id}`) : `#kunden/${c.id}`;
+      const href = p ? `#projekte/${p.id}` : `#kunden/${c.id}`;
       const video = v.termin?.video_url && new Date(v.termin.start).toDateString() === new Date().toDateString() ? `<a class="vneben" href="${esc(v.termin.video_url)}" target="_blank" rel="noopener">Video beitreten</a>` : "";
       if (schritt === 4) {            // Auftrag läuft
         if (h) { const ph = (h.phasen || []).find(x => x.status !== "fertig"), seite = ph ? HW_SEITE[ph.id] : null, nr = ph ? (h.phasen || []).indexOf(ph) + 1 : 0;
@@ -132,7 +132,16 @@
 
   /* ---------- Arbeitsstand auf der Projektseite ---------- */
   async function arbeitsstand(p) {
-    const box = $("#pArbeit"); if (!box || !p || p.bereich === "hardware") return;
+    const box = $("#pArbeit"); if (!box || !p) return;
+    if (p.bereich === "hardware") {
+      // Hardware: die Notiz steht im Konzept (projekt.json, Feld naechstesMal) – dieselbe wie auf der Karte in „Mein Arbeitsplatz“
+      const k = await api(`/hardware/projekte/${p.id}`).catch(() => null); if (!k) return;
+      box.hidden = false;
+      box.innerHTML = `<div class="chead" style="margin-bottom:10px"><h2 style="font-size:18px">Fürs nächste Mal</h2></div>
+        <label class="astand__notiz"><textarea rows="3" placeholder="Deine eigene Notiz: Womit geht es weiter? Was ist noch offen?">${esc(k.naechstesMal || "")}</textarea></label>`;
+      $("textarea", box).addEventListener("change", e => api(`/hardware/projekte/${p.id}`, { method: "PATCH", body: { naechstesMal: e.target.value } }).then(() => toast("Gespeichert")).catch(x => toast(x.message)));
+      return;
+    }
     const a = await api(`/projects/${p.id}/arbeitsstand`).catch(() => null); if (!a) return;
     const tag = iso => C.fmt(iso, { weekday: "short", day: "numeric", month: "short" });
     box.hidden = false;
@@ -296,9 +305,7 @@
   async function projects() {
     const [, pid] = location.hash.slice(1).split("/");
     if (pid) {
-      // Hardware-Projekte haben ihre eigene Seite im Hardware-Bereich
-      const istHardware = await api(`/hardware/projekte/${+pid}/stand`).then(() => true, () => false);
-      if (istHardware) { location.replace(`#hardware/projekt/${+pid}`); return; }
+      // Alle Bereiche (Website, Software, Hardware) haben dieselbe Projektseite; Hardware bekommt dort die Karte „Ausarbeitung“
       $("#pList").hidden = true; $("#projectPage").hidden = false; return window.KUNDEN.openProjectPage(+pid); }
     $("#pList").hidden = false; $("#projectPage").hidden = true;
     const [all, team] = await Promise.all([api("/projects"), ME.owner ? api("/team") : Promise.resolve([])]);

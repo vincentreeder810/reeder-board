@@ -1768,7 +1768,7 @@ label.auf__item{cursor:pointer}
 .pchat--neu .pchat__ic{background:var(--grad);color:#fff}
 .pchat__t{flex:1;min-width:0;display:grid}
 .pchat__t b{font-size:14.5px}
-.pchat__t small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pchat__t small{font-size:12.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
 .pchat__zeile time{flex:none;font-size:12px;color:var(--muted)}
 .pchat__zeile .wa__chev{flex:none;width:14px;height:14px;color:var(--muted);transition:transform .25s}
 .pchat__zeile[aria-expanded=true] .wa__chev{transform:rotate(180deg)}
@@ -1914,3 +1914,6 @@ label.auf__item{cursor:pointer}
 .pb__leer{display:flex;gap:12px;align-items:flex-start}.pb__leer b{font-size:16px}.pb__leer p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
 @media (max-width:620px){.pb{padding:16px!important}.pb__kacheln{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pb__t b{font-size:19px}}
 .pb__l:not(.pb__l--ok) .pb__f em{color:var(--ink2,#424245)}
+
+/* Texte nie mit „…“ abschneiden: in Listen umbrechen statt kürzen */
+.hrow__m p,.hrow__m b,.pt__main b,.pt__main small,.pdoc__m small,.pdoc__m b,.cl__m small,.cl__m b,.wa__wer,.ltab__r .lc small{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}

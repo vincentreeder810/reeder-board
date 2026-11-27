@@ -203,7 +203,8 @@ const bereicheTags = c => ["software", "hardware"].filter(b => (c.projects || []
 /** Kurzform für enge Stellen wie Kalenderkacheln: SW oder HW (leer ohne Projekt) */
 const bereichKurz = p => p ? `<em class="bkurz bkurz--${p.bereich === "hardware" ? "hw" : "sw"}" title="${p.bereich === "hardware" ? "Hardware" : "Software"}-Termin">${p.bereich === "hardware" ? "HW" : "SW"}</em>` : "";
 /** Adresse der Projektseite: Hardware-Projekte haben ihre eigene Seite */
-const projektHref = p => p.bereich === "hardware" ? `#hardware/projekt/${p.id}` : `#projekte/${p.id}`;
+// Eine Projektseite für alle Bereiche; die Seiten der Hardware-Ausarbeitung (3D-Modell usw.) liegen unter #hardware/projekt/<id>/<seite>
+const projektHref = p => `#projekte/${p.id}`;
 function route() {
   if (!ME) return;
   let v = location.hash.slice(1).split("/")[0] || (ME.owner ? "cockpit" : "arbeitsplatz");

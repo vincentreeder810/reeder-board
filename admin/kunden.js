@@ -408,7 +408,18 @@
         </a>`).join("") : `<div class="empty">${ME.owner ? "Noch keine Projekte. Legen Sie das erste an – Angebot, Termine, Prototypen und Rechnungen hängen dann daran." : "Ihnen ist bei diesem Kunden noch kein Projekt zugewiesen."}</div>`}</div></div>`;
   }
 
-  /* ---------- Projektseite (#projekte/:id) ---------- */
+  /* ---------- Projektseite (#projekte/:id) – dieselbe für Website, Software und Hardware ---------- */
+  // Hardware: Kopf mit 3D-Modell, Claude und Ordner; die Karte „Ausarbeitung“ kommt aus dem Hardware-Paket (window.HWKARTE)
+  const hwKopf = p => `<a class="btn btn--grad btn--sm" href="#hardware/projekt/${p.id}/modell">3D-Modell öffnen</a>${ME.owner ? `<button class="btn btn--ghost btn--sm" data-hw="claude" title="Claude-App im Projektordner öffnen, mit dem Auftrag zum aktuellen Schritt">Mit Claude arbeiten</button><button class="btn btn--ghost btn--sm" data-hw="ordner">Ordner öffnen</button>` : ""}<a class="btn btn--ghost btn--sm" href="#hardware/projekt/${p.id}/dateien">Dateien</a><a class="btn btn--ghost btn--sm" href="#hardware/projekt/${p.id}/pruefung" title="Konzept als PDF erstellen und an den Kunden schicken">Konzept-Dokument</a>`;
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-hw]"); if (!b || !project || !window.HWKARTE) return;
+    b.disabled = true;
+    try {
+      if (b.dataset.hw === "claude") { await window.HWKARTE.claude(project.id); toast("Die Claude-App öffnet sich im Projektordner. Ordner bestätigen, dann abschicken."); }
+      else { await window.HWKARTE.ordner(project.id); toast("Der Ordner öffnet sich auf deinem Rechner."); }
+    } catch (err) { toast(err.message); }
+    setTimeout(() => { b.disabled = false; }, 2500);
+  });
   async function openProjectPage(id, keepScroll) {
     const y = scrollY, host = $("#projectPage");
     try { project = await api(`/projects/${id}`); }
@@ -429,6 +440,7 @@
     const docs = ME.owner ? await api(`/finance/projects/${id}/dokumente`).catch(() => []) : [];
     p.docs = docs;
     const haupt = hauptSchritt(p);
+    const hw = p.bereich === "hardware", web = !hw && (p.kind === "Website" || p.anfrage_art === "website"), W = web ? "Website" : p.kind === "App" ? "App" : "Anwendung";
     const statusPill = p.status === "aktiv" ? `<span class="pill pill--aktiv">aktiv</span>` : `<span class="pill">${esc(p.status)}</span>`;
     host.innerHTML = `
       <a class="back" href="#projekte">← Alle Projekte</a>
@@ -439,16 +451,17 @@
           <div class="khead__acts">
             ${haupt ? `<button class="btn btn--grad btn--sm" data-act="pHaupt" title="${esc(haupt.hint || "")}">${esc(haupt.l)}</button>` : ""}
             ${AKT.knopf("pKopf")}</div></div>
-        <div class="pweb">${liveV ? `<button class="btn btn--grad btn--sm" data-web="0">Aktuelle Website ansehen</button><a class="btn btn--ghost btn--sm" href="${esc(liveV.url)}" target="_blank" rel="noopener" title="Die Website ohne Board in einem neuen Tab öffnen – so, wie der Kunde sie sieht">↗ Neuer Tab</a><button class="btn btn--ghost btn--sm" data-web="1">Mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="1">Website ansehen</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--ghost btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span><button class="btn btn--ghost btn--sm" data-erneut data-art="stand" data-ref="${liveV.id}" data-url="/projects/${p.id}/stand/erneut" data-titel="Aktuellen Stand erneut schicken (Version ${liveV.version})" title="Wenn der Kunde sagt, er hat nichts bekommen">↻ Erneut schicken</button>` : ""}</div>
-        <div class="pphase" role="list">${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
+        <div class="pweb">${hw ? hwKopf(p) : liveV ? `<button class="btn btn--grad btn--sm" data-web="0">Aktuelle ${W} ansehen</button><a class="btn btn--ghost btn--sm" href="${esc(liveV.url)}" target="_blank" rel="noopener" title="Die ${W} ohne Board in einem neuen Tab öffnen – so, wie der Kunde sie sieht">↗ Neuer Tab</a><button class="btn btn--ghost btn--sm" data-web="1">Mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="1">${W} ansehen</button>` : `<span class="pweb__leer">Noch keine ${W} hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--ghost btn--sm" data-br="claude">Mit Claude arbeiten</button><button class="btn btn--ghost btn--sm" data-br="ordner" title="Projektordner auf deinem Rechner öffnen">Ordner öffnen</button>` : ""}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span><button class="btn btn--ghost btn--sm" data-erneut data-art="stand" data-ref="${liveV.id}" data-url="/projects/${p.id}/stand/erneut" data-titel="Aktuellen Stand erneut schicken (Version ${liveV.version})" title="Wenn der Kunde sagt, er hat nichts bekommen">↻ Erneut schicken</button>` : ""}</div>
+        <div class="pphase" role="list" ${hw ? "hidden" : ""}>${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
       </div>
       <div class="pgrid">
         <div class="stack p-main">
           <div class="card pfrei" id="pFrei" hidden></div>
+          ${hw ? `<div class="card hwkarte" id="pHw"></div>` : ""}
           <div class="card pab" id="pAbschluss" hidden></div>
-          <div class="card" id="pAnn">
-            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Anmerkungen${openAnns.length ? ` <em class="pcount">${openAnns.length}</em>` : ""}</h2><p>${openAnns.length ? "Offene Wünsche von Kunde und Team. Claude hat dieselbe Liste im Projektordner." : `Keine offenen Anmerkungen.${p.prototypes.length ? " Neue pinnst du direkt an der Website an." : ""}`}</p></div>
-              ${p.prototypes.length ? `<div class="acts"><button class="btn ${openAnns.length ? "btn--grad" : "btn--ghost"} btn--sm" data-web="1">${openAnns.length ? "Auf der Website ansehen" : "Anmerkung anpinnen"}</button></div>` : ""}</div>
+          <div class="card" id="pAnn" ${hw ? "hidden" : ""}>
+            <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Anmerkungen${openAnns.length ? ` <em class="pcount">${openAnns.length}</em>` : ""}</h2><p>${openAnns.length ? "Offene Wünsche von Kunde und Team. Claude hat dieselbe Liste im Projektordner." : `Keine offenen Anmerkungen.${p.prototypes.length ? " Neue pinnst du direkt an der ${W} an." : ""}`}</p></div>
+              ${p.prototypes.length ? `<div class="acts"><button class="btn ${openAnns.length ? "btn--grad" : "btn--ghost"} btn--sm" data-web="1">${openAnns.length ? "Mit Anmerkungen ansehen" : "Anmerkung anpinnen"}</button></div>` : ""}</div>
             ${openAnns.length ? `<div class="annlist">${[...openAnns].sort((a, b) => String(a.page).localeCompare(String(b.page)) || a.id - b.id).map((a, i) => `
               <div class="ann" data-act="jump" data-id="${a.id}"><span class="ann__no">${i + 1}</span>
                 <div class="ann__body"><p>${esc(a.comment || "(nur eingezeichnet, ohne Text)")}</p>${a.change && a.comment !== window.RSViewer?.changeText(a.change) ? `<p class="ann__chg">Wunsch: ${esc(window.RSViewer.changeText(a.change))}</p>` : ""}<span>${esc(seiteName(a.page))} · ${a.author_kind === "team" ? "Team" : "Kunde"}: ${esc(a.author)} · ${ago(a.created_at)} · zu Version ${a.proto_version}</span></div>
@@ -467,9 +480,9 @@
           <details class="card pklapp"><summary><h2>Dokumente</h2><span>${p.documents.length || "keine"}</span></summary>
             <div class="acts" style="justify-content:flex-start;margin:12px 0 10px"><button class="btn btn--ghost btn--sm" data-act="newDoc">Hochladen</button></div>
             <div class="plist">${p.documents.length ? p.documents.map(docRow).join("") : `<div class="empty">Noch keine Dokumente.</div>`}</div></details>
-          <details class="card pklapp" id="pVers"><summary><h2>Website-Versionen</h2><span>${p.prototypes.flat().length || "keine"}</span></summary>
+          <details class="card pklapp" id="pVers" ${hw ? "hidden" : ""}><summary><h2>${web ? "Website-Versionen" : "Versionen"}</h2><span>${p.prototypes.flat().length || "keine"}</span></summary>
             <p class="hint" style="margin:12px 0 10px">Alle bisherigen Versionen. Die oberste ohne Hinweis ist die, die der Kunde im Kundenportal sieht.</p>
-            <div class="plist">${p.prototypes.length ? p.prototypes.map((g, gi) => protoGroupRow(g, gi)).join("") : `<div class="empty">Noch keine Version. Mit „Mit Claude arbeiten“ entsteht die Website im Projektordner.</div>`}</div>
+            <div class="plist">${p.prototypes.length ? p.prototypes.map((g, gi) => protoGroupRow(g, gi)).join("") : `<div class="empty">Noch keine Version. Mit „Mit Claude arbeiten“ entsteht die ${W} im Projektordner.</div>`}</div>
             <details class="pmehr" id="pWege"><summary>Selbst hochladen, Ordner und Brücke</summary>
               <div class="pmehr__in"><p class="hint" style="margin:0 0 10px">Nur nötig, wenn Claude nicht selbst hochlädt: Was du hier hochlädst, sieht der Kunde sofort – ohne Freigabe.</p>
                 <div class="acts" style="justify-content:flex-start;margin:0 0 10px">${ME.owner ? `<button class="btn btn--ghost btn--sm" data-br="stand">Stand aus dem Projektordner hochladen</button>` : ""}<button class="btn btn--ghost btn--sm" data-act="uploadProto">Dateien von Hand hochladen</button></div>
@@ -477,7 +490,7 @@
                 <div id="pAuftrag"></div></div></details>
           </details>
           <div class="card pb" id="pPruef" hidden></div>
-          <div class="card" id="pTests"></div>
+          <div class="card" id="pTests" ${hw ? "hidden" : ""}></div>
         </div>
         <div class="stack p-side">
           <div class="card" id="pTime"></div>
@@ -501,11 +514,14 @@
         </div>
       </div>`;
     window.WORK?.projectCards(p);
+    // Das Hardware-Paket wird als Modul nachgeladen: kurz darauf warten
+    if (hw) (async () => { for (let i = 0; i < 50 && !window.HWKARTE; i++) await new Promise(r => setTimeout(r, 100)); const box = $("#pHw"); if (!box) return;
+      window.HWKARTE ? window.HWKARTE.zeigen(box, p.id) : (box.innerHTML = `<p class="hint" style="margin:0">Die Ausarbeitung lädt nicht – bitte die Seite neu laden.</p>`); })();
     window.CHATS?.projektKarte(p, current).catch(() => {});   // Karte „Nachrichten“: Chat dieses Projekts
     window.kuerzungPruefen?.();
     window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); window.STAND.pruefbericht?.(p); window.STAND.abschluss?.(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
     // Prüfstrecke nur zeigen, wo sie laufen kann (auf dem Online-Server gibt es keinen Browser dafür)
-    Promise.resolve(window.PRUEF?.load(p)).then(() => { const k = $("#pTests"); if (k && /Kein Browser gefunden/.test(k.textContent)) k.hidden = true; }).catch(() => {});
+    Promise.resolve(hw ? null : window.PRUEF?.load(p)).then(() => { const k = $("#pTests"); if (k && /Kein Browser gefunden/.test(k.textContent)) k.hidden = true; }).catch(() => {});
     window.BOARD?.arbeitsstand?.(p);
     window.BOARD?.vereinbarungen?.(p);
     if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
