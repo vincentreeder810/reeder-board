@@ -63,6 +63,8 @@ export const DEFAULT_AVAILABILITY = {
     abstimmung:    { label: "Projekt-Abstimmung",                  minutes: 30, buffer: 10, active: true, portal: true, desc: "Stand besprechen, Fragen klären, nächste Schritte festlegen." },
     feedback:      { label: "Feedback zum Prototyp",               minutes: 45, buffer: 15, active: true, portal: true, desc: "Wir gehen den Prototyp gemeinsam durch und nehmen Ihre Wünsche auf." },
     rueckfrage:    { label: "Kurze Rückfrage",                     minutes: 15, buffer: 5,  active: true, portal: true, desc: "Eine schnelle Frage, die sich im Gespräch leichter klären lässt." },
+    abnahme:       { label: "Abnahme",                             minutes: 45, buffer: 15, active: true, intern: true, desc: "Gemeinsame Abnahme des fertigen Projekts." },        // nur vom Team vergeben
+    installation:  { label: "Installation & Übergabe",             minutes: 90, buffer: 30, active: true, intern: true, desc: "Wir installieren die Software und übergeben alles." },
     schulung:      { label: "Schulung & Einweisung",               minutes: 60, buffer: 15, active: true, portal: true, desc: "Wir zeigen Ihnen und Ihrem Team, wie alles funktioniert." },
   },
 };

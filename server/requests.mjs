@@ -9,7 +9,7 @@ import { firmaVonProjekt } from "./firmen.mjs";
 export const onBooked = new Set();   // z. B. Vorab-Fragebogen nach einem vom Team eingeplanten Erstgespräch
 export function createRequests({ json, readJson, clean, logEvent, SITE_URL }) {
   const av = () => getSetting("availability", DEFAULT_AVAILABILITY);
-  const portalTypes = () => Object.entries(av().types).filter(([, t]) => t.portal && t.active !== false)
+  const portalTypes = () => Object.entries(av().types).filter(([, t]) => t.portal && !t.intern && t.active !== false)
     .map(([key, t]) => ({ key, label: t.label, minutes: t.minutes, desc: t.desc || "" }));
   const typeLabel = key => av().types[key]?.label || key;
   const short = iso => new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) + " Uhr";

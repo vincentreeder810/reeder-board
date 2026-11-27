@@ -302,5 +302,70 @@
       ${behoben.length ? weitere(behoben.length, `<ul class="pb__l pb__l--ok">${behoben.map(fund).join("")}</ul>`, ["behobener Fund", "behobene Funde"]) : ""}</div></details>`;
     box.querySelector("details").addEventListener("toggle", e => { try { sessionStorage.setItem("pb-auf", e.target.open ? "1" : "0"); } catch {} });
   }
-  window.STAND = { projectCard, workspace, freigabe, pruefbericht };
+  /* ---------- Abschluss: Abnahme → Abgenommen → Endrechnung → Übergabe (Schritt 1 von 3) ---------- */
+  let AB = null;
+  const euroN = c => (Number(c || 0) / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  const tagZeit = s => C.fmt(String(s).includes("T") ? s : String(s).replace(" ", "T") + "Z", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  async function abschluss(p) {
+    const box = $("#pAbschluss"); if (!box || !p || !ME.owner) return;
+    if (!["aktiv", "abgeschlossen"].includes(p.status)) { box.hidden = true; return; }
+    AB = await api(`/projects/${p.id}/abschluss`).catch(() => null); if (!AB) return;
+    box.hidden = false; box.dataset.pid = p.id; box.dataset.cid = p.client_id;
+    const sw = AB.bereich === "software", jetzt = Date.now();
+    const abn = AB.abnahme[0], inst = AB.installation[0];
+    const terminText = t => t ? `${Date.parse(t.start) > jetzt ? "geplant" : "war"} am ${tagZeit(t.start)} Uhr` : "";
+    const e = AB.endrechnung, z = AB.endzahlung;
+    // Stand je Schritt: fertig / dran / später
+    const s1 = abn && Date.parse(abn.start) <= jetzt ? "ok" : "dran";
+    const s2 = AB.abgenommen_at ? "ok" : (abn ? "dran" : "spaeter");
+    const s3 = !z ? (AB.abgenommen_at ? "dran" : "spaeter") : (z.status === "bezahlt" ? "ok" : e?.versandt ? "warte" : AB.abgenommen_at ? "dran" : "spaeter");
+    const s4 = AB.uebergabeBereit ? "dran" : "spaeter";
+    const fertig = [s1, s2, s3].filter(x => x === "ok").length;
+    const schritt = (st, titel, text, akt = "") => `<li class="pab__s pab__s--${st}"><span class="pab__i" aria-hidden="true">${st === "ok" ? "✓" : st === "warte" ? "…" : ""}</span>
+      <div class="pab__m"><b>${titel}</b><small>${text}</small></div><div class="pab__a">${akt}</div></li>`;
+    const endAkt = z?.status === "bezahlt" ? (e?.locked ? `<button class="btn btn--ghost btn--sm" data-ab="rechnung" data-id="${e.id}">Ansehen</button>` : "") : !z ? `<a class="btn btn--ghost btn--sm" href="#finanzen/rechnungen">Zu den Finanzen</a>`
+      : !e ? `<button class="btn btn--${AB.abgenommen_at ? "grad" : "ghost"} btn--sm" data-rechnung='${esc(JSON.stringify({ client_id: p.client_id, project_id: p.id, payment_id: z.id }))}'>Endrechnung erstellen</button>`
+      : !e.locked ? `<button class="btn btn--grad btn--sm" data-ab="rechnung" data-id="${e.id}">Entwurf fertigstellen</button>`
+      : `<button class="btn btn--ghost btn--sm" data-ab="rechnung" data-id="${e.id}">Ansehen</button>`;
+    const endText = !z ? "Kein Zahlungsplan – die Endrechnung stellst du in den Finanzen."
+      : `${esc(z.label)} · ${euroN(z.netto)} netto · ${z.status === "bezahlt" ? `bezahlt${z.paid_at ? " am " + C.fmt(z.paid_at, { day: "numeric", month: "short" }) : ""}` : !e ? "noch keine Rechnung" : !e.locked ? "Entwurf liegt bereit" : e.versandt ? `${esc(e.number)} verschickt · wartet auf Zahlung` : `${esc(e.number)} festgeschrieben · noch nicht verschickt`}${AB.offeneVorher ? ` · <span class="pab__warn">${AB.offeneVorher} frühere Rate${AB.offeneVorher === 1 ? "" : "n"} noch offen</span>` : ""}`;
+    // Zu Beginn eines Projekts nur eine Zeile; offen, sobald es einen Abnahmetermin gibt oder schon etwas erledigt ist
+    const offen = !!(abn || inst || AB.abgenommen_at || e);
+    box.innerHTML = `<details class="pab__auf" ${offen ? "open" : ""}><summary class="pab__sum"><span><b>Abschluss</b><small>${fertig ? `${fertig} von 3 erledigt` : "Abnahme, Endrechnung und Übergabe an den Kunden"}</small></span><svg class="pb__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+      <ol class="pab__l">
+        ${schritt(s1, sw ? "Abnahme- oder Installationstermin" : "Abnahmetermin",
+          abn ? terminText(abn) : inst ? `Installation ${terminText(inst)}` : "Mit dem Kunden gemeinsam durchgehen und abnehmen.",
+          `<button class="btn btn--${abn ? "ghost" : "grad"} btn--sm" data-ab="termin" data-typ="abnahme">${abn ? "Neuer Termin" : "Abnahmetermin vereinbaren"}</button>${sw ? `<button class="btn btn--ghost btn--sm" data-ab="termin" data-typ="installation">Installation</button>` : ""}`)}
+        ${schritt(s2, "Abgenommen", AB.abgenommen_at ? `am ${tagZeit(AB.abgenommen_at)} Uhr · eingetragen von ${esc(AB.abgenommen_von || "")}` : "Trag ein, wenn der Kunde das Ergebnis abgenommen hat.",
+          AB.abgenommen_at ? `<button class="link link--leise" data-ab="zurueck">zurücknehmen</button>` : `<button class="btn btn--${s2 === "dran" ? "grad" : "ghost"} btn--sm" data-ab="abgenommen">Als abgenommen eintragen</button>`)}
+        ${schritt(s3, "Endrechnung", endText, endAkt)}
+        ${schritt(s4, "Übergabe an den Kunden",
+          `${AB.uebergabeBereit ? "Bereit – Code bzw. Dateien, Prüfbericht und Rechnung können raus." : `Wird freigegeben ${AB.uebergabe_nach === "zahlung" ? "nach Zahlungseingang der Endrechnung" : "sobald die Endrechnung verschickt ist"}.`}
+            <label class="pab__nach">Freigeben: <select data-ab="nach"><option value="zahlung" ${AB.uebergabe_nach === "zahlung" ? "selected" : ""}>nach Zahlungseingang</option><option value="rechnung" ${AB.uebergabe_nach === "rechnung" ? "selected" : ""}>sofort mit der Endrechnung</option></select></label>`,
+          `<button class="btn btn--ghost btn--sm" disabled title="Kommt im nächsten Schritt: Übergabe-Paket und Abschluss-Mail">Übergabe senden</button>`)}
+      </ol></details>`;
+  }
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-ab]"); if (!b || b.tagName === "SELECT" || !b.closest("#pAbschluss")) return;
+    const box = $("#pAbschluss"), pid = +box.dataset.pid, cid = +box.dataset.cid, neu = () => abschluss({ id: pid, client_id: cid, status: AB?.status || "aktiv" });
+    try {
+      if (b.dataset.ab === "termin") return window.KUNDEN?.schedule(cid, { type: b.dataset.typ, project_id: pid });
+      if (b.dataset.ab === "rechnung") return window.FIN?.open(+b.dataset.id);
+      if (b.dataset.ab === "abgenommen") {
+        if (!(await UI.confirm("Der Kunde sieht im Kundenportal, dass das Projekt abgenommen ist. Danach folgt die Endrechnung.", { title: "Projekt als abgenommen eintragen?", ok: "Abgenommen" }))) return;
+        await api(`/projects/${pid}/abschluss`, { method: "POST", body: { aktion: "abgenommen" } }); toast("Als abgenommen eingetragen"); return neu();
+      }
+      if (b.dataset.ab === "zurueck") {
+        if (!(await UI.confirm("Die Abnahme wird wieder entfernt.", { title: "Abnahme zurücknehmen?", ok: "Zurücknehmen" }))) return;
+        await api(`/projects/${pid}/abschluss`, { method: "POST", body: { aktion: "zuruecknehmen" } }); return neu();
+      }
+    } catch (err) { toast(err.message); }
+  });
+  document.addEventListener("change", async e => {
+    const s = e.target.closest("#pAbschluss [data-ab=nach]"); if (!s) return;
+    const box = $("#pAbschluss");
+    try { await api(`/projects/${box.dataset.pid}/abschluss`, { method: "POST", body: { aktion: "uebergabe_nach", wert: s.value } }); toast("Gespeichert"); abschluss({ id: +box.dataset.pid, client_id: +box.dataset.cid, status: AB?.status || "aktiv" }); }
+    catch (err) { toast(err.message); }
+  });
+  window.STAND = { projectCard, workspace, freigabe, pruefbericht, abschluss };
 })();

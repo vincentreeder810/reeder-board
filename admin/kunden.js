@@ -445,6 +445,7 @@
       <div class="pgrid">
         <div class="stack p-main">
           <div class="card pfrei" id="pFrei" hidden></div>
+          <div class="card pab" id="pAbschluss" hidden></div>
           <div class="card" id="pAnn">
             <div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Anmerkungen${openAnns.length ? ` <em class="pcount">${openAnns.length}</em>` : ""}</h2><p>${openAnns.length ? "Offene Wünsche von Kunde und Team. Claude hat dieselbe Liste im Projektordner." : `Keine offenen Anmerkungen.${p.prototypes.length ? " Neue pinnst du direkt an der Website an." : ""}`}</p></div>
               ${p.prototypes.length ? `<div class="acts"><button class="btn ${openAnns.length ? "btn--grad" : "btn--ghost"} btn--sm" data-web="1">${openAnns.length ? "Auf der Website ansehen" : "Anmerkung anpinnen"}</button></div>` : ""}</div>
@@ -502,7 +503,7 @@
     window.WORK?.projectCards(p);
     window.CHATS?.projektKarte(p, current).catch(() => {});   // Karte „Nachrichten“: Chat dieses Projekts
     window.kuerzungPruefen?.();
-    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); window.STAND.pruefbericht?.(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
+    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); window.STAND.pruefbericht?.(p); window.STAND.abschluss?.(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
     // Prüfstrecke nur zeigen, wo sie laufen kann (auf dem Online-Server gibt es keinen Browser dafür)
     Promise.resolve(window.PRUEF?.load(p)).then(() => { const k = $("#pTests"); if (k && /Kein Browser gefunden/.test(k.textContent)) k.hidden = true; }).catch(() => {});
     window.BOARD?.arbeitsstand?.(p);

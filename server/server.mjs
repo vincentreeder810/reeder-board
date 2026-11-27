@@ -35,6 +35,7 @@ import { createBruecke } from "./bruecke.mjs";
 import { createBrueckeSoftware } from "./bruecke-software.mjs";
 import { createWorkspace } from "./workspace.mjs";
 import { createVersand, erinnerungenStarten } from "./versand.mjs";
+import { createAbschluss } from "./abschluss.mjs";
 import { createMailVorschau } from "./mail-vorschau.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
@@ -121,6 +122,7 @@ const brueckeSw = createBrueckeSoftware({ json, send, readJson, clean, publish: 
 const workspace = createWorkspace({ json, readJson, clean, limited, SITE_URL });
 portal.extend(workspace.portal);   // Rückfragen im Kundenportal beantworten
 const versand = createVersand({ json, readJson, SITE_URL });   // Versandprotokoll, erneut schicken
+const abschluss = createAbschluss({ json, readJson, logEvent: portal.logEvent });   // Abnahme, Endrechnung, Übergabe
 erinnerungenStarten(SITE_URL);                                  // E-Mail nur, wenn eine Chat-Karte ungelesen bleibt
 const mailVorschau = createMailVorschau({ json, send });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });
@@ -193,7 +195,7 @@ async function publicApi(req, res, url) {
   if (p === "/api/slots" && req.method === "GET") {
     const type = clean(url.searchParams.get("type"), 40), from = clean(url.searchParams.get("from"), 10), to = clean(url.searchParams.get("to"), 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return json(res, 400, { error: "Datum fehlt" });
-    if (getSetting("availability", DEFAULT_AVAILABILITY).types[type]?.portal) return json(res, 200, { days: {} });
+    if (getSetting("availability", DEFAULT_AVAILABILITY).types[type]?.portal || getSetting("availability", DEFAULT_AVAILABILITY).types[type]?.intern) return json(res, 200, { days: {} });
     return json(res, 200, { days: freeSlots(type, from, to) });
   }
   if (p === "/api/next-slot" && req.method === "GET") {
@@ -212,7 +214,7 @@ async function publicApi(req, res, url) {
     const b = { type, product: clean(d.product, 80), start: clean(d.start, 40), name: clean(d.name, 120), email: clean(d.email, 160).toLowerCase(),
       phone: clean(d.phone, 40), company: clean(d.company, 160), channel: clean(d.channel, 30),
       message: [topics.length && `Themen: ${topics.join(", ")}`, clean(d.message, 3000)].filter(Boolean).join("\n\n") };
-    if (!t || t.portal || !b.name || !isEmail(b.email) || !Date.parse(b.start)) return json(res, 400, { error: "Bitte prüfen Sie Ihre Angaben." }); // Kundenportal-Termine nur über das Portal
+    if (!t || t.portal || t.intern || !b.name || !isEmail(b.email) || !Date.parse(b.start)) return json(res, 400, { error: "Bitte prüfen Sie Ihre Angaben." }); // Kundenportal-Termine nur über das Portal
     if (!isSlotFree(type, b.start)) return json(res, 409, { error: "Dieser Termin ist leider nicht mehr frei." });
     b.start = new Date(b.start).toISOString(); b.minutes = t.minutes;
     // Direkt verbindlich gebucht: Termin steht sofort fest (Kalender, Kunde, Videolink), dann Bestätigung, Info ans Team und – beim Erstgespräch – der Fragebogen
@@ -470,6 +472,7 @@ async function adminApi(req, res, url) {
     const from = d(url.searchParams.get("from")) || new Date(Date.now() - 31 * 864e5).toISOString(), to = d(url.searchParams.get("to")) || new Date(Date.now() + 62 * 864e5).toISOString();
     return json(res, 200, kalender(user, from, to)); }
   if (p === "/inbox") return json(res, 200, inbox(user));
+  if (/^\/projects\/\d+\/abschluss$/.test(p)) { const r = await abschluss.admin(req, res, p, m, user); if (r !== null) return; }
   if (p === "/versand" || /^\/projects\/\d+\/stand\/erneut$|^\/documents\/\d+\/erneut$/.test(p)) { const r = await versand.admin(req, res, url, p, m, user); if (r !== null) return; }
   if (p === "/chats" || p.startsWith("/chats/")) { const r = await portal.chatAdmin(req, res, url, p, m, user); if (r !== null) return; }   // Ansicht „Chats“: Fäden, Teilnehmer, neuer Chat
   if (p.startsWith("/team")) { const r = await teamApi(req, res, p, m, user); if (r !== null) return; }
