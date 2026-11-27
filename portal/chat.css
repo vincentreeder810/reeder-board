@@ -87,3 +87,40 @@
 .msg__zitat{display:block;margin:0 0 6px;padding:6px 10px;border-left:3px solid #8b5cf6;border-radius:8px;background:rgba(139,92,246,.10);font-size:13px;line-height:1.4;opacity:.95;overflow-wrap:anywhere}
 .msg__zitat small{display:block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#a78bfa;margin-bottom:1px}
 .msg--client.msg--mine .msg__zitat,.msg--team.msg--mine .msg__zitat{background:rgba(255,255,255,.14);border-left-color:#c4b5fd}
+
+/* Rückfragen in der Kundenansicht: direkt in der Karte antworten – aufklappen, senden, Antwort fliegt in den Chat */
+.rqk--kunde .rqk__f{grid-template-columns:minmax(0,1fr);transition:opacity .32s ease,transform .42s cubic-bezier(.2,.75,.2,1),height .42s cubic-bezier(.4,0,.2,1),padding .42s cubic-bezier(.4,0,.2,1),margin .42s;overflow:hidden}
+.rqk--kunde .rqk__ant{justify-self:start;margin-top:6px;height:32px;padding:0 14px 0 12px;transition:opacity .2s ease,transform .25s ease}
+.rqk--kunde .rqk__ant::before{content:"";width:14px;height:14px;margin-right:4px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") center/contain no-repeat}
+.rqk--kunde .rqk__ant:hover{transform:translateY(-1px);box-shadow:0 8px 18px -10px rgba(139,92,246,.8)}
+.rqk__klapp{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .38s cubic-bezier(.4,0,.2,1),opacity .28s ease .06s}
+.rqk__innen{min-height:0;overflow:hidden;margin:0 -6px;padding:0 6px}.rqk__f.auf .rqk__innen{padding:8px 6px 6px}
+.rqk__f.auf .rqk__klapp{grid-template-rows:1fr;opacity:1}
+.rqk__f.auf .rqk__ant{display:none}
+.rqk__f.ohne-anim .rqk__klapp{transition:none}
+.rqk__form{display:flex;align-items:flex-end;gap:8px;margin:0;padding:5px 5px 5px 14px;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1.5px rgba(139,92,246,.35),0 6px 18px -12px rgba(139,92,246,.6);transition:box-shadow .2s}
+.rqk__form:focus-within{box-shadow:inset 0 0 0 1.5px #8b5cf6,0 0 0 4px rgba(139,92,246,.12),0 6px 18px -12px rgba(139,92,246,.7)}
+.rqk__form textarea{flex:1;min-width:0;border:0;outline:0;resize:none;background:transparent;font:inherit;font-size:14.5px;line-height:1.45;padding:7px 0;color:var(--ink);max-height:140px;overflow-y:auto}
+.rqk__send{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;cursor:pointer;transition:transform .2s ease,opacity .2s ease}
+.rqk__send svg{width:18px;height:18px}
+.rqk__send:disabled{opacity:.35;cursor:default}
+.rqk__send:not(:disabled):hover{transform:scale(1.06)}
+.rqk__f.sendet .rqk__send{animation:rqpuls .9s ease-in-out infinite}
+.rqk__f.weg{opacity:0;transform:translateX(28px) scale(.98);height:0!important;padding-top:0!important;padding-bottom:0!important;margin-top:-8px}
+.rqflug{position:fixed;z-index:9999;pointer-events:none;padding:10px 14px;border-radius:18px 18px 6px 18px;background:#0b0b10;color:#fff;font-size:14.5px;line-height:1.45;box-shadow:0 16px 34px -14px rgba(0,0,0,.55);overflow-wrap:anywhere;max-height:120px;overflow:hidden}
+.msg--pop{animation:msgpop .5s cubic-bezier(.2,.9,.25,1.15) both}
+@keyframes msgpop{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes rqpuls{50%{transform:scale(.9)}}
+/* Alles beantwortet: kompakte Bestätigung mit Haken */
+.rqk--fertig{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.rqk--fertig b{display:block;font-size:14.5px;color:var(--ink)}
+.rqk--fertig small{display:block;font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:1px}
+.rqk__haken{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#22c58b,#16a36a);color:#fff;box-shadow:0 8px 20px -10px rgba(22,163,106,.8)}
+.rqk__haken svg{width:20px;height:20px}
+.rqk--neu{animation:msgpop .5s cubic-bezier(.2,.9,.25,1.15) both}
+.rqk--neu .rqk__haken{animation:hakenpop .6s cubic-bezier(.2,.9,.3,1.4) .1s both}
+.rqk--neu .rqk__haken path{stroke-dasharray:24;stroke-dashoffset:24;animation:hakenzug .45s ease .35s forwards}
+@keyframes hakenpop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes hakenzug{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.rqk--kunde .rqk__f,.rqk__klapp,.msg--pop,.rqk--neu,.rqk--neu .rqk__haken{transition:none!important;animation:none!important}.rqk--neu .rqk__haken path{animation:none;stroke-dashoffset:0}}
+.rqk--kunde .rqk__f{row-gap:0}.rqk__innen{transition:padding .38s cubic-bezier(.4,0,.2,1)}

@@ -29,8 +29,25 @@
   const absatz = t => esc(t).replace(/\n/g, "<br>");
   const FRAGE_IC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.8 9.4a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.3"/><path d="M12 16.6h.01"/></svg>`;
   const ST = { offen: ["offen", "wartet auf Antwort"], beantwortet: ["beantwortet", "beantwortet"], erledigt: ["geklärt", "inzwischen geklärt"] };
+  const SENDEN_IC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  /* Kundensicht: nur die offenen Fragen. „Antworten“ klappt direkt unter der Frage ein Antwortfeld auf;
+     nach dem Senden wandert die Antwort als Blase in den Chat und die Frage verschwindet aus der Karte.
+     Sind alle beantwortet, schrumpft die Karte auf eine kurze Bestätigung. */
+  function rueckfragenKunde(m) {
+    const fr = m.meta.fragen, offen = fr.filter(f => f.status === "offen"), fertig = fr.filter(f => f.status === "beantwortet").length;
+    if (!offen.length) return `<div class="rqk rqk--fertig" data-rqk="${m.id}"><span class="rqk__haken" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div><b>Alle Rückfragen beantwortet</b><small>Vielen Dank! ${fertig === 1 ? "Ihre Antwort ist" : `Ihre ${fertig} Antworten sind`} bei uns angekommen.</small></div></div>`;
+    return `<div class="rqk rqk--kunde" data-rqk="${m.id}">
+      <div class="rqk__h"><span class="rqk__ic">${FRAGE_IC}</span><div><b>Rückfragen zu Ihrem Projekt</b><small>${offen.length === 1 ? "Eine Frage wartet" : `${offen.length} Fragen warten`} auf Ihre Antwort – einfach direkt hier antworten.</small></div></div>
+      <ol class="rqk__l">${offen.map(f => `<li class="rqk__f rqk__f--offen" data-rq-id="${esc(f.id)}"><p>${absatz(f.text)}</p>
+        <button type="button" class="rqk__ant" data-rq-auf="${esc(f.id)}">Antworten</button>
+        <div class="rqk__klapp"><div class="rqk__innen"><form class="rqk__form" data-rq-form="${esc(f.id)}" data-frage="${esc(f.text)}">
+          <textarea rows="1" maxlength="1000" data-entwurf="${esc(f.id)}" placeholder="Ihre Antwort …" aria-label="Ihre Antwort auf: ${esc(f.text)}"></textarea>
+          <button type="submit" class="rqk__send" aria-label="Antwort senden" disabled>${SENDEN_IC}</button></form></div></div></li>`).join("")}</ol></div>`;
+  }
   function rueckfragenCard(m, me) {
-    const fr = m.meta.fragen, offen = fr.filter(f => f.status === "offen").length, kunde = me === "client";
+    if (me === "client") return rueckfragenKunde(m);
+    const fr = m.meta.fragen, offen = fr.filter(f => f.status === "offen").length, kunde = false;
     const unter = offen ? (kunde ? `${offen === 1 ? "Eine Frage wartet" : `${offen} Fragen warten`} auf Ihre Antwort. Tippen Sie bei einer Frage auf „Antworten“ und schreiben Sie unten ganz normal.` : `${offen} von ${fr.length} offen · der Kunde antwortet im Chat auf jede Frage einzeln`)
       : (kunde ? "Vielen Dank – alles beantwortet." : "Alle Fragen sind beantwortet oder geklärt.");
     // Im Kundenportal hat jede offene Frage „Antworten“: setzt die Frage als Zitat über das Eingabefeld – geantwortet wird im normalen Chat
@@ -66,7 +83,14 @@
       lastSender = m.sender; lastTime = t;
     }
     const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 120;
+    // Angefangene Antworten in Rückfragen-Karten überstehen das Neuzeichnen (z. B. wenn währenddessen eine Nachricht kommt)
+    const entwuerfe = [...log.querySelectorAll(".rqk__f.auf [data-entwurf]")].map(t => ({ id: t.dataset.entwurf, v: t.value, fokus: t === document.activeElement, s: t.selectionStart }));
     log.innerHTML = html;
+    for (const e of entwuerfe) {
+      const t = log.querySelector(`[data-entwurf="${CSS.escape(e.id)}"]`); if (!t) continue;
+      t.closest(".rqk__f").classList.add("auf", "ohne-anim"); t.value = e.v; t.dispatchEvent(new Event("input", { bubbles: true }));
+      if (e.fokus) { t.focus({ preventScroll: true }); try { t.setSelectionRange(e.s, e.s); } catch {} }
+    }
     if (nearBottom || !log.dataset.scrolled) { log.scrollTop = log.scrollHeight; log.dataset.scrolled = "1"; }
   }
 

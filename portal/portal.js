@@ -465,7 +465,7 @@ $("#projDetail").addEventListener("click", e => {
 /* ---------- Chat: je Projekt ein eigener Chat ----------
    Hat der Kunde mehrere Projekte (oder dazu allgemeine Nachrichten), wählt er oben den Chat; sonst sieht er wie bisher einen Verlauf.
    Adresse: #chat oder #chat/<Projekt-Nummer> bzw. #chat/allgemein */
-let msgs = [], threads = [], thread = null, antwortAuf = null;
+let msgs = [], threads = [], thread = null;
 const thKey = t => t.project_id == null ? "allgemein" : String(t.project_id);
 const EMPTY = `<b>Ihr direkter Draht zu uns.</b>Stellen Sie hier Fragen, geben Sie Feedback oder schicken Sie uns einfach Ihre Gedanken. Unser Team antwortet in der Regel am selben Werktag.`;
 async function viewChat(arg) {
@@ -483,10 +483,10 @@ function renderThreads() {
   box.innerHTML = threads.map(t => { const on = thKey(t) === thread;
     return `<button type="button" role="tab" class="thchip ${on ? "on" : ""} ${t.status === "abgeschlossen" ? "thchip--zu" : ""}" data-th="${thKey(t)}" aria-selected="${on}"><span>${esc(t.title)}</span>${t.unread && !on ? `<em>${t.unread}</em>` : ""}</button>`; }).join("");
   $("#chatSub").textContent = threads.length > 1 && cur ? (cur.project_id ? `Zum Projekt „${cur.title}“ · wir antworten in der Regel am selben Werktag.` : "Allgemeine Fragen · wir antworten in der Regel am selben Werktag.") : "Wir antworten in der Regel am selben Werktag.";
-  if (!antwortAuf) $("#composer textarea").placeholder = threads.length > 1 && cur?.project_id ? `Nachricht zu „${cur.title}“ …` : "Nachricht an unser Team …";
+  $("#composer textarea").placeholder = threads.length > 1 && cur?.project_id ? `Nachricht zu „${cur.title}“ …` : "Nachricht an unser Team …";
 }
 async function openThread(k) {
-  thread = k; msgs = []; $("#log").dataset.scrolled = ""; antwortAuf = null; $("#antwortAuf").hidden = true;
+  thread = k; msgs = []; $("#log").dataset.scrolled = "";
   if (location.hash.startsWith("#chat")) history.replaceState(null, "", threads.length > 1 ? `#chat/${k}` : "#chat");
   await loadMessages();
   const t = threads.find(x => thKey(x) === k); if (t) t.unread = 0;
@@ -513,32 +513,58 @@ $("#chatThreads").addEventListener("click", e => {
   const b = e.target.closest("[data-th]"); if (!b || b.dataset.th === thread) return;
   openThread(b.dataset.th).then(() => $("#composer textarea").focus()).catch(err => toast(err.message));
 });
-/* Auf eine Rückfrage antworten – direkt im Chat: „Antworten“ setzt die Frage als Zitat über das Eingabefeld,
-   die nächste Nachricht geht als Antwort genau an diese Frage. Danach springt das Zitat zur nächsten offenen Frage. */
-function antwortSetzen(a) {
-  antwortAuf = a; const box = $("#antwortAuf"), ta = $("#composer textarea");
-  box.hidden = !a;
-  if (a) { $("#antwortNr").textContent = a.nr ? a.nr : ""; $("#antwortFrage").textContent = a.frage; ta.placeholder = "Ihre Antwort …"; ta.focus(); }
-  else renderThreads();
-}
-function naechsteOffene() {
-  const k = [...$$("#log [data-antworten]")][0];
-  return k ? { id: +k.dataset.antworten, frage: k.dataset.frage, nr: k.dataset.nr } : null;
+/* Rückfragen direkt in der Karte beantworten:
+   „Antworten“ klappt unter der Frage ein Feld auf → Senden → die Antwort fliegt als Blase nach unten in den Chat,
+   die Frage gleitet aus der Karte. Ist alles beantwortet, wird die Karte zur kurzen Bestätigung. */
+const ruhig = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const warte = ms => new Promise(r => setTimeout(r, ms));
+function rqOeffnen(li) {
+  $$("#log .rqk__f.auf").forEach(x => { if (x !== li && !x.querySelector("textarea").value.trim()) x.classList.remove("auf", "ohne-anim"); });
+  li.classList.remove("ohne-anim"); li.classList.add("auf");
+  const ta = li.querySelector("textarea"); setTimeout(() => { ta.focus({ preventScroll: true }); li.scrollIntoView({ behavior: ruhig() ? "auto" : "smooth", block: "nearest" }); }, 60);
 }
 $("#log").addEventListener("click", e => {
-  const b = e.target.closest("[data-antworten]"); if (!b) return;
-  antwortSetzen({ id: +b.dataset.antworten, frage: b.dataset.frage, nr: b.dataset.nr });
+  const b = e.target.closest("[data-rq-auf]"); if (b) rqOeffnen(b.closest(".rqk__f"));
 });
-$("#antwortWeg").addEventListener("click", () => antwortSetzen(null));
-composer($("#composer"), async text => {
-  if (antwortAuf) {
-    await api(`/rueckfragen/${antwortAuf.id}`, { method: "POST", body: { antwort: text } }).catch(err => { toast(err.message); throw err; });
-    msgs = await api(`/messages?thread=${encodeURIComponent(thread)}&after=0`);   // Karte und Antwort neu laden
-    $("#log").dataset.scrolled = ""; render($("#log"), msgs, "client", EMPTY);
-    antwortSetzen(naechsteOffene());
-    RQ = await api("/rueckfragen").catch(() => RQ);
-    return;
+$("#log").addEventListener("input", e => {
+  const t = e.target.closest("[data-entwurf]"); if (!t) return;
+  t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight + 2) + "px";
+  t.closest("form").querySelector(".rqk__send").disabled = !t.value.trim();
+});
+$("#log").addEventListener("keydown", e => {
+  const t = e.target.closest("[data-entwurf]"); if (!t) return;
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); t.closest("form").requestSubmit(); }
+  if (e.key === "Escape" && !t.value.trim()) t.closest(".rqk__f").classList.remove("auf");
+});
+$("#log").addEventListener("submit", async e => {
+  const f = e.target.closest("[data-rq-form]"); if (!f) return;
+  e.preventDefault();
+  const ta = f.querySelector("textarea"), btn = f.querySelector(".rqk__send"), text = ta.value.trim(); if (!text) return;
+  const li = f.closest(".rqk__f"), log = $("#log"), kid = li.closest("[data-rqk]")?.dataset.rqk;
+  btn.disabled = true; ta.readOnly = true; li.classList.add("sendet");
+  try { await api(`/rueckfragen/${f.dataset.rqForm}`, { method: "POST", body: { antwort: text } }); }
+  catch (err) { toast(err.message); btn.disabled = false; ta.readOnly = false; li.classList.remove("sendet"); return; }
+  const neu = api(`/messages?thread=${encodeURIComponent(thread)}&after=0`);
+  if (!ruhig()) {
+    // 1) Antwort als Blase vom Feld nach unten rechts in den Chat fliegen lassen
+    const von = ta.getBoundingClientRect(), ziel = log.getBoundingClientRect();
+    const g = document.createElement("div"); g.className = "rqflug"; g.textContent = text; document.body.appendChild(g);
+    const gw = Math.min(von.width, 260); g.style.cssText = `left:${von.left}px;top:${von.top}px;width:${gw}px`;
+    const dx = ziel.right - 18 - gw - von.left, dy = ziel.bottom - 24 - g.offsetHeight - von.top;
+    const flug = g.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx * .55}px,${dy * .45}px) scale(.96)`, opacity: 1, offset: .55 },
+      { transform: `translate(${dx}px,${dy}px) scale(.92)`, opacity: 0 }], { duration: 620, easing: "cubic-bezier(.2,.75,.2,1)" });
+    // 2) gleichzeitig gleitet die Frage aus der Karte und klappt zusammen
+    li.style.height = li.offsetHeight + "px"; li.getBoundingClientRect(); li.classList.add("weg");
+    await Promise.all([flug.finished.catch(() => {}), warte(460)]); g.remove();
   }
+  msgs = await neu.catch(() => msgs);
+  render(log, msgs, "client", EMPTY);
+  log.scrollTo({ top: log.scrollHeight, behavior: ruhig() ? "auto" : "smooth" });
+  const letzte = [...log.querySelectorAll(".msg--mine")].pop(); letzte?.classList.add("msg--pop");
+  log.querySelector(`[data-rqk="${CSS.escape(kid || "")}"].rqk--fertig`)?.classList.add("rqk--neu");   // letzte Frage beantwortet: Haken-Animation
+  RQ = await api("/rueckfragen").catch(() => RQ);
+});
+composer($("#composer"), async text => {
   const m = await api("/messages", { method: "POST", body: { body: text, project_id: thread && thread !== "allgemein" ? +thread : null } }).catch(err => { toast(err.message); throw err; });
   if (!msgs.some(x => x.id === m.id)) msgs.push(m);
   $("#log").dataset.scrolled = ""; render($("#log"), msgs, "client", EMPTY);
