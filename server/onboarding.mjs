@@ -10,7 +10,7 @@ import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
-import { vorlage, firmaVonBuchung } from "./mail-vorlagen.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
 import { projektnamenPflegen, anfrageBeschreiben } from "./projektname.mjs";
 import { hardwareKonzeptAnlegen, hardwareDateiOrdner, hardwareKonzeptFelder } from "./hardware.mjs";
 
@@ -254,6 +254,14 @@ export function antwortenView(bereich, a) {
   }).filter(Boolean) })).filter(g => g.rows.length);
 }
 
+// Mail-Vorlage zum Fragebogen nach Bereichen: nur Software, nur Hardware oder beides
+const fragebogenVorlage = (kinds, erinnerung = false) => {
+  const hw = kinds.includes("hardware"), sw = kinds.some(k => k !== "hardware");
+  return `fragebogen_${hw && sw ? "software_hardware" : hw ? "hardware" : "software"}${erinnerung ? "_erinnerung" : ""}`;
+};
+// Absender: Hardware GmbH nur, wenn es ausschließlich um Hardware geht; gemischt bleibt Software
+const fragebogenFirma = kinds => kinds.length && kinds.every(k => k === "hardware") ? "hardware" : "software";
+
 // Der Website-Fragebogen liegt in vorab.mjs und wird beim Start des Servers hier eingehängt
 let vorabEinladen = null;
 export const setVorabEinladen = fn => { vorabEinladen = fn; };
@@ -269,9 +277,7 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     const token = randomBytes(24).toString("hex");
     db.prepare("INSERT INTO onboarding(booking_id, client_id, token, kinds) VALUES(?,?,?,?)").run(b.id, b.client_id || null, token, JSON.stringify(kinds));
     const link = `${SITE_URL}/portal/onboarding.html#${token}`;
-    // Absender: Hardware GmbH nur, wenn es ausschließlich um Hardware geht (z. B. Hardware-Terminart oder nur „Hardware“ gewählt)
-    await sendMail({ to: b.email, ...vorlage("fragebogen_vorhaben", { name: b.name, bereiche: kinds.map(k => BEREICHE[k]).join(" und "), link,
-      firma: kinds.every(k => k === "hardware") ? "hardware" : firmaVonBuchung(b) }) });
+    await sendMail({ to: b.email, ...vorlage(fragebogenVorlage(kinds), { name: b.name, link, firma: fragebogenFirma(kinds) }) });
     return token;
   }
 
@@ -417,8 +423,8 @@ export function createOnboarding({ json, readJson, clean, limited, ipOf, SITE_UR
     const o = db.prepare("SELECT o.* FROM onboarding o LEFT JOIN bookings b ON b.id = o.booking_id WHERE (o.client_id = ? OR b.client_id = ?) AND o.status != 'ausgefuellt' ORDER BY o.id DESC LIMIT 1").get(clientId, clientId);
     if (o) {
       const link = `${SITE_URL}/portal/onboarding.html#${o.token}`;
-      const mailed = await sendMail({ to: c.email, ...vorlage("fragebogen_erinnerung", { name: c.name, link,
-        firma: JSON.parse(o.kinds || "[]").every(k => k === "hardware") && JSON.parse(o.kinds || "[]").length ? "hardware" : "software" }) });
+      const ok = JSON.parse(o.kinds || "[]");
+      const mailed = await sendMail({ to: c.email, ...vorlage(fragebogenVorlage(ok, true), { name: c.name, link, firma: fragebogenFirma(ok) }) });
       return { mailed: !!mailed, link };
     }
     // Website-Buchung: Dazu gehört der bildhafte Website-Fragebogen (vorab.mjs), nicht die Software-Fragen.

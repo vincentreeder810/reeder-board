@@ -284,8 +284,10 @@ export function createContracts({ json, readJson, clean, logEvent, SITE_URL }) {
     db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(c.id, owner,
       `Vielen Dank für Ihren Auftrag, ${c.name.split(" ")[0]}! Wir haben die Annahme von Angebot ${inv.number} erhalten. Die Auftragsbestätigung liegt unter „Dokumente“. Wir melden uns in Kürze mit den nächsten Schritten.`);
     const firma = inv.firma || "software";   // dieselbe Firma wie auf dem Angebot und der Auftragsbestätigung (PDF)
+    // Ein PDF enthält Nachweis der Annahme (mit Unterschrift), Bedingungen und ggf. die AVV. Fehlt es, geht die Mail ohne Anhang raus.
+    if (!buf) console.warn(`Auftragsbestätigung ${inv.number}: PDF fehlt – Mail ohne Anhang.`);
     await sendMail({ to: c.email, ...vorlage("auftrag_bestaetigung", { name: c.name, nummer: inv.number, titel: inv.title || "", betrag: inv.gross, angenommenAm: new Date().toISOString(),
-        avv: !!inv.avv, portalLink: `${SITE_URL}/portal/#dokumente`, firma }),
+        avv: !!inv.avv, portalLink: `${SITE_URL}/portal/#dokumente`, anhang: !!buf, firma }),
       attachments: buf ? [{ filename: `Auftragsbestaetigung-${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] : [] }).catch(e => console.warn(e.message));
     for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all())
       await sendMail({ to: u.email, ...vorlage("auftrag_team", { name, position, unternehmen: c.company, nummer: inv.number, titel: inv.title || "", netto: inv.net, brutto: inv.gross,

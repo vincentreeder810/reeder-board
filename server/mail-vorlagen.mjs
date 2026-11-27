@@ -80,7 +80,7 @@ export function firmaVonTermin(a) {
   return "software";
 }
 /** „Reeder Software“ aus „Reeder Software GmbH“ */
-const marke = firma => firmenname(firma).replace(/\s+(GmbH|UG|AG|KG|e\.K\.)(\s.*)?$/i, "");
+export const marke = firma => firmenname(firma).replace(/\s+(GmbH|UG|AG|KG|e\.K\.)(\s.*)?$/i, "");
 /** Name des Inhabers: aktiver Benutzer mit Rolle „inhaber“ (der Platzhalter „Admin“ zählt nicht) */
 function inhaberName() {
   try { const u = db.prepare("SELECT name FROM users WHERE role = 'inhaber' AND active = 1 ORDER BY id LIMIT 1").get(); return u?.name && u.name !== "Admin" ? u.name : ""; }
@@ -93,15 +93,85 @@ export function gruss(firma = "software", name) {
   return ["Viele Grüße", person && person !== f ? person : "", f].filter(Boolean).join("\n");
 }
 
-/* ---------- Bausteine, die mehrere Vorlagen teilen ---------- */
+/* ---------- Bausteine, die mehrere Vorlagen teilen ----------
+   Einheitlicher Aufbau einer Kundenmail:
+     Anrede · ein Satz, worum es geht · Übersicht („Schlüssel: Wert“) oder nummerierte Schritte („1. **Schlagwort** – …“)
+     · Hauptlink als eigene Zeile (dort steht der Knopf) · Kleingedrucktes als „Hinweis: …“ · Gruß.
+   **fett** setzt das Layout fett (Klartext ohne Sternchen) – sparsam, höchstens 2–4 Stellen je Mail. */
+const fett = t => `**${t}**`;
+const schritte = liste => liste.filter(Boolean).map(([wort, rest], i) => `${i + 1}. ${fett(wort)}${rest ? ` – ${rest}` : ""}`).join("\n");
+const hinweis = t => t ? `Hinweis: ${t}` : "";
+/** „Das Angebot finden Sie als PDF im Anhang und im Kundenportal.“ – ohne Anhang nur der Portal-Hinweis */
+const pdfSatz = (was, anhang, portal = true) => anhang
+  ? `${was} finden Sie ${fett("als PDF im Anhang")}${portal ? " und im Kundenportal" : ""}.`
+  : portal ? `${was} finden Sie in Ihrem Kundenportal.` : "";
+const mitAnhang = d => d.anhang !== false;
 const videoSatz = url => `Zum Video-Gespräch klicken Sie zur Uhrzeit einfach auf diesen Link – ohne Anmeldung, ohne Installation:\n${url}`;
 const videoKnopf = url => url ? { label: "Zum Video-Gespräch", url } : undefined;
+const kalenderSatz = "Den Termin finden Sie als Kalendereintrag im Anhang.";
+const aenderungHinweis = d => hinweis(d.portalLink
+  ? "Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail oder schreiben Sie uns im Kundenportal."
+  : "Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail.");
+/** Übersicht eines Termins – in allen Termin-Mails gleich */
+const terminZeilen = (d, start = d.start) => zeilen([["Termin", d.titel || [d.art, d.produkt].filter(Boolean).join(" – ")], ["Datum", terminLang(start)],
+  ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""], ["Gespräch", d.videoUrl ? "Video-Gespräch" : d.kanal]]);
 function erinnerung(d, wann) {
-  return absaetze(anrede(d), `eine kurze Erinnerung an unseren Termin ${wann}.`,
-    zeilen([["Termin", d.titel], ["Datum", terminLang(d.start)], ["Gespräch", d.videoUrl ? "Video-Gespräch" : ""]]),
-    d.videoUrl && `Zum Video-Gespräch (ohne Anmeldung, einfach im Browser):\n${d.videoUrl}`,
-    d.portalLink ? `Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail oder schreiben Sie uns im Kundenportal:\n${d.portalLink}` : "Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail.",
+  return absaetze(anrede(d), `eine kurze Erinnerung an unseren Termin ${fett(wann)}.`,
+    terminZeilen(d),
+    d.videoUrl && videoSatz(d.videoUrl),
+    aenderungHinweis(d),
     gruss(d.firma));
+}
+
+/* ---------- Fragebögen: gleicher Aufbau für Website, Software, Hardware und beides ---------- */
+const FB = {
+  website: { betreff: "Ihr Fragebogen zur Website", minuten: 6, worum: "Ihrer Website", knopf: "Zum Fragebogen",
+    warum: "haben wir einen Fragebogen mit Beispielen vorbereitet: erster Eindruck, Bilder, Farben, Schrift, Bewegung und die Funktionen, die Ihnen wichtig sind",
+    ausfuellen: "ca. 6 Minuten, Sie klicken einfach an, was Ihnen gefällt.",
+    fertig: "aus Ihren Angaben bereiten wir vor dem Termin einen ersten Eindruck vor, den wir Ihnen im Gespräch zeigen.",
+    hinweis: "Ihre Angaben sind in Ihrem Kundenkonto sicher gespeichert. Später finden Sie dort alles zu Ihrem Projekt an einem Ort." },
+  software: { betreff: "Ein paar Fragen zu Ihrer Software", minuten: 8, worum: "Ihrer Software", knopf: "Zu den Fragen",
+    warum: "haben wir ein paar Fragen zu Ihrer Software vorbereitet: welche Abläufe sie erleichtern soll, wer damit arbeitet und was die erste Version unbedingt können muss",
+    ausfuellen: "ca. 8 Minuten, das meiste tippen Sie einfach an.",
+    fertig: "wir bereiten das Gespräch gezielt darauf vor.",
+    hinweis: "Sie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch. Im Kundenkonto finden Sie später auch Termine, Unterlagen und unser Angebot." },
+  hardware: { betreff: "Ein paar Fragen zu Ihrem Gerät", minuten: 8, worum: "Ihrem Gerät", knopf: "Zu den Fragen",
+    warum: "haben wir ein paar Fragen zu Ihrer Produktidee vorbereitet: was das Gerät tun soll, wo und von wem es eingesetzt wird, welche Stückzahl und welchen Stückpreis Sie anpeilen und welches Budget für Konzept und Prototyp vorgesehen ist",
+    ausfuellen: "ca. 8 Minuten, das meiste tippen Sie einfach an. Eine Skizze oder ein Foto können Sie gern hochladen.",
+    fertig: "wir bereiten das Gespräch gezielt darauf vor.",
+    hinweis: "Sie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch. Im Kundenkonto finden Sie später auch Termine, Unterlagen und unser Angebot." },
+  beides: { betreff: "Ein paar Fragen zu Ihrer Software und Hardware", minuten: 0, worum: "Ihrer Software und Hardware", knopf: "Zu den Fragen",
+    warum: "haben wir Fragen zu beiden Teilen Ihres Vorhabens vorbereitet: bei der Software zu Abläufen, Nutzern und Funktionen, bei der Hardware zu Gerät, Einsatzort, Stückzahl und Prototyp",
+    ausfuellen: "ca. 8 Minuten je Bereich, das meiste tippen Sie einfach an. Eine Skizze oder ein Foto können Sie gern hochladen.",
+    fertig: "wir bereiten das Gespräch gezielt darauf vor.",
+    hinweis: "Sie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch. Im Kundenkonto finden Sie später auch Termine, Unterlagen und unser Angebot." },
+};
+function fragebogenMail(d, f, istErinnerung) {
+  const dauer = f.minuten ? ` (ca. ${f.minuten} Minuten)` : "";
+  return {
+    subject: istErinnerung ? `Erinnerung: ${f.betreff}${dauer}` : `Vor unserem Gespräch: ${f.betreff}${dauer}`,
+    text: absaetze(anrede(d),
+      istErinnerung
+        ? `damit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Angaben zu ${f.worum}.`
+        : `damit wir die Zeit in unserem Gespräch bestmöglich nutzen, ${f.warum}.`,
+      schritte([
+        istErinnerung ? ["Anmelden", "mit Ihrem Passwort oder, falls noch nicht geschehen, jetzt einmalig eins festlegen."]
+          : ["Kundenkonto anlegen", "einmalig mit einem Passwort, dauert etwa 20 Sekunden. Haben Sie schon eines, melden Sie sich einfach an."],
+        ["Fragebogen ausfüllen", f.ausfuellen],
+        ["Fertig", f.fertig]]),
+      d.link,
+      hinweis(f.hinweis),
+      gruss(d.firma)),
+    knopf: { label: f.knopf, url: d.link },
+  };
+}
+
+/** Kalenderdatei als Anhang: method "PUBLISH" (Termin eintragen/aktualisieren) oder "CANCEL" (Termin streichen).
+ *  ics = Text aus icsCalendar([icsFor(…)]) aus mail.mjs; die METHOD-Zeile wird hier ergänzt, weil der Inhaltstyp sie nennt. */
+export function kalenderAnhang(ics, method = "PUBLISH") {
+  const m = method === "CANCEL" ? "CANCEL" : "PUBLISH";
+  const content = /\r\nMETHOD:/.test(ics) ? ics : String(ics).replace("VERSION:2.0", `VERSION:2.0\r\nMETHOD:${m}`);
+  return { filename: "termin.ics", content, contentType: `text/calendar; charset=utf-8; method=${m}` };
 }
 
 /* ---------- Beispieldaten (frei erfunden, nur für die Vorschau) ---------- */
@@ -114,33 +184,38 @@ export const VORLAGEN = {
   /* ---------- Termine ---------- */
   termin_bestaetigt: {
     gruppe: "Termine", titel: "Termin bestätigt", an: "kunde",
-    wann: "Direkt nach einer Buchung über die Website oder wenn das Team eine Buchung bestätigt; mit Kalenderdatei im Anhang.",
+    wann: "Direkt nach einer Buchung über die Website oder wenn das Team eine Buchung bestätigt; mit Kalendereintrag (termin.ics) im Anhang.",
     baue: d => {
       const video = !!d.videoUrl && String(d.kanal || "Video").includes("Video");
+      // Hinweis auf die folgenden Fragebögen: Website → Entwurf vorab, Software/Hardware → Fragen zum Vorhaben
+      const fb = Array.isArray(d.fragebogen) ? d.fragebogen : [], web = fb.includes("website"), andere = fb.filter(k => k !== "website");
+      const fbSatz = !fb.length ? "" : `${fb.length > 1 ? "In zwei weiteren E-Mails schicken wir Ihnen gleich kurze Fragebögen" : "In einer zweiten E-Mail schicken wir Ihnen gleich einen kurzen Fragebogen"}${web ? " – daraus bereiten wir schon vor dem Termin einen ersten Entwurf Ihrer Website vor" : ""}${andere.length ? `${web ? ", und mit den Fragen zu Ihrem Vorhaben" : " – damit"} können wir uns gezielt auf das Gespräch vorbereiten` : ""}.`;
       return {
         subject: `Ihr Termin ist bestätigt – ${tagMittel(d.start)}, ${uhr(d.start)} Uhr`,
-        text: absaetze(anrede(d), "Ihr Termin ist bestätigt. Wir freuen uns auf das Gespräch.",
+        text: absaetze(anrede(d), `Ihr Termin ist ${fett("bestätigt")}. Wir freuen uns auf das Gespräch.`,
           zeilen([["Termin", [d.art, d.produkt].filter(Boolean).join(" – ")], ["Datum", terminLang(d.start)], ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""],
             ["Gespräch", video ? "Video-Gespräch" : d.kanal], ["Kosten", d.preis ? `${d.preis} € zzgl. MwSt., die Rechnung erhalten Sie nach dem Termin` : ""]]),
           video && videoSatz(d.videoUrl),
-          d.erstgespraech && "In einer zweiten E-Mail schicken wir Ihnen gleich einen kurzen Fragebogen. Daraus bereiten wir schon vor dem Termin einen ersten Entwurf für Sie vor.",
-          "Den Termin für Ihren Kalender finden Sie im Anhang. Falls Sie ihn verschieben müssen, antworten Sie einfach auf diese E-Mail.",
+          fbSatz,
+          kalenderSatz,
+          aenderungHinweis(d),
           gruss(d.firma)),
         knopf: video ? videoKnopf(d.videoUrl) : undefined,
       };
     },
-    beispiel: { name: B.name, art: "Kostenloses Erstgespräch", produkt: "Website", start: IN_7, minuten: 30, kanal: "Video", videoUrl: VIDEO, preis: 0, erstgespraech: true },
+    beispiel: { name: B.name, art: "Kostenloses Erstgespräch", produkt: "Website", start: IN_7, minuten: 30, kanal: "Video", videoUrl: VIDEO, preis: 0, fragebogen: ["website"] },
   },
   termin_einladung: {
     gruppe: "Termine", titel: "Einladung zu einem Termin", an: "kunde",
-    wann: "Wenn das Team im Board einen Termin einplant oder eine Terminanfrage aus dem Kundenportal annimmt; mit Kalenderdatei.",
+    wann: "Wenn das Team im Board einen Termin einplant oder eine Terminanfrage aus dem Kundenportal annimmt; mit Kalendereintrag (termin.ics) im Anhang.",
     baue: d => ({
       subject: `Einladung: ${kurz(d.titel, 40)} am ${tagMittel(d.start)}, ${uhr(d.start)} Uhr`,
-      text: absaetze(anrede(d), "wir freuen uns auf das Gespräch. Hier die Einzelheiten:",
-        zeilen([["Termin", d.titel], ["Datum", terminLang(d.start)], ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""], ["Gespräch", d.videoUrl ? "Video-Gespräch" : d.kanal]]),
+      text: absaetze(anrede(d), `wir haben einen ${fett("Termin")} für Sie eingetragen und freuen uns auf das Gespräch.`,
+        terminZeilen(d),
         d.videoUrl && videoSatz(d.videoUrl),
         d.notiz,
-        "Den Termin für Ihren Kalender finden Sie im Anhang.",
+        kalenderSatz,
+        aenderungHinweis(d),
         gruss(d.firma, d.absender)),
       knopf: videoKnopf(d.videoUrl),
     }),
@@ -160,13 +235,14 @@ export const VORLAGEN = {
   },
   termin_verschoben: {
     gruppe: "Termine", titel: "Termin verlegt", an: "kunde",
-    wann: "Wenn der Inhaber einen bestätigten Termin im Board verschiebt; mit neuer Kalenderdatei.",
+    wann: "Wenn der Inhaber einen bestätigten Termin im Board verschiebt; mit aktualisiertem Kalendereintrag (termin.ics) im Anhang.",
     baue: d => ({
       subject: `Ihr Termin wurde verlegt – neu: ${tagMittel(d.neu)}, ${uhr(d.neu)} Uhr`,
-      text: absaetze(anrede(d), `wir müssen den Termin „${d.titel}“ leider verlegen. Bitte entschuldigen Sie die Umstände.`,
-        zeilen([["Bisher", terminLang(d.alt)], ["Neu", terminLang(d.neu)], ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""]]),
-        d.videoUrl && `Der Link zum Video-Gespräch bleibt gleich:\n${d.videoUrl}`,
-        `Den neuen Termin für Ihren Kalender finden Sie im Anhang. Passt er Ihnen nicht, wählen Sie einfach einen anderen – oder antworten Sie auf diese E-Mail:\n${d.terminLink}`,
+      text: absaetze(anrede(d), `wir müssen den Termin „${d.titel}“ leider verlegen – neu ist ${fett(terminLang(d.neu))}. Bitte entschuldigen Sie die Umstände.`,
+        zeilen([["Termin", d.titel], ["Bisher", terminLang(d.alt)], ["Neu", terminLang(d.neu)], ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""], ["Gespräch", d.videoUrl ? "Video-Gespräch (Link bleibt gleich)" : ""]]),
+        d.videoUrl && videoSatz(d.videoUrl),
+        kalenderSatz,
+        hinweis(`Passt Ihnen der neue Termin nicht? Wählen Sie einfach einen anderen unter ${d.terminLink} – oder antworten Sie auf diese E-Mail.`),
         gruss(d.firma)),
       knopf: d.videoUrl ? videoKnopf(d.videoUrl) : { label: "Anderen Termin wählen", url: d.terminLink },
     }),
@@ -174,12 +250,13 @@ export const VORLAGEN = {
   },
   termin_abgesagt: {
     gruppe: "Termine", titel: "Termin abgesagt", an: "kunde",
-    wann: "Wenn das Team eine Website-Buchung oder einen vereinbarten Termin im Board absagt.",
+    wann: "Wenn das Team eine Website-Buchung oder einen vereinbarten Termin im Board absagt; mit Kalender-Absage (termin.ics, CANCEL) im Anhang.",
     baue: d => ({
       subject: `Ihr Termin am ${tagMittel(d.start)} entfällt leider`,
-      text: absaetze(anrede(d), `leider können wir den Termin${d.titel ? ` „${d.titel}“` : ""} am ${terminLang(d.start)} nicht wahrnehmen. Bitte entschuldigen Sie die Umstände.`,
+      text: absaetze(anrede(d), `leider können wir den Termin${d.titel ? ` „${d.titel}“` : ""} am ${fett(terminLang(d.start))} nicht wahrnehmen. Bitte entschuldigen Sie die Umstände.`,
         d.grund,
-        `Wählen Sie gern einen neuen Termin – oder antworten Sie einfach auf diese E-Mail:\n${d.terminLink}`,
+        `${fett("Neuen Termin wählen")} – oder antworten Sie einfach auf diese E-Mail:\n${d.terminLink}`,
+        d.kalender !== false && "Im Anhang finden Sie die Absage für Ihren Kalender – damit verschwindet der Termin dort.",
         gruss(d.firma)),
       knopf: { label: "Neuen Termin wählen", url: d.terminLink },
     }),
@@ -190,9 +267,9 @@ export const VORLAGEN = {
     wann: "Automatisch, wenn nach einer Projektanfrage einige Zeit (Standard 48 Stunden) kein Gespräch vereinbart wurde.",
     baue: d => ({
       subject: `Ihre Anfrage bei ${marke(d.firma)}: Wann passt Ihnen ein kurzes Gespräch?`,
-      text: absaetze(anrede(d), `vielen Dank noch einmal für Ihre Anfrage${d.arten ? ` (${d.arten})` : ""}. Am schnellsten kommen wir in einem kostenlosen Erstgespräch weiter – 30 Minuten per Video, ganz unverbindlich.`,
+      text: absaetze(anrede(d), `vielen Dank noch einmal für Ihre Anfrage${d.arten ? ` (${d.arten})` : ""}. Am schnellsten kommen wir in einem ${fett("kostenlosen Erstgespräch")} weiter – 30 Minuten per Video, ganz unverbindlich.`,
         `Hier können Sie sich direkt einen freien Termin aussuchen:\n${d.terminLink}`,
-        "Lieber telefonieren oder Fragen vorab? Antworten Sie einfach auf diese E-Mail.",
+        hinweis("Lieber telefonieren oder Fragen vorab? Antworten Sie einfach auf diese E-Mail."),
         gruss(d.firma)),
       knopf: { label: "Termin auswählen", url: d.terminLink },
     }),
@@ -240,58 +317,49 @@ export const VORLAGEN = {
   fragebogen_website: {
     gruppe: "Fragebögen", titel: "Fragebogen zur Website", an: "kunde",
     wann: "Gleich nach der Terminbestätigung, wenn es um eine Website geht (zweite Mail).",
-    baue: d => ({
-      subject: "Vor unserem Gespräch: Ihr Fragebogen zur Website (ca. 6 Minuten)",
-      text: absaetze(anrede(d),
-        "wir freuen uns auf unser Gespräch. Damit wir die Zeit bestmöglich nutzen, haben wir einen Fragebogen mit Beispielen vorbereitet. Sie klicken einfach an, was Ihnen gefällt: erster Eindruck, Bilder, Farben, Schrift, Bewegung und die Funktionen, die Ihnen wichtig sind.",
-        "Zuerst legen Sie mit einem Klick Ihr persönliches Kundenkonto an. Dort sind Ihre Angaben sicher gespeichert, und später finden Sie dort alles zu Ihrem Projekt an einem Ort.",
-        "Aus Ihren Angaben bereiten wir schon vor dem Termin einen ersten Eindruck vor, den wir Ihnen im Gespräch zeigen.",
-        `Zum Fragebogen (ca. 6 Minuten):\n${d.link}`,
-        gruss(d.firma)),
-      knopf: { label: "Zum Fragebogen", url: d.link },
-    }),
+    baue: d => fragebogenMail(d, FB.website, false),
     beispiel: { name: B.name, link: `${BSP}/portal/fragebogen.html#beispiel` },
-  },
-  fragebogen_vorhaben: {
-    gruppe: "Fragebögen", titel: "Fragen zum Vorhaben (Software/Hardware)", an: "kunde",
-    wann: "Gleich nach der Terminbestätigung, wenn es um Software oder Hardware geht.",
-    baue: d => ({
-      subject: "Ein paar Fragen zu Ihrem Vorhaben (ca. 8 Minuten)",
-      text: absaetze(anrede(d),
-        `wir freuen uns auf unser Gespräch. Damit wir die Zeit bestmöglich nutzen, haben wir ein paar Fragen zu Ihrem Vorhaben vorbereitet${d.bereiche ? ` (${d.bereiche})` : ""}. Das dauert etwa acht Minuten, das meiste tippen Sie einfach an.`,
-        `Zu den Fragen:\n${d.link}`,
-        "Zuerst legen Sie dort mit einem Passwort Ihren persönlichen Bereich an. Dort finden Sie später auch Termine, Unterlagen und unser Angebot.",
-        "Sie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.",
-        gruss(d.firma)),
-      knopf: { label: "Zu den Fragen", url: d.link },
-    }),
-    beispiel: { name: B.name, bereiche: "Software", link: `${BSP}/portal/onboarding.html#beispiel` },
   },
   fragebogen_website_erinnerung: {
     gruppe: "Fragebögen", titel: "Erinnerung: Fragebogen zur Website", an: "kunde",
     wann: "Wenn das Team im Board „Fragebogen erneut senden“ wählt und der Website-Fragebogen noch offen ist.",
-    baue: d => ({
-      subject: "Erinnerung: Ihr Fragebogen zur Website (ca. 6 Minuten)",
-      text: absaetze(anrede(d),
-        "damit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Angaben zur Website. Sie klicken einfach an, was Ihnen gefällt – das dauert etwa sechs Minuten.",
-        `Zum Fragebogen:\n${d.link}`,
-        gruss(d.firma)),
-      knopf: { label: "Zum Fragebogen", url: d.link },
-    }),
+    baue: d => fragebogenMail(d, FB.website, true),
     beispiel: { name: B.name, link: `${BSP}/portal/fragebogen.html#beispiel` },
   },
-  fragebogen_erinnerung: {
-    gruppe: "Fragebögen", titel: "Erinnerung: Fragen zum Vorhaben", an: "kunde",
-    wann: "Wenn das Team im Board „Fragebogen erneut senden“ wählt und die Fragen zum Vorhaben noch offen sind.",
-    baue: d => ({
-      subject: "Erinnerung: ein paar Fragen zu Ihrem Vorhaben (ca. 8 Minuten)",
-      text: absaetze(anrede(d),
-        "damit wir uns gut auf unser Gespräch vorbereiten können, fehlen uns noch Ihre Antworten auf ein paar Fragen. Das dauert etwa acht Minuten.",
-        `Zu den Fragen:\n${d.link}`,
-        "Sie müssen nicht alles wissen. Was offen bleibt, klären wir im Gespräch.",
-        gruss(d.firma)),
-      knopf: { label: "Zu den Fragen", url: d.link },
-    }),
+  fragebogen_software: {
+    gruppe: "Fragebögen", titel: "Fragebogen zur Software", an: "kunde",
+    wann: "Gleich nach der Terminbestätigung, wenn es nur um Software geht.",
+    baue: d => fragebogenMail(d, FB.software, false),
+    beispiel: { name: B.name, link: `${BSP}/portal/onboarding.html#beispiel` },
+  },
+  fragebogen_software_erinnerung: {
+    gruppe: "Fragebögen", titel: "Erinnerung: Fragebogen zur Software", an: "kunde",
+    wann: "Wenn das Team im Board „Fragebogen erneut senden“ wählt und der Software-Fragebogen noch offen ist.",
+    baue: d => fragebogenMail(d, FB.software, true),
+    beispiel: { name: B.name, link: `${BSP}/portal/onboarding.html#beispiel` },
+  },
+  fragebogen_hardware: {
+    gruppe: "Fragebögen", titel: "Fragebogen zur Hardware", an: "kunde",
+    wann: "Gleich nach der Terminbestätigung, wenn es nur um Hardware geht (Absender: Hardware GmbH, sobald aktiv).",
+    baue: d => fragebogenMail(d, FB.hardware, false),
+    beispiel: { firma: "hardware", name: B.name, link: `${BSP}/portal/onboarding.html#beispiel` },
+  },
+  fragebogen_hardware_erinnerung: {
+    gruppe: "Fragebögen", titel: "Erinnerung: Fragebogen zur Hardware", an: "kunde",
+    wann: "Wenn das Team im Board „Fragebogen erneut senden“ wählt und der Hardware-Fragebogen noch offen ist.",
+    baue: d => fragebogenMail(d, FB.hardware, true),
+    beispiel: { firma: "hardware", name: B.name, link: `${BSP}/portal/onboarding.html#beispiel` },
+  },
+  fragebogen_software_hardware: {
+    gruppe: "Fragebögen", titel: "Fragebogen zu Software und Hardware", an: "kunde",
+    wann: "Gleich nach der Terminbestätigung, wenn bei der Buchung Software und Hardware gewählt wurden.",
+    baue: d => fragebogenMail(d, FB.beides, false),
+    beispiel: { name: B.name, link: `${BSP}/portal/onboarding.html#beispiel` },
+  },
+  fragebogen_software_hardware_erinnerung: {
+    gruppe: "Fragebögen", titel: "Erinnerung: Fragebogen zu Software und Hardware", an: "kunde",
+    wann: "Wenn das Team im Board „Fragebogen erneut senden“ wählt und der Fragebogen zu Software und Hardware noch offen ist.",
+    baue: d => fragebogenMail(d, FB.beides, true),
     beispiel: { name: B.name, link: `${BSP}/portal/onboarding.html#beispiel` },
   },
   fragebogen_ausgefuellt_team: {
@@ -325,29 +393,34 @@ export const VORLAGEN = {
   /* ---------- Angebote & Rechnungen ---------- */
   angebot_versand: {
     gruppe: "Angebote & Rechnungen", titel: "Angebot verschickt", an: "kunde",
-    wann: "Wenn ein Angebot im Board festgeschrieben und verschickt wird; das PDF hängt an.",
+    wann: "Wenn ein Angebot im Board festgeschrieben und verschickt wird; das Angebot hängt als PDF an.",
     baue: d => ({
       subject: kurz(`Ihr Angebot von ${marke(d.firma)}: ${d.titel || d.nummer}`, 90),
       text: absaetze(anrede(d),
-        d.freitext || `anbei erhalten Sie unser Angebot ${d.nummer}${d.titel ? ` („${d.titel}“)` : ""} über ${euro(d.betrag)}.`,
-        zeilen([["Angebot", d.nummer], ["Projekt", d.titel], ["Betrag", `${euro(d.betrag)} brutto`]]),
+        d.freitext || `${mitAnhang(d) ? "anbei" : "hiermit"} erhalten Sie unser Angebot${d.titel ? ` für „${d.titel}“` : ""}.`,
+        zeilen([["Angebot", d.nummer], ["Projekt", d.titel], ["Betrag", `${euro(d.betrag)} brutto`], ["Gültig bis", datum(d.gueltigBis)]]),
         d.zugangLink
-          ? `Ansehen, unterschreiben und verbindlich annehmen können Sie das Angebot online. Legen Sie dafür über diesen Link in einer Minute Ihren Zugang zum Kundenportal an (14 Tage gültig):\n${d.zugangLink}`
-          : `Ansehen, unterschreiben und verbindlich annehmen können Sie das Angebot in Ihrem Kundenportal:\n${d.portalLink}`,
+          ? schritte([["Zugang anlegen", "über den Link unten, das dauert etwa eine Minute (14 Tage gültig)."], ["Angebot ansehen und unterschreiben", "verbindlich annehmen direkt online."]])
+          : `${fett("Angebot ansehen und unterschreiben")} – im Kundenportal nehmen Sie es verbindlich an:
+${d.portalLink}`,
+        d.zugangLink,
+        pdfSatz("Das Angebot", mitAnhang(d)),
+        hinweis("Bei Fragen antworten Sie einfach auf diese E-Mail."),
         gruss(d.firma)),
-      knopf: d.zugangLink ? { label: "Zugang anlegen und Angebot ansehen", url: d.zugangLink } : { label: "Angebot im Kundenportal ansehen", url: d.portalLink },
+      knopf: d.zugangLink ? { label: "Zugang anlegen und Angebot ansehen", url: d.zugangLink } : { label: "Angebot ansehen und unterschreiben", url: d.portalLink },
     }),
-    beispiel: { name: B.name, nummer: "A-2026-00014", titel: "Website Physiotherapie Am Park", betrag: 65807, portalLink: `${BSP}/portal/#angebot/14` },
+    beispiel: { name: B.name, nummer: "A-2026-00014", titel: "Website Physiotherapie Am Park", betrag: 65807, gueltigBis: "2026-12-27", portalLink: `${BSP}/portal/#angebot/14` },
   },
   angebot_nachfrage: {
     gruppe: "Angebote & Rechnungen", titel: "Nachfrage zum Angebot", an: "kunde",
-    wann: "Wenn der Inhaber im Cockpit beim Vorschlag „Angebot nachfassen“ auf „Erinnern“ klickt.",
+    wann: "Wenn der Inhaber im Cockpit beim Vorschlag „Angebot nachfassen“ auf „Erinnern“ klickt; das Angebot hängt noch einmal als PDF an.",
     baue: d => ({
       subject: `Kurze Nachfrage zu unserem Angebot ${d.nummer}`,
       text: absaetze(anrede(d),
         `vor ein paar Tagen haben wir Ihnen unser Angebot ${d.nummer}${d.titel ? ` für „${d.titel}“` : ""} geschickt. Passt alles für Sie, oder gibt es noch offene Fragen?`,
-        `Gern gehen wir alles in einem kurzen Gespräch durch. Einen Termin suchen Sie sich hier aus:\n${d.terminLink}`,
-        d.portalLink && `Sie finden das Angebot auch in Ihrem Kundenportal:\n${d.portalLink}`,
+        `Gern gehen wir alles in einem ${fett("kurzen Gespräch")} durch. Einen Termin suchen Sie sich hier aus:\n${d.terminLink}`,
+        pdfSatz("Das Angebot", mitAnhang(d), !!d.portalLink),
+        d.portalLink && d.portalLink,
         gruss(d.firma)),
       knopf: { label: "Termin auswählen", url: d.terminLink },
     }),
@@ -355,13 +428,15 @@ export const VORLAGEN = {
   },
   auftrag_bestaetigung: {
     gruppe: "Angebote & Rechnungen", titel: "Auftragsbestätigung", an: "kunde",
-    wann: "Sobald der Kunde ein Angebot im Kundenportal annimmt; die Auftragsbestätigung hängt als PDF an.",
+    wann: "Sobald der Kunde ein Angebot im Kundenportal annimmt; die Auftragsbestätigung (mit Bedingungen und ggf. AVV) hängt als PDF an.",
     baue: d => ({
       subject: kurz(`Ihre Auftragsbestätigung von ${marke(d.firma)}: ${d.titel || d.nummer}`, 90),
       text: absaetze(anrede(d),
-        `vielen Dank für Ihren Auftrag. Sie haben unser Angebot ${d.nummer}${d.titel ? ` („${d.titel}“)` : ""} über ${euro(d.betrag)} brutto am ${zeitpunkt(d.angenommenAm)} angenommen.`,
+        `vielen Dank für Ihren Auftrag. Sie haben unser Angebot ${d.nummer}${d.titel ? ` („${d.titel}“)` : ""} über ${euro(d.betrag)} brutto am ${zeitpunkt(d.angenommenAm)} ${fett("angenommen")}.`,
         zeilen([["Angebot", d.nummer], ["Projekt", d.titel], ["Betrag", `${euro(d.betrag)} brutto`], ["Angenommen am", zeitpunkt(d.angenommenAm)]]),
-        `Im Anhang finden Sie die Auftragsbestätigung mit den vereinbarten Bedingungen${d.avv ? " und der Vereinbarung zur Auftragsverarbeitung" : ""}. Alles liegt außerdem in Ihrem Kundenportal:\n${d.portalLink}`,
+        pdfSatz(`Die Auftragsbestätigung mit den vereinbarten Bedingungen${d.avv ? " und der Vereinbarung zur Auftragsverarbeitung" : ""}`, mitAnhang(d)),
+        d.portalLink,
+        hinweis("Wir melden uns in Kürze mit den nächsten Schritten."),
         gruss(d.firma)),
       knopf: { label: "Dokumente im Kundenportal", url: d.portalLink },
     }),
@@ -400,13 +475,15 @@ export const VORLAGEN = {
   },
   rechnung_versand: {
     gruppe: "Angebote & Rechnungen", titel: "Rechnung verschickt", an: "kunde",
-    wann: "Wenn eine Rechnung im Board festgeschrieben und verschickt wird; das PDF hängt an.",
+    wann: "Wenn eine Rechnung im Board festgeschrieben und verschickt wird; die Rechnung hängt als PDF an.",
     baue: d => ({
       subject: `Ihre Rechnung ${d.nummer} von ${marke(d.firma)}`,
       text: absaetze(anrede(d),
-        d.freitext || `anbei erhalten Sie unsere Rechnung ${d.nummer}${d.titel ? ` („${d.titel}“)` : ""} über ${euro(d.betrag)}.${datum(d.faellig) ? `\nBitte überweisen Sie den Betrag bis zum ${datum(d.faellig)}.` : ""}`,
+        d.freitext || `${mitAnhang(d) ? "anbei" : "hiermit"} erhalten Sie unsere Rechnung${d.titel ? ` für „${d.titel}“` : ""}.${datum(d.faellig) ? ` Bitte überweisen Sie den Betrag ${fett("bis " + datum(d.faellig))}.` : ""}`,
         zeilen([["Rechnung", d.nummer], ["Projekt", d.titel], ["Betrag", euro(d.betrag)], ["Zahlbar bis", datum(d.faellig)]]),
-        `Sie finden das Dokument jederzeit auch in Ihrem Kundenportal:\n${d.portalLink}`,
+        pdfSatz("Die Rechnung", mitAnhang(d)),
+        d.portalLink,
+        hinweis("Bei Fragen zur Rechnung antworten Sie einfach auf diese E-Mail."),
         gruss(d.firma)),
       knopf: { label: "Im Kundenportal ansehen", url: d.portalLink },
     }),
@@ -414,13 +491,15 @@ export const VORLAGEN = {
   },
   storno_versand: {
     gruppe: "Angebote & Rechnungen", titel: "Stornorechnung verschickt", an: "kunde",
-    wann: "Wenn eine Rechnung im Board storniert und die Stornorechnung verschickt wird; das PDF hängt an.",
+    wann: "Wenn eine Rechnung im Board storniert und die Stornorechnung verschickt wird; sie hängt als PDF an.",
     baue: d => ({
       subject: `Stornorechnung ${d.nummer} von ${marke(d.firma)}`,
       text: absaetze(anrede(d),
-        d.freitext || `anbei erhalten Sie die Stornorechnung ${d.nummer}${d.titel ? ` („${d.titel}“)` : ""} über ${euro(Math.abs(d.betrag || 0))}.`,
-        zeilen([["Stornorechnung", d.nummer], ["Storniert wird", d.storniert ? `Rechnung ${d.storniert}` : ""], ["Betrag", euro(Math.abs(d.betrag || 0))]]),
-        `Sie finden das Dokument jederzeit auch in Ihrem Kundenportal:\n${d.portalLink}`,
+        d.freitext || `${mitAnhang(d) ? "anbei" : "hiermit"} erhalten Sie die Stornorechnung${d.storniert ? ` zu unserer Rechnung ${fett(d.storniert)}` : ""}.`,
+        zeilen([["Stornorechnung", d.nummer], ["Storniert wird", d.storniert ? `Rechnung ${d.storniert}` : ""], ["Projekt", d.titel], ["Betrag", euro(Math.abs(d.betrag || 0))]]),
+        pdfSatz("Die Stornorechnung", mitAnhang(d)),
+        d.portalLink,
+        hinweis("Bei Fragen antworten Sie einfach auf diese E-Mail."),
         gruss(d.firma)),
       knopf: { label: "Im Kundenportal ansehen", url: d.portalLink },
     }),
@@ -432,8 +511,10 @@ export const VORLAGEN = {
     baue: d => ({
       subject: `Zahlungserinnerung: Rechnung ${d.nummer}`,
       text: absaetze(anrede(d),
-        `sicher ist es Ihnen im Alltag nur durchgerutscht: Unsere Rechnung ${d.nummer} vom ${datum(d.datum)} über ${euro(d.betrag)} war am ${datum(d.faellig)} fällig. Wir bitten Sie, den Betrag bis zum ${datum(d.frist)} zu überweisen. Sollte sich Ihre Zahlung mit dieser Nachricht überschnitten haben, betrachten Sie sie bitte als gegenstandslos.`,
+        `sicher ist es Ihnen im Alltag nur durchgerutscht: Unsere Rechnung ${d.nummer} vom ${datum(d.datum)} über ${euro(d.betrag)} war am ${datum(d.faellig)} fällig. Wir bitten Sie, den Betrag ${fett("bis zum " + datum(d.frist))} zu überweisen.`,
         zeilen([["Rechnung", d.nummer], ["Betrag", euro(d.betrag)], ["Bitte überweisen bis", datum(d.frist)]]),
+        pdfSatz("Die Rechnung", mitAnhang(d), false),
+        hinweis("Sollte sich Ihre Zahlung mit dieser Nachricht überschnitten haben, betrachten Sie sie bitte als gegenstandslos."),
         gruss(d.firma)),
     }),
     beispiel: { name: B.name, nummer: "R-2026-00031", datum: "2026-11-06", betrag: 32904, faellig: "2026-11-20", frist: "2026-12-04" },
@@ -444,13 +525,14 @@ export const VORLAGEN = {
     baue: d => ({
       subject: `${d.stufe || "Mahnung"}: Rechnung ${d.nummer}`,
       text: absaetze(anrede(d),
-        `trotz unserer Zahlungserinnerung ist der Betrag aus Rechnung ${d.nummer} über ${euro(d.betrag)} bisher nicht bei uns eingegangen. Bitte überweisen Sie den offenen Betrag bis spätestens ${datum(d.frist)}${d.iban ? ` auf das Konto IBAN ${d.iban}` : ""}. Bei Fragen melden Sie sich gern direkt bei uns.`,
+        `trotz unserer Zahlungserinnerung ist der Betrag aus Rechnung ${d.nummer} über ${euro(d.betrag)} bisher nicht bei uns eingegangen. Bitte überweisen Sie den offenen Betrag ${fett("bis spätestens " + datum(d.frist))}${d.iban ? ` auf das Konto IBAN ${d.iban}` : ""}.`,
         zeilen([["Rechnung", d.nummer], ["Offener Betrag", euro(d.betrag)], ["Zahlbar bis spätestens", datum(d.frist)], ["IBAN", d.iban]]),
+        pdfSatz("Die Rechnung", mitAnhang(d), false),
+        hinweis("Bei Fragen melden Sie sich gern direkt bei uns."),
         gruss(d.firma)),
     }),
     beispiel: { name: B.name, stufe: "1. Mahnung", nummer: "R-2026-00031", betrag: 32904, frist: "2026-12-04", iban: "DE00 0000 0000 0000 0000 00" },
   },
-
   /* ---------- Projekt & Portal ---------- */
   projektanfrage_eingang: {
     gruppe: "Projekt & Portal", titel: "Eingangsbestätigung Projektanfrage", an: "kunde",
@@ -530,19 +612,20 @@ export const VORLAGEN = {
   },
   konzept_versand: {
     gruppe: "Projekt & Portal", titel: "Entwicklungskonzept (Hardware)", an: "kunde",
-    wann: "Wenn der Inhaber im Hardware-Projekt die Kundenfassung des Konzepts verschickt; das PDF hängt an.",
+    wann: "Wenn der Inhaber im Hardware-Projekt die Kundenfassung des Konzepts verschickt; das Konzept hängt als PDF an.",
     baue: d => ({
       subject: `Ihr Entwicklungskonzept: ${kurz(d.titel, 50)}${d.version ? ` (Version ${d.version})` : ""}`,
       text: absaetze(anrede(d),
-        `im Anhang finden Sie das Entwicklungskonzept zu „${d.titel}“: die Anforderungen, die gewählte Lösung, den Aufbau mit Ansichten aus dem 3D-Modell, die geschätzten Materialkosten sowie die Prüfpunkte und offenen Punkte.`,
-        "Schauen Sie es in Ruhe durch. Ihre Fragen und Anmerkungen besprechen wir gern in einem Termin.",
-        d.portalLink && `Sie finden das Dokument auch in Ihrem Kundenportal:\n${d.portalLink}`,
+        `hier ist das ${fett("Entwicklungskonzept")} zu „${d.titel}“: die Anforderungen, die gewählte Lösung, den Aufbau mit Ansichten aus dem 3D-Modell, die geschätzten Materialkosten sowie die Prüfpunkte und offenen Punkte.`,
+        zeilen([["Konzept", d.titel], ["Version", d.version]]),
+        pdfSatz("Das Konzept", mitAnhang(d), !!d.portalLink),
+        d.portalLink,
+        hinweis("Schauen Sie es in Ruhe durch. Ihre Fragen und Anmerkungen besprechen wir gern in einem Termin."),
         gruss(d.firma)),
       knopf: d.portalLink ? { label: "Im Kundenportal ansehen", url: d.portalLink } : undefined,
     }),
     beispiel: { firma: "hardware", name: B.name, titel: "Therapie-Timer mit Tastenfeld", version: 2, portalLink: `${BSP}/portal/` },
   },
-
   /* ---------- Support ---------- */
   support_neu_team: {
     gruppe: "Support", titel: "Neue Support-Anfrage (an dich)", an: "team",
@@ -593,8 +676,8 @@ export const VORLAGEN = {
     baue: d => ({
       subject: `Re: ${kurz(d.betreff, 60)} [Support #${d.id}]`,
       text: absaetze(anrede(d), d.nachricht,
-        d.geloest && "Wir haben die Anfrage als gelöst markiert. Falls doch noch etwas ist, antworten Sie einfach im Kundenportal – dann öffnet sie sich wieder.",
         `Antworten und den ganzen Verlauf finden Sie im Kundenportal:\n${d.link}`,
+        d.geloest && hinweis("Wir haben die Anfrage als gelöst markiert. Falls doch noch etwas ist, antworten Sie einfach im Kundenportal – dann öffnet sie sich wieder."),
         gruss(d.firma, d.absender)),
       knopf: { label: "Verlauf im Kundenportal", url: d.link },
     }),
@@ -605,12 +688,14 @@ export const VORLAGEN = {
     wann: "Automatisch, wenn eine Anfrage einige Tage (Standard 4) auf eine Rückmeldung des Kunden wartet.",
     baue: d => ({
       subject: `Wir warten noch auf Ihre Rückmeldung [Support #${d.id}]`,
-      text: absaetze(anrede(d), `zu Ihrer Anfrage „${d.betreff}“ brauchen wir noch eine kurze Rückmeldung von Ihnen. Antworten Sie einfach im Kundenportal:\n${d.link}`, gruss(d.firma)),
+      text: absaetze(anrede(d), `zu Ihrer Anfrage „${d.betreff}“ brauchen wir noch eine ${fett("kurze Rückmeldung")} von Ihnen.`,
+        `Antworten Sie einfach im Kundenportal:\n${d.link}`,
+        hinweis("Hat sich die Sache schon erledigt? Dann markieren Sie die Anfrage im Kundenportal einfach als erledigt."),
+        gruss(d.firma)),
       knopf: { label: "Im Kundenportal antworten", url: d.link },
     }),
     beispiel: { name: B.name, id: 42, betreff: "Kontaktformular verschickt keine Mails", link: `${BSP}/portal/#support/42` },
   },
-
   /* ---------- Konto & Zugang ---------- */
   portal_zugang: {
     gruppe: "Konto & Zugang", titel: "Zugang zum Kundenportal", an: "kunde",
@@ -619,7 +704,8 @@ export const VORLAGEN = {
       subject: `Ihr Zugang zum Kundenportal von ${marke(d.firma)}`,
       text: absaetze(anrede(d),
         `für ${d.unternehmen || "Sie"} haben wir einen Zugang zu unserem Kundenportal eingerichtet. Dort schreiben Sie direkt mit unserem Team und klicken sich durch die Prototypen, die wir für Sie bauen.`,
-        `Über diesen Link legen Sie Ihr Passwort fest (${d.tage || 14} Tage gültig):\n${d.link}`,
+        schritte([["Passwort festlegen", `über den Link unten (${d.tage || 14} Tage gültig).`], ["Anmelden", "ab dann jederzeit mit Ihrer E-Mail-Adresse und dem Passwort."]]),
+        d.link,
         gruss(d.firma)),
       knopf: { label: "Passwort festlegen", url: d.link },
     }),
@@ -631,8 +717,8 @@ export const VORLAGEN = {
     baue: d => ({
       subject: `Ihr Link für ein neues Passwort – ${marke(d.firma)}`,
       text: absaetze(anrede(d),
-        `für Ihren Zugang wurde ein neues Passwort angefordert. Über diesen Link legen Sie es fest (eine Stunde gültig):\n${d.link}`,
-        "Wenn Sie das nicht waren, ignorieren Sie diese E-Mail einfach – Ihr bisheriges Passwort bleibt gültig.",
+        `für Ihren Zugang wurde ein neues Passwort angefordert. Über diesen Link ${fett("legen Sie es fest")} (eine Stunde gültig):\n${d.link}`,
+        hinweis("Wenn Sie das nicht waren, ignorieren Sie diese E-Mail einfach – Ihr bisheriges Passwort bleibt gültig."),
         gruss(d.firma)),
       knopf: { label: "Neues Passwort festlegen", url: d.link },
     }),

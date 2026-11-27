@@ -133,14 +133,15 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
   }
   async function mailInvoice(inv, buf, kind, extraText = "") {
     const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(inv.client_id), firma = firmaDaten(inv.locked ? inv.firma : firmaVonProjekt(inv.project_id)).firma;
-    const basis = { name: c.name, nummer: inv.number, titel: inv.title || "", freitext: extraText || "", firma };
+    const basis = { name: c.name, nummer: inv.number, titel: inv.title || "", freitext: extraText || "", anhang: !!buf, firma };
+    if (!buf) console.warn(`${inv.number}: PDF fehlt – Mail ohne Anhang.`);
     const mail = kind === "angebot"
-      ? vorlage("angebot_versand", { ...basis, betrag: Math.abs(inv.gross), ...(c.pw_hash || !inviteLink ? { portalLink: `${SITE_URL}/portal/#angebot/${inv.id}` } : { zugangLink: inviteLink(c.id) }) })
+      ? vorlage("angebot_versand", { ...basis, betrag: Math.abs(inv.gross), gueltigBis: inv.valid_until || "", ...(c.pw_hash || !inviteLink ? { portalLink: `${SITE_URL}/portal/#angebot/${inv.id}` } : { zugangLink: inviteLink(c.id) }) })
       : kind === "storno"
         ? vorlage("storno_versand", { ...basis, betrag: inv.gross, storniert: inv.cancels_number || "", portalLink: `${SITE_URL}/portal/#dokumente` })
         : vorlage("rechnung_versand", { ...basis, betrag: Math.abs(inv.gross), faellig: inv.due_date || "", portalLink: `${SITE_URL}/portal/#dokumente` });
     return sendMail({ to: c.email, ...mail,
-      attachments: [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] });
+      attachments: buf ? [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] : [] });
   }
   const pdfOf = async inv => inv.pdf_token ? readFile(path.join(FILE_DIR, inv.pdf_token + ".pdf")) : renderInvoicePdf(draftView(inv));
 
@@ -399,7 +400,7 @@ Regeln:
       if (act === "issue" && m === "POST") { const d = await readJson(req); return json(res, 200, await issue(id, d, user)); }
       if (act === "send" && m === "POST") {
         if (!inv.locked) return json(res, 409, { error: "Bitte zuerst festschreiben." });
-        const d = await readJson(req), buf = await pdfOf(inv);
+        const d = await readJson(req), buf = await pdfOf(inv).catch(e => { console.warn(`${inv.number}: PDF nicht verfügbar (${e.message})`); return null; });
         const mailed = await mailInvoice(inv, buf, inv.kind, clean(d.message, 3000));
         db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id); audit(user.name, "versendet", inv.kind, id, inv.number);
         return json(res, 200, { mailed });
@@ -429,13 +430,13 @@ Regeln:
       }
       if (act === "remind" && m === "POST") {
         if (inv.kind !== "rechnung" || inv.status !== "offen") return json(res, 409, { error: "Nur offene Rechnungen können gemahnt werden." });
-        const level = Math.min(inv.dunning_level, DUNNING.length - 1), label = DUNNING[level].label, buf = await pdfOf(inv);
+        const level = Math.min(inv.dunning_level, DUNNING.length - 1), label = DUNNING[level].label, buf = await pdfOf(inv).catch(e => { console.warn(`${inv.number}: PDF nicht verfügbar (${e.message}) – ${DUNNING[level].label} ohne Anhang.`); return null; });
         const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(inv.client_id), s = firmaDaten(inv.firma);   // Absender und Konto der Firma, die die Rechnung gestellt hat
         const frist = addDays(today(), 7);
         const mail = level === 0
-          ? vorlage("zahlungserinnerung", { name: c.name, nummer: inv.number, datum: inv.issue_date, betrag: inv.gross, faellig: inv.due_date, frist, firma: s.firma })
-          : vorlage("mahnung", { name: c.name, stufe: label, nummer: inv.number, betrag: inv.gross, frist, iban: s.iban || "", firma: s.firma });
-        const mailed = await sendMail({ to: c.email, ...mail, attachments: [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] });
+          ? vorlage("zahlungserinnerung", { name: c.name, nummer: inv.number, datum: inv.issue_date, betrag: inv.gross, faellig: inv.due_date, frist, anhang: !!buf, firma: s.firma })
+          : vorlage("mahnung", { name: c.name, stufe: label, nummer: inv.number, betrag: inv.gross, frist, iban: s.iban || "", anhang: !!buf, firma: s.firma });
+        const mailed = await sendMail({ to: c.email, ...mail, attachments: buf ? [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] : [] });
         db.prepare("UPDATE invoices SET dunning_level = dunning_level + 1, last_dunning_at = datetime('now') WHERE id = ?").run(id);
         audit(user.name, label, "rechnung", id, inv.number);
         return json(res, 200, { mailed, label });

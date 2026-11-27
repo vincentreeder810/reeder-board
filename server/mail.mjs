@@ -63,6 +63,7 @@ export async function sendMail({ to, subject, text, html, knopf, attachments, ar
   if (knopf?.url && !text.includes(knopf.url)) text = linkInText(text, knopf);
   let fassung = html || null;
   if (!fassung) { try { fassung = mailHtml({ subject, text, knopf, firma: f }); } catch (e) { console.warn("E-Mail: HTML-Fassung nicht erzeugt –", e.message); } }
+  text = ohneSternchen(text);   // Klartext ohne **Markierungen**
   if (!smtpReady) { protokoll(to, subject, text, fassung, "nicht versendet – SMTP nicht eingerichtet", null, art || null); return false; }
   try {
     await transporter.sendMail({ from: von, to, subject, text, ...(fassung ? { html: fassung } : {}), attachments });
@@ -96,6 +97,11 @@ const ANREDE = /^(hallo|guten\s+(tag|morgen|abend)|liebe[rs]?|sehr\s+geehrte[rs]
 const GRUSS = /^((viele|beste|freundliche|herzliche|liebe|schöne|sonnige)\s+grüße|mit\s+(freundlichen|besten|herzlichen|lieben)\s+grüßen|(gruß|grüße|bis\s+bald|danke\s+und\s+viele\s+grüße)\b)/i;
 const SCHLUESSEL = /^([A-Za-zÄÖÜäöüß][^:\n]{0,30}?):\s+(\S.*)$/;
 const AUFZAEHLUNG = /^\s*[-•–·*]\s+(.+)$/;
+const SCHRITT = /^(\d{1,2})\.\s+(\S.*)$/;     // „1. …“ – zählt nur als Block von mindestens zwei Zeilen
+const HINWEIS = /^Hinweis:\s+(\S.*)$/;
+const FETT = /\*\*(?=\S)(.+?)(?<=\S)\*\*/g;
+/** Klartext-Fassung: **Fett** ohne Sternchen */
+export const ohneSternchen = s => String(s ?? "").replace(FETT, "$1");
 
 /** Passende Beschriftung für einen Link, je nach Ziel */
 export function knopfLabel(url) {
@@ -128,7 +134,8 @@ function verlinke(escaped) {
     return `<a href="${url}" target="_blank" style="color:${F.link};text-decoration:underline;word-break:break-word">${url}</a>${rest}`;
   });
 }
-const zeile = s => verlinke(esc(s));
+// Escapen, **Fett** setzen, Links erzeugen
+const zeile = s => verlinke(esc(s).replace(FETT, `<strong style="font-weight:700;color:${F.tinte}">$1</strong>`));
 const normUrl = u => String(u || "").trim().replace(/[.,;:!?)]+$/, "");
 
 /** Text in Bausteine zerlegen: Absatz, Übersicht (Schlüssel: Wert), Aufzählung, Link-Zeile, Gruß */
@@ -153,8 +160,14 @@ function zerlege(text) {
       const z = blk[i];
       const url = z.match(NUR_URL);
       if (url) { absatzEnde(); teile.push({ typ: "link", url: url[1] }); i++; continue; }
-      // Übersicht: mindestens zwei „Schlüssel: Wert“-Zeilen hintereinander
-      let j = i; while (j < blk.length && SCHLUESSEL.test(blk[j]) && !/^https?$/i.test(blk[j].match(SCHLUESSEL)[1])) j++;
+      // Hinweis: eigener, dezent hinterlegter Kasten
+      const hw = z.match(HINWEIS);
+      if (hw) { absatzEnde(); teile.push({ typ: "hinweis", text: hw[1] }); i++; continue; }
+      // Schritte: mindestens zwei Zeilen „1. …“, „2. …“ hintereinander
+      let j = i; while (j < blk.length && SCHRITT.test(blk[j])) j++;
+      if (j - i >= 2) { absatzEnde(); teile.push({ typ: "schritte", schritte: blk.slice(i, j).map(x => { const m = x.match(SCHRITT); return [m[1], m[2]]; }) }); i = j; continue; }
+      // Übersicht: mindestens zwei „Schlüssel: Wert“-Zeilen hintereinander (ohne Hinweis-Zeilen)
+      j = i; while (j < blk.length && SCHLUESSEL.test(blk[j]) && !HINWEIS.test(blk[j]) && !/^https?$/i.test(blk[j].match(SCHLUESSEL)[1])) j++;
       if (j - i >= 2) { absatzEnde(); teile.push({ typ: "uebersicht", paare: blk.slice(i, j).map(x => { const m = x.match(SCHLUESSEL); return [m[1].trim(), m[2].trim()]; }) }); i = j; continue; }
       // Aufzählung: mindestens zwei Zeilen mit Spiegelstrich
       j = i; while (j < blk.length && AUFZAEHLUNG.test(blk[j])) j++;
@@ -175,7 +188,7 @@ function ersterSatz(teile) {
     if (texte.length >= 3) break;
   }
   if (texte.length && ANREDE.test(texte[0]) && texte[0].length < 90 && texte.length > 1) texte.shift();
-  const s = texte.join(" ").replace(URL_RE, "").replace(/\s+/g, " ").trim();
+  const s = ohneSternchen(texte.join(" ")).replace(URL_RE, "").replace(/\s+/g, " ").trim();
   const m = s.match(/^(.{20,}?[.!?])(\s|$)/);
   let satz = (m ? m[1] : s);
   if (satz.length > 150) satz = satz.slice(0, 147).replace(/\s+\S*$/, "") + " …";
@@ -209,6 +222,25 @@ function listeHtml(punkte) {
   const reihen = punkte.map(p => `<tr><td valign="top" width="18" style="padding:0 0 8px;font-family:${FONT};font-size:16px;line-height:26px;color:${F.akzent}">•</td><td style="padding:0 0 8px;font-family:${FONT};font-size:16px;line-height:26px;color:${F.tinte2}">${zeile(p)}</td></tr>`).join("");
   return `<tr><td class="r-pad" style="padding:0 48px 14px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${reihen}</table></td></tr>`;
 }
+
+// Schritte: lila Kreis mit Ziffer links (Outlook zeigt ein Quadrat), Text rechts
+function schritteHtml(schritte) {
+  const reihen = schritte.map(([nr, t], i) => {
+    const unten = i < schritte.length - 1 ? 14 : 0;
+    return `<tr>
+<td valign="top" width="26" style="width:26px;padding:0 0 ${unten}px">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate"><tr><td width="26" height="26" align="center" valign="middle" bgcolor="${F.akzent}" style="width:26px;height:26px;border-radius:13px;background-color:${F.akzent};font-family:${FONT};font-size:13px;line-height:26px;mso-line-height-rule:exactly;font-weight:700;color:#ffffff;text-align:center">${esc(nr)}</td></tr></table>
+</td>
+<td valign="top" style="padding:0 0 ${unten}px 14px;font-family:${FONT};font-size:16px;line-height:26px;color:${F.tinte2}">${zeile(t)}</td></tr>`;
+  }).join("");
+  return `<tr><td class="r-pad" style="padding:2px 48px 22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${reihen}</table></td></tr>`;
+}
+
+// Hinweis: dezenter hellvioletter Kasten
+const hinweisHtml = t => `<tr><td class="r-pad" style="padding:0 48px 20px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate"><tr>
+<td bgcolor="#f5f3ff" style="background-color:#f5f3ff;border-radius:12px;padding:14px 18px;font-family:${FONT};font-size:15px;line-height:23px;color:#4c1d95"><strong style="font-weight:700">Hinweis:</strong> ${zeile(t).replace(new RegExp(`color:${F.tinte}`, "g"), "color:#4c1d95")}</td>
+</tr></table></td></tr>`;
 
 // „Reeder“ fett, Zusatz grau – „Reeder Software“ bzw. „Reeder Hardware“
 function wortmarke(f) {
@@ -261,6 +293,8 @@ export function mailHtml({ subject, text, knopf = null, vorschautext = "", firma
     if (t.typ === "absatz") rows.push(absatzHtml(t.zeilen.map(zeile).join("<br>")));
     else if (t.typ === "uebersicht") rows.push(uebersichtHtml(t.paare));
     else if (t.typ === "liste") rows.push(listeHtml(t.punkte));
+    else if (t.typ === "schritte") rows.push(schritteHtml(t.schritte));
+    else if (t.typ === "hinweis") rows.push(hinweisHtml(t.text));
     else if (t.typ === "link") {
       const u = normUrl(t.url);
       if (kUrl && u === kUrl && !hauptGesetzt) { rows.push(knopfHtml({ label: knopf.label, url: knopf.url })); hauptGesetzt = true; }

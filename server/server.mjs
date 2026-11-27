@@ -8,7 +8,7 @@ import { db, getSetting, setSetting, DEFAULT_AVAILABILITY, DEFAULT_MAIL, DEFAULT
 import { guard, isOwner, ROLES, memberProjectIds, clientIdsFor } from "./access.mjs";
 import { freeSlots, isSlotFree, formatDe, zonedParts, ACTIVE_STATES } from "./slots.mjs";
 import { sendMail, mailStatus, icsFor, icsCalendar, reloadSmtp, testSmtp } from "./mail.mjs";
-import { vorlage, firmaVonBuchung, firmaVonTermin } from "./mail-vorlagen.mjs";
+import { vorlage, firmaVonBuchung, firmaVonTermin, kalenderAnhang, marke } from "./mail-vorlagen.mjs";
 import { createPortal } from "./portal.mjs";
 import { createFinance } from "./finance.mjs";
 import { createAutomation } from "./automation.mjs";
@@ -153,15 +153,20 @@ async function mailNewBookingToTeam(b) {
   await sendMail({ to: cfg.notifyAddress, ...vorlage("termin_neu_team", { name: b.name, unternehmen: b.company || "", email: b.email, telefon: b.phone || "", art: typeLabel(b.type), produkt: b.product || "",
     start: b.start, minuten: b.minutes, preis: typePrice(b.type), kanal: b.channel || "", videoUrl: b.video_url || "", nachricht: b.message || "", link: `${SITE_URL}/admin/#termine`, firma: firmaVonBuchung(b) }) });
 }
-async function mailForStatus(b, status) {
+// fragebogen: welche Fragebogen-Mails gleich folgen ("website" = Vorab-Fragebogen, "software" | "hardware" | "software_hardware" = Fragen zum Vorhaben)
+async function mailForStatus(b, status, fragebogen = []) {
+  const firma = firmaVonBuchung(b);
   if (status === "bestaetigt") {
-    const ics = icsCalendar([icsFor({ ...b, status, typeLabel: typeLabel(b.type) }, { title: `${typeLabel(b.type)} – Reeder Software` })]);
+    const ics = icsCalendar([icsFor({ ...b, status, typeLabel: typeLabel(b.type) }, { title: `${typeLabel(b.type)} – ${marke(firma)}` })]);
     return sendMail({ to: b.email, ...vorlage("termin_bestaetigt", { name: b.name, art: typeLabel(b.type), produkt: b.product || "", start: b.start, minuten: b.minutes, kanal: b.channel || "",
-        videoUrl: b.video_url || "", preis: typePrice(b.type), erstgespraech: b.type === "erstgespraech", firma: firmaVonBuchung(b) }),
-      attachments: [{ filename: "termin-reeder-software.ics", content: ics, contentType: "text/calendar" }] });
+        videoUrl: b.video_url || "", preis: typePrice(b.type), fragebogen, firma }),
+      attachments: [kalenderAnhang(ics, "PUBLISH")] });
   }
   if (status === "abgesagt") {
-    return sendMail({ to: b.email, ...vorlage("termin_abgesagt", { name: b.name, start: b.start, terminLink: `${SITE_URL}/termin.html`, firma: firmaVonBuchung(b) }) });
+    // Absage auch im Kalender: gleiche UID wie bei der Bestätigung (termin-<Buchung>), STATUS:CANCELLED
+    const ics = icsCalendar([icsFor({ ...b, typeLabel: typeLabel(b.type) }, { method: "CANCEL", title: `${typeLabel(b.type)} – ${marke(firma)}` })]);
+    return sendMail({ to: b.email, ...vorlage("termin_abgesagt", { name: b.name, start: b.start, terminLink: `${SITE_URL}/termin.html`, kalender: true, firma }),
+      attachments: [kalenderAnhang(ics, "CANCEL")] });
   }
 }
 
@@ -217,7 +222,10 @@ async function publicApi(req, res, url) {
     const weitere = [...gewaehlt].filter(k => k !== "website");
     // Eine Anfrage ist ein Projekt: je Thema entsteht sofort ein Projekt „anfrage“, der Termin hängt daran
     try { projekteFuerBuchung(row, gewaehlt.size ? [...gewaehlt] : ["website"]); } catch (e) { console.warn("Anfrage-Projekt:", e.message); }
-    (async () => { await mailForStatus(row, "bestaetigt"); await mailNewBookingToTeam(row);
+    // Hinweis in der Bestätigung, welche Fragebögen gleich folgen (Vorab-Fragebogen gibt es nur zu Erstgespräch/Workshop, siehe TYPES in vorab.mjs)
+    const folgt = [...((gewaehlt.has("website") || !gewaehlt.size) && ["erstgespraech", "workshop"].includes(type) ? ["website"] : []),
+      ...(weitere.length ? [weitere.includes("software") && weitere.includes("hardware") ? "software_hardware" : weitere[0]] : [])];
+    (async () => { await mailForStatus(row, "bestaetigt", folgt); await mailNewBookingToTeam(row);
       if (gewaehlt.has("website") || !gewaehlt.size) await vorab.invite(row);
       if (weitere.length) await onboarding.invite(row, weitere); })().catch(e => console.warn("Mail:", e.message));
     return json(res, 201, { ok: true, id: row.id, status: "bestaetigt", video_url: row.video_url || null });
@@ -502,17 +510,21 @@ async function adminApi(req, res, url) {
       if (a.booking_id) db.prepare("UPDATE bookings SET status = 'abgesagt', updated_at = datetime('now') WHERE id = ?").run(a.booking_id);
       db.prepare("DELETE FROM appointments WHERE id = ?").run(a.id);
       const grund = clean(d.grund, 600);
-      const mailed = mitMail ? await sendMail({ to: a.email, ...vorlage("termin_abgesagt", { name: anrede, titel: a.title, start: a.start, grund, terminLink: `${SITE_URL}/termin.html`, firma: firmaVonTermin(a) }) }) : null;
+      // Kalender-Absage mit derselben UID wie die Einladung (termin-<Buchung>, sonst termin-<Termin>)
+      const firma = firmaVonTermin(a), ics = icsCalendar([icsFor({ id: a.booking_id || a.id, start: a.start, minutes: a.minutes || 30, name: anrede, email: a.email || "", video_url: a.video_url }, { method: "CANCEL", title: `${a.title} – ${marke(firma)}` })]);
+      const mailed = mitMail ? await sendMail({ to: a.email, ...vorlage("termin_abgesagt", { name: anrede, titel: a.title, start: a.start, grund, terminLink: `${SITE_URL}/termin.html`, kalender: true, firma }),
+        attachments: [kalenderAnhang(ics, "CANCEL")] }) : null;
       return json(res, 200, { ok: true, mailed, ohneAdresse: !a.email });
     }
     const zeit = new Date(String(d.start || "")), neu = Number.isFinite(zeit.getTime()) ? zeit.toISOString() : null;
     if (!neu || Date.parse(neu) <= Date.now()) return json(res, 400, { error: "Bitte einen Zeitpunkt in der Zukunft wählen." });
     db.prepare("UPDATE appointments SET start = ? WHERE id = ?").run(neu, a.id);
     if (a.booking_id) db.prepare("UPDATE bookings SET start = ?, updated_at = datetime('now') WHERE id = ?").run(neu, a.booking_id);
-    const wann = formatDe(neu), ics = icsCalendar([icsFor({ id: a.id, start: neu, minutes: a.minutes || 30, name: anrede, email: a.email || "", status: "bestaetigt", video_url: a.video_url }, { title: `${a.title} – Reeder` })]);
+    // Gleiche UID wie die Einladung (termin-<Buchung>, sonst termin-<Termin>), damit der Kalender den Eintrag verschiebt statt einen zweiten anzulegen
+    const firma = firmaVonTermin(a), ics = icsCalendar([icsFor({ id: a.booking_id || a.id, start: neu, minutes: a.minutes || 30, name: anrede, email: a.email || "", status: "bestaetigt", video_url: a.video_url }, { title: `${a.title} – ${marke(firma)}` })]);
     const mailed = mitMail ? await sendMail({ to: a.email, ...vorlage("termin_verschoben", { name: anrede, titel: a.title, alt: a.start, neu, minuten: a.minutes || 0, videoUrl: a.video_url || "",
-        terminLink: `${SITE_URL}/termin.html`, firma: firmaVonTermin(a) }),
-      attachments: [{ filename: "termin-reeder.ics", content: ics, contentType: "text/calendar" }] }) : null;
+        terminLink: `${SITE_URL}/termin.html`, firma }),
+      attachments: [kalenderAnhang(ics, "PUBLISH")] }) : null;
     return json(res, 200, { ok: true, mailed, start: neu, ohneAdresse: !a.email });
   }
   mm = p.match(/^\/bookings\/(\d+)$/);
@@ -526,7 +538,8 @@ async function adminApi(req, res, url) {
       try { projekteFuerBuchung(c, themenDerBuchung(c, bereichOfType(c.type) === "hardware")); } catch (e) { console.warn("Anfrage-Projekt:", e.message); } }
     if (status === "abgesagt") db.prepare("DELETE FROM appointments WHERE booking_id = ? AND start > ?").run(b.id, new Date().toISOString());
     let mailed = null;
-    if (d.notify && status !== b.status && (status === "bestaetigt" || status === "abgesagt")) mailed = await mailForStatus(b, status);
+    if (d.notify && status !== b.status && (status === "bestaetigt" || status === "abgesagt")) mailed = await mailForStatus(b, status,
+      status === "bestaetigt" && ["erstgespraech", "workshop"].includes(b.type) && !db.prepare("SELECT 1 FROM vorab WHERE booking_id = ?").get(b.id) ? ["website"] : []);
     // Zweite Mail: Vorab-Fragebogen fürs Erstgespräch (daraus entsteht automatisch ein Vorab-Entwurf)
     if (d.notify && status === "bestaetigt" && b.status !== "bestaetigt") vorab.invite(db.prepare("SELECT * FROM bookings WHERE id = ?").get(b.id)).catch(e => console.warn("Vorab-Mail:", e.message));
     return json(res, 200, { ok: true, mailed, client_id: b.client_id || db.prepare("SELECT client_id FROM bookings WHERE id = ?").get(b.id).client_id, video_url: b.video_url || null });

@@ -3,7 +3,7 @@
 import { db, getSetting, DEFAULT_AVAILABILITY, DEFAULT_MAIL, videoUrl } from "./db.mjs";
 import { freeSlots, isSlotFree, formatDe, zonedParts } from "./slots.mjs";
 import { sendMail, icsFor, icsCalendar } from "./mail.mjs";
-import { vorlage } from "./mail-vorlagen.mjs";
+import { vorlage, kalenderAnhang, marke } from "./mail-vorlagen.mjs";
 import { firmaVonProjekt } from "./firmen.mjs";
 
 export const onBooked = new Set();   // z. B. Vorab-Fragebogen nach einem vom Team eingeplanten Erstgespräch
@@ -30,10 +30,11 @@ export function createRequests({ json, readJson, clean, logEvent, SITE_URL }) {
     logEvent(c.id, projectId || null, "termin", "Termin vereinbart", `${title} · ${short(start)}`, false);
     let mailed = null;
     if (notify) {
-      const ics = icsCalendar([icsFor({ id: b.lastInsertRowid, start, minutes, type, name: c.name, email: c.email, company: c.company, channel, status: "bestaetigt", video_url: video, typeLabel: typeLabel(type) }, { title: `${title} – Reeder Software` })]);
+      const firma = projectId ? firmaVonProjekt(projectId) : av().types[type]?.bereich === "hardware" ? "hardware" : "software";
+      const ics = icsCalendar([icsFor({ id: b.lastInsertRowid, start, minutes, type, name: c.name, email: c.email, company: c.company, channel, status: "bestaetigt", video_url: video, typeLabel: typeLabel(type) }, { title: `${title} – ${marke(firma)}` })]);
       mailed = await sendMail({ to: c.email, ...vorlage("termin_einladung", { name: c.name, titel: title, start, minuten: minutes, videoUrl: video || "", kanal: channel, notiz: note,
-          absender: user.name, firma: projectId ? firmaVonProjekt(projectId) : av().types[type]?.bereich === "hardware" ? "hardware" : "software" }),
-        attachments: [{ filename: "termin-reeder-software.ics", content: ics, contentType: "text/calendar" }] });
+          absender: user.name, portalLink: c.pw_hash ? `${SITE_URL}/portal/` : "", firma }),
+        attachments: [kalenderAnhang(ics, "PUBLISH")] });
     }
     if (notify) { const row = db.prepare("SELECT * FROM bookings WHERE id = ?").get(b.lastInsertRowid); for (const fn of onBooked) Promise.resolve().then(() => fn(row)).catch(e => console.warn("Nach Buchung:", e.message)); }
     return { appointment_id: a.lastInsertRowid, booking_id: b.lastInsertRowid, video_url: video, mailed };

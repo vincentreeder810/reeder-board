@@ -1,5 +1,7 @@
 // Automatik im Hintergrund: prüft jede Minute die Regeln, verschickt Erinnerungen und legt „Vorschläge“ fürs Cockpit an.
 // Alles wird in job_log festgehalten (Schlüssel = nichts doppelt). Vorschläge erledigen sich selbst, sobald der Anlass weg ist.
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage, firmaVonTermin } from "./mail-vorlagen.mjs";
@@ -41,6 +43,7 @@ export const DEFAULT_AUTOMATION = {
 };
 const DUNNING = [{ days: 0, label: "Zahlungserinnerung" }, { days: 14, label: "1. Mahnung" }, { days: 28, label: "2. Mahnung" }, { days: 42, label: "3. Mahnung" }];
 const TZ = "Europe/Berlin", H = 3600e3, D = 24 * H;
+const FINANCE_DIR = path.resolve(process.env.DATA_DIR || "data", "finance");   // festgeschriebene PDFs aus finance.mjs
 const ts = s => Date.parse(String(s).includes("T") ? s : String(s).replace(" ", "T") + "Z");
 const sqlTime = d => new Date(d).toISOString().replace("T", " ").slice(0, 19);
 const euro = c => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format((c || 0) / 100);
@@ -341,8 +344,13 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
         if (!isOwner(user)) return json(res, 403, { error: "Nur für Inhaber" });
         if (n.kind === "angebot") {
           const q = db.prepare("SELECT i.*, c.name, c.email, c.stage FROM invoices i JOIN clients c ON c.id = i.client_id WHERE i.id = ?").get(n.ref_id);
+          // Das festgeschriebene Angebots-PDF (finance.mjs: data/finance/<pdf_token>.pdf) hängt noch einmal an; fehlt es, geht die Mail ohne Anhang raus
+          let pdf = null;
+          try { if (q.pdf_token) pdf = await readFile(path.join(FINANCE_DIR, q.pdf_token + ".pdf")); } catch (e) { console.warn(`Angebot ${q.number}: PDF nicht lesbar (${e.message}) – Nachfrage ohne Anhang.`); }
+          if (!pdf && !q.pdf_token) console.warn(`Angebot ${q.number}: kein PDF hinterlegt – Nachfrage ohne Anhang.`);
           const mailed = await sendMail({ to: q.email, ...vorlage("angebot_nachfrage", { name: q.name, nummer: q.number, titel: q.title || "", terminLink: `${SITE_URL}/termin.html`,
-            portalLink: q.stage === "mandant" ? `${SITE_URL}/portal/` : "", firma: q.firma }) });
+            portalLink: q.stage === "mandant" ? `${SITE_URL}/portal/` : "", anhang: !!pdf, firma: q.firma }),
+            attachments: pdf ? [{ filename: `${q.number}.pdf`, content: pdf, contentType: "application/pdf" }] : [] });
           log(`angebot-erinnerung:${q.id}:${Date.now()}`, "nachfassen", q.client_id, `Nachfrage zum Angebot ${q.number} an ${q.email} (von ${user.name})`);
           db.prepare("UPDATE nudges SET status = 'erledigt', done_at = datetime('now'), done_by = ? WHERE id = ?").run(user.name, n.id);
           return json(res, 200, { mailed });
