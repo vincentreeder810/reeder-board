@@ -299,6 +299,7 @@ async function loadSettings() {
   setTab = (sub && $(`#setTabs [data-t="${sub}"]`) ? sub : null) || setTab || (ME.owner ? "firma" : "konto");
   if (!ME.owner) setTab = "konto";
   $$("#setTabs button").forEach(b => b.classList.toggle("on", b.dataset.t === setTab));
+  segZeigen($("#setTabs"));
   $$("[data-set]").forEach(d => d.hidden = d.dataset.set !== setTab);
   if (!ME.owner) return;
   const s = await api("/settings");
@@ -452,3 +453,13 @@ $("#navToggle")?.addEventListener("click", e => { e.stopPropagation(); const s =
 document.addEventListener("click", e => { if (!e.target.closest(".side")) menuZu(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") menuZu(); });
 $$(".side nav a").forEach(a => a.addEventListener("click", () => menuZu()));
+
+/* Wischbare Reiterleisten: den aktiven Reiter immer ins Bild holen (nur innerhalb der Leiste, die Seite scrollt nicht mit) */
+function segZeigen(seg) { if (!seg || seg.scrollWidth <= seg.clientWidth) return; const on = seg.querySelector("button.on"); if (!on) return;
+  seg.scrollLeft = Math.max(0, on.offsetLeft - (seg.clientWidth - on.offsetWidth) / 2); segRand(seg); }
+document.addEventListener("click", e => { const seg = e.target.closest(".seg"); if (seg) setTimeout(() => segZeigen(document.getElementById(seg.id) || seg), 60); });
+/* Weicher Rand links/rechts, solange es in der Leiste noch weitergeht – so ist klar, dass man wischen kann */
+function segRand(seg) { if (!seg) return; const mehr = seg.scrollWidth > seg.clientWidth + 1; seg.classList.toggle("seg--l", mehr && seg.scrollLeft > 4); seg.classList.toggle("seg--r", mehr && seg.scrollLeft + seg.clientWidth < seg.scrollWidth - 4); }
+document.addEventListener("scroll", e => { if (e.target.classList?.contains("seg")) segRand(e.target); }, true);
+addEventListener("resize", () => $$(".seg").forEach(segRand));
+setTimeout(() => $$(".seg").forEach(segRand), 800); window.addEventListener("hashchange", () => setTimeout(() => $$(".seg").forEach(segRand), 400));

@@ -1564,3 +1564,15 @@ label.auf__item{cursor:pointer}
 @media (max-width:980px){.side__toggle{flex:0 1 auto;min-width:0;max-width:none}.side__me{flex:none}.app{grid-template-rows:auto 1fr;align-content:start}}
 /* Phasenleiste auf dem Handy: nur die aktuelle Phase beschriftet, sonst ragt sie rechts hinaus */
 @media (max-width:620px){.pphase button span{visibility:hidden;white-space:nowrap}.pphase button.now span{visibility:visible}.pphase{overflow:visible;grid-template-columns:repeat(6,minmax(0,1fr))}.pphase button{min-width:0}}
+
+/* Reiterleisten bleiben eine Zeile: passen nicht alle Reiter hinein, lässt sich die Leiste seitlich wischen (statt zu einem ovalen Klecks umzubrechen) */
+/* Desktop: darf umbrechen – mit Ecken, die auch zu zwei Zeilen passen (kein ovaler Klecks mehr) */
+.seg{border-radius:21px;max-width:100%}
+.seg button{white-space:nowrap}
+/* Handy und Tablet: eine Zeile zum Wischen */
+@media (max-width:760px){.seg{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}.seg::-webkit-scrollbar{display:none}.seg button{flex:none}}
+/* Terminliste auf dem Handy: Titel bricht um statt rechts abgeschnitten zu werden */
+@media (max-width:700px){.cl__r{grid-template-columns:52px 4px minmax(0,1fr);gap:12px;padding:12px 14px}.cl__m{min-width:0}.cl__m b{white-space:normal;overflow-wrap:anywhere;line-height:1.3}.cl__r>*:nth-child(n+4){grid-column:3}}
+.seg--r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent)}
+.seg--l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px);mask-image:linear-gradient(90deg,transparent,#000 34px)}
+.seg--l.seg--r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent)}
