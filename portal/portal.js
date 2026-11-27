@@ -479,7 +479,7 @@ $("#projDetail").addEventListener("click", e => {
    Hat der Kunde mehrere Projekte (oder dazu allgemeine Nachrichten), wählt er oben den Chat; sonst sieht er wie bisher einen Verlauf.
    Adresse: #chat oder #chat/<Projekt-Nummer> bzw. #chat/allgemein */
 let msgs = [], threads = [], thread = null;
-const thKey = t => t.project_id == null ? "allgemein" : String(t.project_id);
+const thKey = t => t.key ?? (t.project_id == null ? "allgemein" : String(t.project_id));
 const EMPTY = `<b>Ihr direkter Draht zu uns.</b>Stellen Sie hier Fragen, geben Sie Feedback oder schicken Sie uns einfach Ihre Gedanken. Unser Team antwortet in der Regel am selben Werktag.`;
 async function viewChat(arg) {
   threads = await api("/threads").catch(() => []);
@@ -495,7 +495,8 @@ function renderThreads() {
   box.hidden = threads.length < 2;
   box.innerHTML = threads.map(t => { const on = thKey(t) === thread;
     return `<button type="button" role="tab" class="thchip ${on ? "on" : ""} ${t.status === "abgeschlossen" ? "thchip--zu" : ""}" data-th="${thKey(t)}" aria-selected="${on}"><span>${esc(t.title)}</span>${t.unread && !on ? `<em>${t.unread}</em>` : ""}</button>`; }).join("");
-  $("#chatSub").textContent = threads.length > 1 && cur ? (cur.project_id ? `Zum Projekt „${cur.title}“ · wir antworten in der Regel am selben Werktag.` : "Allgemeine Fragen · wir antworten in der Regel am selben Werktag.") : "Wir antworten in der Regel am selben Werktag.";
+  const wer = cur?.teilnehmer?.length ? `Im Chat: ${cur.teilnehmer.map(x => `${x.name} (${x.rolle})`).join(", ")}` : "Wir antworten in der Regel am selben Werktag.";
+  $("#chatSub").textContent = threads.length > 1 && cur ? `${cur.thema ? `Thema „${cur.title}“` : cur.project_id ? `Projekt „${cur.title}“` : "Allgemein"} · ${wer}` : wer;
   $("#composer textarea").placeholder = threads.length > 1 && cur?.project_id ? `Nachricht zu „${cur.title}“ …` : "Nachricht an unser Team …";
 }
 async function openThread(k) {
@@ -613,7 +614,7 @@ async function antwortFliegt({ log, ta, kid, von: startRect }) {
   blase.style.visibility = ""; huelle.remove();
 }
 composer($("#composer"), async text => {
-  const m = await api("/messages", { method: "POST", body: { body: text, project_id: thread && thread !== "allgemein" ? +thread : null } }).catch(err => { toast(err.message); throw err; });
+  const m = await api("/messages", { method: "POST", body: { body: text, thread: thread || "allgemein" } }).catch(err => { toast(err.message); throw err; });
   if (!msgs.some(x => x.id === m.id)) msgs.push(m);
   const log = $("#log"), ta = $("#composer textarea");
   if (ruhig()) { log.dataset.scrolled = ""; render(log, msgs, "client", EMPTY); return; }

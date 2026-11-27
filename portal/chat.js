@@ -68,19 +68,21 @@
   /** Chat-Verlauf in ein Element rendern. me = "client" | "team" (eigene Nachrichten rechts) */
   function render(log, msgs, me, emptyHtml) {
     if (!msgs.length) { log.innerHTML = `<div class="chat__empty">${emptyHtml}</div>`; return; }
-    let html = "", lastDay = "", lastSender = "", lastTime = 0;
+    let html = "", lastDay = "", lastSender = "", lastAuthor = "", lastTime = 0;
     for (const m of msgs) {
       const d = dayKey(m.created_at), t = toDate(m.created_at).getTime();
       if (d !== lastDay) { html += `<div class="chat__day">${dayLabel(m.created_at)}</div>`; lastDay = d; lastSender = ""; }
-      const same = m.sender === lastSender && t - lastTime < 5 * 60000;
+      // Hinweise wie „X hat Y zum Chat hinzugefügt“ stehen klein in der Mitte
+      if (m.art === "system") { html += `<div class="chat__sys">${esc(m.body)}</div>`; lastSender = ""; continue; }
+      const same = m.sender === lastSender && m.author === lastAuthor && t - lastTime < 5 * 60000;
       const mine = m.sender === me;
-      const who = m.sender === "team" ? `${esc(m.author)} · Reeder Software` : esc(m.author);
+      const who = m.sender === "team" ? `${esc(m.author)} · ${esc(m.rolle && m.rolle !== "Inhaber" ? m.rolle : "Reeder Software")}` : esc(m.author);
       html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--${m.sender} ${same ? "msg--same" : ""} ${m.art === "rueckfragen" ? "msg--karte" : ""}">
         <span class="msg__who">${who}</span>
         ${inhalt(m, me)}
         ${m.has_prototype ? protoCard(m.prototype) : ""}
         <span class="msg__meta">${fmt(m.created_at, { hour: "2-digit", minute: "2-digit" })}${mine && m.read ? " · gelesen" : ""}</span></div>`;
-      lastSender = m.sender; lastTime = t;
+      lastSender = m.sender; lastAuthor = m.author; lastTime = t;
     }
     const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 120;
     // Angefangene Antworten in Rückfragen-Karten überstehen das Neuzeichnen (z. B. wenn währenddessen eine Nachricht kommt)

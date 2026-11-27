@@ -47,8 +47,9 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
   const protoOut = p => p && ({ id: p.id, title: p.title, note: p.note, url: `/p/${p.token}/${p.entry}`, base: `/p/${p.token}/`, entry: p.entry, files: p.files, bytes: p.bytes, active: !!p.active,
     version: p.version || 1, project_id: p.project_id || null, group_id: p.group_id || p.id, changes: p.changes || "", state: p.state || null, created_at: p.created_at });
   const msgOut = m => ({ id: m.id, has_prototype: !!m.prototype_id, sender: m.sender, author: m.author, body: m.body, created_at: m.created_at, read: !!m.read_at,
-    project_id: m.project_id ?? null, art: m.art || null, meta: metaOut(m),
+    project_id: m.project_id ?? null, thema_id: m.thema_id ?? null, art: m.art || null, meta: metaOut(m), rolle: m.user_id ? rolleVon(m.user_id) : null,
     prototype: m.prototype_id ? protoOut(db.prepare("SELECT * FROM prototypes WHERE id = ? AND active = 1").get(m.prototype_id)) || null : null });
+  const rolleVon = id => ({ inhaber: "Inhaber", entwickler: "Entwickler", buchhaltung: "Buchhaltung" })[db.prepare("SELECT role FROM users WHERE id = ?").get(id)?.role] || null;
   /* Sonderkarten im Chat. Rückfragen bekommen ihren Stand je Frage live aus kunden_fragen:
      offen (wartet auf den Kunden) · beantwortet (mit Antwort) · erledigt (inzwischen im Board geklärt oder gelöscht) */
   function metaOut(m) {
@@ -66,44 +67,151 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
     return meta;
   }
 
-  /* ---------- Chats je Projekt ----------
-     Jede Nachricht gehört zu einem Faden: einem Projekt des Kunden oder „Allgemein“ (project_id NULL).
-     Faden-Angabe in Anfragen: ?thread=<Projekt-ID> | allgemein | (leer = alle Nachrichten, wie früher) */
+  /* ---------- Chats: je Projekt, „Allgemein“ und eigene Themen ----------
+     Faden-Schlüssel: Projekt-Nr. („5“) · „allgemein“ · Thema „t<Nr.>“ (z. B. die Buchhaltung schreibt wegen einer Rechnung).
+     Teilnehmer im Team: beim Projekt die zugeordneten Mitarbeiter (project_members) – dazu alle, die beigetreten sind oder eingeladen wurden
+     (chat_teilnehmer). Der Inhaber sieht alle Chats und tritt mit „Beitreten“ oder seiner ersten Nachricht bei. */
+  db.exec(`CREATE TABLE IF NOT EXISTS chat_themen (id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      project_id INTEGER, titel TEXT NOT NULL, erstellt_von INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')));
+    CREATE TABLE IF NOT EXISTS chat_teilnehmer (client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE, faden TEXT NOT NULL, user_id INTEGER NOT NULL,
+      hinzu_von INTEGER, hinzu_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (client_id, faden, user_id));`);
+  { const mc = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name);
+    if (!mc.includes("thema_id")) db.exec("ALTER TABLE messages ADD COLUMN thema_id INTEGER");
+    if (!mc.includes("user_id")) db.exec("ALTER TABLE messages ADD COLUMN user_id INTEGER"); }
+  const ROLLE = { inhaber: "Inhaber", entwickler: "Entwickler", buchhaltung: "Buchhaltung" };
+
+  // Faden aus einer Angabe lesen: undefined = alle (wie früher) · null = Allgemein · Zahl = Projekt · { thema } · false = gibt es nicht
   function threadOf(v, clientId) {
     if (v === undefined || v === null || v === "" || v === "alle") return undefined;
     if (v === "allgemein" || v === "0" || v === 0) return null;
-    return db.prepare("SELECT id FROM projects WHERE id = ? AND client_id = ?").get(+v, clientId)?.id ?? false;   // false = gibt es nicht
+    const tm = /^t(\d+)$/.exec(String(v));
+    if (tm) return db.prepare("SELECT id FROM chat_themen WHERE id = ? AND client_id = ?").get(+tm[1], clientId) ? { thema: +tm[1] } : false;
+    return db.prepare("SELECT id FROM projects WHERE id = ? AND client_id = ?").get(+v, clientId)?.id ?? false;
   }
-  const threadSql = t => t === undefined ? "" : t === null ? " AND project_id IS NULL" : ` AND project_id = ${Number(t)}`;
-  /** Fäden eines Kunden mit Zählern. side = wer liest: "team" zählt ungelesene Kundennachrichten, "client" ungelesene Team-Nachrichten */
-  function threadsFor(clientId, allowedPids = null, side = "team") {
+  const fadenKey = t => t === null ? "allgemein" : typeof t === "object" ? `t${t.thema}` : String(t);
+  const threadSql = t => t === undefined ? "" : t === null ? " AND project_id IS NULL AND thema_id IS NULL"
+    : typeof t === "object" ? ` AND thema_id = ${Number(t.thema)}` : ` AND project_id = ${Number(t)} AND thema_id IS NULL`;
+  /** Wer aus dem Team ist in diesem Faden? */
+  function teilnehmer(clientId, t) {
+    const key = fadenKey(t), pid = typeof t === "number" ? t : null;
+    return db.prepare(`SELECT u.id, u.name, u.role FROM users u WHERE u.active = 1 AND (u.id IN (SELECT user_id FROM chat_teilnehmer WHERE client_id = ? AND faden = ?)
+        OR (? IS NOT NULL AND u.id IN (SELECT user_id FROM project_members WHERE project_id = ?))) ORDER BY u.role = 'inhaber' DESC, u.name`)
+      .all(clientId, key, pid, pid).map(u => ({ id: u.id, name: u.name, rolle: ROLLE[u.role] || u.role }));
+  }
+  const istDrin = (user, clientId, t) => teilnehmer(clientId, t).some(x => x.id === user.id);
+  const beitreten = (userId, clientId, t, von = null) =>
+    db.prepare("INSERT OR IGNORE INTO chat_teilnehmer(client_id, faden, user_id, hinzu_von) VALUES(?, ?, ?, ?)").run(clientId, fadenKey(t), userId, von);
+  /** Darf dieser Mitarbeiter den Faden sehen? Inhaber: alles. Sonst: zugeordnetes Projekt bzw. Kunde – oder Teilnehmer des Fadens. */
+  function darf(user, clientId, t) {
+    const pids = memberProjectIds(user); if (pids === null) return true;
+    if (istDrin(user, clientId, t)) return true;
+    if (t && typeof t === "object") return false;
+    if (typeof t === "number") return pids.includes(t);
+    return !!db.prepare(`SELECT 1 FROM projects WHERE client_id = ? AND id IN (${pids.join(",") || "NULL"})`).get(clientId);
+  }
+
+  /** Fäden eines Kunden mit Zählern. side = wer liest: "team" zählt ungelesene Kundennachrichten, "client" ungelesene Team-Nachrichten.
+      user (nur Team): blendet aus, was dieser Mitarbeiter nicht sehen darf, und sagt, ob er schon drin ist. */
+  function threadsFor(clientId, allowedPids = null, side = "team", user = null) {
     const fremd = side === "team" ? "client" : "team";
-    const projs = db.prepare("SELECT id, title, status, bereich, kind, anfrage_art, updated_at FROM projects WHERE client_id = ? ORDER BY id").all(clientId)
-      .filter(p => allowedPids === null || allowedPids.includes(p.id));
-    const stats = new Map(db.prepare("SELECT project_id, COUNT(*) n, SUM(sender = ? AND read_at IS NULL) unread, MAX(id) last_id FROM messages WHERE client_id = ? GROUP BY project_id")
-      .all(fremd, clientId).map(s => [s.project_id ?? 0, s]));
+    const projs = db.prepare("SELECT id, title, status, bereich, kind, anfrage_art, updated_at FROM projects WHERE client_id = ? ORDER BY id").all(clientId);
+    const themen = db.prepare("SELECT * FROM chat_themen WHERE client_id = ? ORDER BY id").all(clientId);
+    const stats = new Map(db.prepare("SELECT project_id, thema_id, COUNT(*) n, SUM(sender = ? AND read_at IS NULL) unread, MAX(id) last_id FROM messages WHERE client_id = ? GROUP BY thema_id, CASE WHEN thema_id IS NULL THEN project_id END")
+      .all(fremd, clientId).map(s => [s.thema_id ? `t${s.thema_id}` : String(s.project_id ?? "allgemein"), s]));
     const letzte = id => id ? db.prepare("SELECT body, created_at, sender FROM messages WHERE id = ?").get(id) : null;
-    const zeile = (p, s) => { const l = letzte(s?.last_id);
-      return { project_id: p ? p.id : null, title: p ? p.title : "Allgemein", status: p ? p.status : "aktiv", bereich: p ? p.bereich || "software" : null, kind: p?.kind || null, anfrage_art: p?.anfrage_art || null,
-        count: s?.n || 0, unread: s?.unread || 0, last_at: l?.created_at || null, last_body: l ? String(l.body).replace(/\s+/g, " ").slice(0, 160) : "", last_sender: l?.sender || null, sort_at: l?.created_at || p?.updated_at || "" }; };
-    const out = projs.map(p => zeile(p, stats.get(p.id)));
-    // Faden „Allgemein“ nur, wenn es dort Nachrichten gibt – oder wenn der Kunde (noch) kein Projekt hat
-    if (stats.has(0) || !out.length) out.push(zeile(null, stats.get(0)));
+    const zeile = (t, extra) => { const key = fadenKey(t), s = stats.get(key), l = letzte(s?.last_id), tn = teilnehmer(clientId, t);
+      return { key, ...extra, count: s?.n || 0, unread: s?.unread || 0, last_at: l?.created_at || null, last_body: l ? String(l.body).replace(/\s+/g, " ").slice(0, 160) : "", last_sender: l?.sender || null,
+        teilnehmer: tn, ich_dabei: user ? tn.some(x => x.id === user.id) : undefined, sort_at: l?.created_at || extra.updated_at || "" }; };
+    const sichtbar = t => !user || darf(user, clientId, t);
+    const out = projs.filter(p => (allowedPids === null || allowedPids.includes(p.id) || (user && istDrin(user, clientId, p.id))))
+      .map(p => zeile(p.id, { project_id: p.id, title: p.title, status: p.status, bereich: p.bereich || "software", kind: p.kind || null, anfrage_art: p.anfrage_art || null, updated_at: p.updated_at }));
+    for (const th of themen) if (sichtbar({ thema: th.id }))
+      out.push(zeile({ thema: th.id }, { project_id: th.project_id || null, thema_id: th.id, title: th.titel, status: "aktiv", bereich: null, thema: true, updated_at: th.created_at }));
+    // Faden „Allgemein“ nur, wenn es dort Nachrichten gibt – oder wenn der Kunde (noch) gar keinen Faden hat
+    if ((stats.has("allgemein") || !out.length) && sichtbar(null)) out.push(zeile(null, { project_id: null, title: "Allgemein", status: "aktiv", bereich: null }));
     const zu = t => t.status === "abgeschlossen" ? 1 : 0;   // abgeschlossene Projekte stehen unten
     return out.sort((a, b) => zu(a) - zu(b) || String(b.sort_at).localeCompare(String(a.sort_at)));
   }
-  /** Liste für die Ansicht „Chats“ im Board: Kunden mit Kundenportal – dazu jeder Kontakt, mit dem es schon Nachrichten gibt.
-      Interessenten ohne Zugang haben keinen Chat und stehen nicht drin. Sortiert nach letzter Aktivität, Archiv unten. */
+  /** Liste für die Ansicht „Chats“ im Board: Kunden mit Kundenportal – dazu jeder Kontakt, mit dem es schon Nachrichten gibt,
+      und jeder Kunde, in dessen Chat der Mitarbeiter Teilnehmer ist. Sortiert nach letzter Aktivität, Archiv unten. */
   function chatList(user) {
     const visible = clientIdsFor(user), pids = memberProjectIds(user);
-    return db.prepare("SELECT * FROM clients c WHERE (c.stage = 'mandant' AND c.active = 1) OR EXISTS (SELECT 1 FROM messages m WHERE m.client_id = c.id)").all()
-      .filter(c => visible === null || visible.includes(c.id))
+    const dabei = new Set(db.prepare("SELECT DISTINCT client_id id FROM chat_teilnehmer WHERE user_id = ?").all(user.id).map(r => r.id));
+    return db.prepare("SELECT * FROM clients c WHERE (c.stage = 'mandant' AND c.active = 1) OR EXISTS (SELECT 1 FROM messages m WHERE m.client_id = c.id) OR EXISTS (SELECT 1 FROM chat_themen t WHERE t.client_id = c.id)").all()
+      .filter(c => visible === null || visible.includes(c.id) || dabei.has(c.id))
       .map(c => {
-        const threads = threadsFor(c.id, pids, "team"), last = threads.reduce((x, t) => t.last_at && (!x || t.last_at > x.last_at) ? t : x, null);
+        const threads = threadsFor(c.id, pids, "team", user), last = threads.reduce((x, t) => t.last_at && (!x || t.last_at > x.last_at) ? t : x, null);
         return { id: c.id, company: c.company, name: c.name, stage: c.stage, status: publicClient(c).status, active: !!c.active,
           unread: threads.reduce((s, t) => s + t.unread, 0), last_at: last?.last_at || null, last_body: last?.last_body || "", last_sender: last?.last_sender || null, threads };
       })
+      .filter(c => c.threads.length)
       .sort((a, b) => (a.stage === "archiv") - (b.stage === "archiv") || String(b.last_at || "").localeCompare(String(a.last_at || "")) || a.company.localeCompare(b.company, "de"));
+  }
+  /* Team-Seite der Chats: /chats/… (eigene Zugriffsprüfung über darf(), damit auch Kollegen schreiben können,
+     die nur Teilnehmer eines Fadens sind – z. B. die Buchhaltung) */
+  async function chatAdmin(req, res, url, p, m, user) {
+    if (p === "/chats" && m === "GET") return json(res, 200, chatList(user));
+    if (p === "/chats/team" && m === "GET")
+      return json(res, 200, db.prepare("SELECT id, name, role FROM users WHERE active = 1 ORDER BY role = 'inhaber' DESC, name").all().map(u => ({ id: u.id, name: u.name, rolle: ROLLE[u.role] || u.role, ich: u.id === user.id })));
+    if (p === "/chats/kunden" && m === "GET") {   // Auswahl für „Neuer Chat“: alle Kontakte mit ihren Projekten
+      const vis = clientIdsFor(user), alle = vis === null || user.role === "buchhaltung", pids = memberProjectIds(user);
+      return json(res, 200, db.prepare("SELECT * FROM clients WHERE stage != 'archiv' ORDER BY company COLLATE NOCASE").all()
+        .filter(c => alle || vis.includes(c.id))
+        .map(c => ({ id: c.id, company: c.company, name: c.name, email: c.email, stage: c.stage, zugang: !!c.pw_hash,
+          projekte: db.prepare("SELECT id, title, bereich, status FROM projects WHERE client_id = ? AND status != 'abgeschlossen' ORDER BY id DESC").all(c.id)
+            .filter(x => pids === null || pids.includes(x.id) || user.role === "buchhaltung").map(x => ({ id: x.id, title: x.title, bereich: x.bereich || "software" })) })));
+    }
+    let mm = p.match(/^\/chats\/(\d+)\/neu$/);
+    if (mm && m === "POST") {   // Neuer Chat: in einen Projekt-/Allgemein-Faden schreiben oder ein eigenes Thema eröffnen
+      const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(+mm[1]); if (!c) return json(res, 404, { error: "Kunde nicht gefunden" });
+      const d = await readJson(req), body = clean(d.body, 5000).replace(/\r/g, ""), titel = clean(d.titel, 120);
+      if (!body) return json(res, 400, { error: "Bitte eine erste Nachricht schreiben." });
+      let t = d.project_id ? threadOf(d.project_id, c.id) : null;
+      if (t === false) return json(res, 400, { error: "Dieses Projekt gehört nicht zu diesem Kunden." });
+      if (titel) t = { thema: Number(db.prepare("INSERT INTO chat_themen(client_id, project_id, titel, erstellt_von) VALUES(?, ?, ?, ?)").run(c.id, typeof t === "number" ? t : null, titel, user.id).lastInsertRowid) };
+      else if (!darf(user, c.id, t) && user.role !== "buchhaltung") return json(res, 403, { error: "Dieser Chat ist Ihnen nicht zugewiesen." });
+      beitreten(user.id, c.id, t);
+      const msg = schreibe(c, user, t, body);
+      return json(res, 201, { key: fadenKey(t), message: msg });
+    }
+    mm = p.match(/^\/chats\/(\d+)\/([\w]{1,20})\/(messages|teilnehmer)(?:\/(\d+))?$/);
+    if (!mm) return null;
+    const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(+mm[1]); if (!c) return json(res, 404, { error: "Kunde nicht gefunden" });
+    const t = threadOf(mm[2], c.id);
+    if (t === false || t === undefined || !darf(user, c.id, t)) return json(res, 404, { error: "Diesen Chat gibt es nicht." });
+    if (mm[3] === "messages" && m === "GET") {
+      const after = Math.max(0, +url.searchParams.get("after") || 0);
+      const rows = listMessages(c.id, after, t);
+      db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE client_id = ? AND sender = 'client' AND read_at IS NULL${threadSql(t)}`).run(c.id);
+      return json(res, 200, rows);
+    }
+    if (mm[3] === "messages" && m === "POST") {
+      const d = await readJson(req), body = clean(d.body, 5000).replace(/\r/g, "");
+      if (!body) return json(res, 400, { error: "Die Nachricht ist leer." });
+      beitreten(user.id, c.id, t);   // wer schreibt, ist ab jetzt im Chat
+      return json(res, 201, schreibe(c, user, t, body));
+    }
+    if (mm[3] === "teilnehmer" && m === "GET") return json(res, 200, teilnehmer(c.id, t));
+    if (mm[3] === "teilnehmer" && m === "POST") {   // Beitreten (ohne user_id) oder einen Kollegen einladen
+      const d = await readJson(req), uid = d.user_id ? +d.user_id : user.id;
+      const u = db.prepare("SELECT id, name FROM users WHERE id = ? AND active = 1").get(uid); if (!u) return json(res, 404, { error: "Diese Person gibt es im Team nicht." });
+      beitreten(u.id, c.id, t, user.id);
+      if (u.id !== user.id) db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id, thema_id, art, user_id) VALUES(?, 'team', ?, ?, ?, ?, 'system', ?)")
+        .run(c.id, user.name, `${user.name} hat ${u.name} zum Chat hinzugefügt.`, typeof t === "number" ? t : (t?.thema ? db.prepare("SELECT project_id FROM chat_themen WHERE id = ?").get(t.thema)?.project_id ?? null : null), t?.thema ?? null, user.id);
+      return json(res, 200, teilnehmer(c.id, t));
+    }
+    if (mm[3] === "teilnehmer" && m === "DELETE" && mm[4]) {   // Chat verlassen bzw. Kollegen herausnehmen (Projekt-Zuordnung bleibt davon unberührt)
+      db.prepare("DELETE FROM chat_teilnehmer WHERE client_id = ? AND faden = ? AND user_id = ?").run(c.id, fadenKey(t), +mm[4]);
+      return json(res, 200, teilnehmer(c.id, t));
+    }
+    return null;
+  }
+  /** Team-Nachricht speichern (mit Absender und Rolle) und den Kunden benachrichtigen */
+  function schreibe(c, user, t, body) {
+    const pid = typeof t === "number" ? t : (t?.thema ? db.prepare("SELECT project_id FROM chat_themen WHERE id = ?").get(t.thema)?.project_id ?? null : null);
+    const r = db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id, thema_id, user_id) VALUES(?, 'team', ?, ?, ?, ?, ?)").run(c.id, user.name, body, pid, t?.thema ?? null, user.id);
+    notifyClient(c);
+    return msgOut(db.prepare("SELECT * FROM messages WHERE id = ?").get(r.lastInsertRowid));
   }
 
   const projects = createProjects({ json, send, readJson, clean, protoOut, SITE_URL });
@@ -136,7 +244,7 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
   const listMessages = (clientId, after, thread) =>
     db.prepare(`SELECT * FROM messages WHERE client_id = ? AND id > ?${threadSql(thread)} ORDER BY id LIMIT 500`).all(clientId, after).map(msgOut);
   // Projekt für eine neue Nachricht: nur ein Projekt dieses Kunden, sonst „Allgemein“
-  const projectFor = (v, clientId) => { const t = threadOf(v, clientId); return t === undefined || t === false ? null : t; };
+  const projectFor = (v, clientId) => { const t = threadOf(v, clientId); return t === undefined || t === false || typeof t === "object" ? null : t; };
 
   /* ---------- Portal-API (Kunden) ---------- */
   const ext = [];   // weitere Portal-Bereiche (z. B. Angebote annehmen)
@@ -206,9 +314,11 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
       if (limited("pmsg:" + c.id, 40, 10 * 60000)) return json(res, 429, { error: "Bitte einen Moment warten." });
       const d = await readJson(req), body = clean(d.body, 5000).replace(/\r/g, "");
       if (!body) return json(res, 400, { error: "Die Nachricht ist leer." });
-      const pid = projectFor(d.project_id, c.id);
-      const r = db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id) VALUES(?, 'client', ?, ?, ?)").run(c.id, c.name, body, pid);
-      notifyTeam(c, body, pid);
+      let ziel = d.thread !== undefined ? threadOf(d.thread, c.id) : projectFor(d.project_id, c.id);
+      if (ziel === false || ziel === undefined) ziel = null;
+      const pid = typeof ziel === "number" ? ziel : (ziel?.thema ? db.prepare("SELECT project_id FROM chat_themen WHERE id = ?").get(ziel.thema)?.project_id ?? null : null);
+      const r = db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id, thema_id) VALUES(?, 'client', ?, ?, ?, ?)").run(c.id, c.name, body, pid, ziel?.thema ?? null);
+      notifyTeam(c, body, ziel === null ? null : fadenKey(ziel));
       return json(res, 201, msgOut(db.prepare("SELECT * FROM messages WHERE id = ?").get(r.lastInsertRowid)));
     }
     if (p === "/prototypes" && m === "GET")
@@ -346,7 +456,7 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
       const mailed = d.send ? await inviteMail(c, link) : null;
       return json(res, 200, { inviteLink: link, mailed });
     }
-    if (sub === "/threads" && m === "GET") return json(res, 200, threadsFor(c.id, memberProjectIds(user), "team"));
+    if (sub === "/threads" && m === "GET") return json(res, 200, threadsFor(c.id, memberProjectIds(user), "team", user));
     if (sub === "/messages" && m === "GET") {
       const after = Math.max(0, +url.searchParams.get("after") || 0), thread = threadOf(url.searchParams.get("thread"), c.id);
       const allowed = memberProjectIds(user);
@@ -458,7 +568,7 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
     });
   }
 
-  return { extend: fn => ext.push(fn), portalApi, adminClientsApi, chatList, servePrototype, projectsAdmin: projects.admin, requestsAdmin: requests.admin, clientLogin: login, currentClient, newInvite, logEvent: projects.logEvent };
+  return { extend: fn => ext.push(fn), portalApi, adminClientsApi, chatList, chatAdmin, servePrototype, projectsAdmin: projects.admin, requestsAdmin: requests.admin, clientLogin: login, currentClient, newInvite, logEvent: projects.logEvent };
 }
 
 // Relativer, sauberer Pfad innerhalb eines Prototyps – oder "" bei allem Verdächtigen.

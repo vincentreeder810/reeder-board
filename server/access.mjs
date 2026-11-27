@@ -4,7 +4,8 @@
 // Geprüft wird hier auf dem Server – die Oberfläche blendet nur zusätzlich aus.
 import { db } from "./db.mjs";
 
-export const ROLES = { inhaber: "Inhaber", entwickler: "Entwickler" };
+//   buchhaltung – wie Entwickler ohne Projekte; kann aber mit jedem Kunden einen Chat eröffnen (z. B. wegen einer offenen Rechnung)
+export const ROLES = { inhaber: "Inhaber", entwickler: "Entwickler", buchhaltung: "Buchhaltung" };
 export const isOwner = u => u?.role === "inhaber";
 export const FINANCE_DOC_KINDS = ["Angebot", "Rechnung", "Vertrag"];
 export const FINANCE_EVENT_KINDS = ["angebot", "zahlung"];
