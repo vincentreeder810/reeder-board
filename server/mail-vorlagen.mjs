@@ -603,13 +603,13 @@ ${d.portalLink}`,
       return {
         subject: `${n === 1 ? "Eine Rückfrage" : "Rückfragen"} zu Ihrem Projekt „${kurz(d.projekt, 50)}“`,
         text: absaetze(anrede(d),
-          `in Ihrem Kundenportal ${n === 1 ? "wartet" : "warten"} ${fett(`${was} zu Ihrem Projekt „${einzeilig(d.projekt)}“`)} auf Sie. Sie können sie dort direkt beantworten – Ihre Antwort kommt sofort bei uns an.`,
+          `in Ihrem Kundenportal ${n === 1 ? "wartet" : "warten"} ${fett(`${was} zu Ihrem Projekt „${einzeilig(d.projekt)}“`)} auf Sie. Sie finden sie im Chat zu Ihrem Projekt und können dort direkt antworten – Ihre Antwort kommt sofort bei uns an.`,
           d.link,
           gruss(d.firma)),
-        knopf: { label: "Rückfragen beantworten", url: d.link },
+        knopf: { label: "Im Chat beantworten", url: d.link },
       };
     },
-    beispiel: { name: B.name, projekt: "Website Physiotherapie Am Park", fragen: ["Sollen die Öffnungszeiten auf jeder Seite unten stehen?", "Haben Sie Fotos der Praxisräume, oder sollen wir einen Fotografen vorschlagen?", "Wie lautet Ihre Umsatzsteuer-ID für das Impressum?"], link: `${BSP}/portal/#rueckfragen` },
+    beispiel: { name: B.name, projekt: "Website Physiotherapie Am Park", fragen: ["Sollen die Öffnungszeiten auf jeder Seite unten stehen?", "Haben Sie Fotos der Praxisräume, oder sollen wir einen Fotografen vorschlagen?", "Wie lautet Ihre Umsatzsteuer-ID für das Impressum?"], link: `${BSP}/portal/#chat/27` },
   },
   rueckfrage_beantwortet_team: {
     gruppe: "Projekt & Portal", titel: "Kunde hat eine Rückfrage beantwortet (an dich)", an: "team",

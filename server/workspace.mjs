@@ -157,7 +157,7 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
       db.prepare("UPDATE messages SET meta = ? WHERE id = ?").run(JSON.stringify(meta), msgId);
       const mitMail = d.mail !== false;
       const mailed = mitMail && pr.client_email ? await sendMail({ to: pr.client_email, ...vorlage("rueckfragen", { name: pr.client_name, projekt: pr.title, anzahl: n,
-        link: `${SITE_URL}/portal/#rueckfragen`, firma: firmaVonProjekt(pr.id) }) }) : false;
+        link: `${SITE_URL}/portal/#chat/${pr.id}`, firma: firmaVonProjekt(pr.id) }) }) : false;
       const r = db.prepare("SELECT gesendet FROM project_workspace WHERE project_id = ?").get(pr.id);
       let g = {}; try { g = JSON.parse(r?.gesendet || "{}"); } catch {}
       for (const f of fragen) g[f.id] = jetzt;

@@ -31,18 +31,20 @@
   const ST = { offen: ["offen", "wartet auf Antwort"], beantwortet: ["beantwortet", "beantwortet"], erledigt: ["geklärt", "inzwischen geklärt"] };
   function rueckfragenCard(m, me) {
     const fr = m.meta.fragen, offen = fr.filter(f => f.status === "offen").length, kunde = me === "client";
-    const unter = offen ? (kunde ? `${offen === 1 ? "Eine Frage wartet" : `${offen} Fragen warten`} auf Ihre Antwort – jede hat ein eigenes Antwortfeld.` : `${offen} von ${fr.length} offen · der Kunde beantwortet jede Frage einzeln`)
+    const unter = offen ? (kunde ? `${offen === 1 ? "Eine Frage wartet" : `${offen} Fragen warten`} auf Ihre Antwort. Tippen Sie bei einer Frage auf „Antworten“ und schreiben Sie unten ganz normal.` : `${offen} von ${fr.length} offen · der Kunde antwortet im Chat auf jede Frage einzeln`)
       : (kunde ? "Vielen Dank – alles beantwortet." : "Alle Fragen sind beantwortet oder geklärt.");
+    // Im Kundenportal hat jede offene Frage „Antworten“: setzt die Frage als Zitat über das Eingabefeld – geantwortet wird im normalen Chat
     return `<div class="rqk">
       <div class="rqk__h"><span class="rqk__ic">${FRAGE_IC}</span><div><b>Rückfragen zu Ihrem Projekt</b><small>${unter}</small></div></div>
-      <ol class="rqk__l">${fr.map(f => `<li class="rqk__f rqk__f--${f.status}"><p>${absatz(f.text)}</p><span class="rqk__st">${(ST[f.status] || ST.offen)[kunde ? 0 : 1]}</span>${f.status === "beantwortet" && f.antwort ? `<p class="rqk__a">${absatz(f.antwort)}</p>` : ""}</li>`).join("")}</ol>
-      ${kunde && offen ? `<a class="rqk__btn" href="#rueckfragen">Jetzt beantworten</a>` : ""}</div>`;
+      <ol class="rqk__l">${fr.map((f, i) => `<li class="rqk__f rqk__f--${f.status}"><p>${absatz(f.text)}</p>${f.status === "offen" && kunde
+        ? `<button type="button" class="rqk__ant" data-antworten="${esc(f.id)}" data-frage="${esc(f.text)}" data-nr="${i + 1}">↩ Antworten</button>`
+        : `<span class="rqk__st">${(ST[f.status] || ST.offen)[kunde ? 0 : 1]}</span>`}${f.status === "beantwortet" && f.antwort ? `<p class="rqk__a">${absatz(f.antwort)}</p>` : ""}</li>`).join("")}</ol></div>`;
   }
-  const antwortCard = (m, me) => `<div class="ank"><small>${me === "client" ? "Ihre Antwort auf unsere Rückfrage" : "Antwort auf eine Rückfrage"}</small>
-    <p class="ank__q">${absatz(m.meta.frage || "")}</p><p class="ank__a"><span aria-hidden="true">→</span> ${absatz(m.meta.antwort || "")}</p></div>`;
+  // Antwort auf eine Rückfrage: ganz normale Chat-Blase mit der Frage als Zitat darüber (wie „Antworten“ bei WhatsApp)
+  const antwortCard = m => `<div class="msg__bubble msg__bubble--zitat"><span class="msg__zitat"><small>Rückfrage</small>${absatz(m.meta.frage || "")}</span>${linkify(m.meta.antwort || "").replace(/\n/g, "<br>")}</div>`;
   function inhalt(m, me) {
     if (m.art === "rueckfragen" && m.meta?.fragen?.length) return rueckfragenCard(m, me);
-    if (m.art === "antwort" && m.meta?.frage) return antwortCard(m, me);
+    if (m.art === "antwort" && m.meta?.frage) return antwortCard(m);
     return `<div class="msg__bubble">${linkify(m.body)}</div>`;
   }
 
@@ -56,7 +58,7 @@
       const same = m.sender === lastSender && t - lastTime < 5 * 60000;
       const mine = m.sender === me;
       const who = m.sender === "team" ? `${esc(m.author)} · Reeder Software` : esc(m.author);
-      html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--${m.sender} ${same ? "msg--same" : ""} ${m.art ? "msg--karte" : ""}">
+      html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--${m.sender} ${same ? "msg--same" : ""} ${m.art === "rueckfragen" ? "msg--karte" : ""}">
         <span class="msg__who">${who}</span>
         ${inhalt(m, me)}
         ${m.has_prototype ? protoCard(m.prototype) : ""}

@@ -73,3 +73,17 @@
 .chat__threads .thchip{height:34px;background:var(--paper);box-shadow:none}
 .chat__threads .thchip.on{background:var(--ink)}
 .vtag{font-style:normal;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--grad);color:#fff;vertical-align:2px;margin-left:4px}
+
+/* Rückfragen direkt im Chat beantworten: „Antworten“-Knopf je Frage, Zitat über dem Eingabefeld, Antwort als normale Blase mit Zitat */
+.rqk__ant{display:inline-flex;align-items:center;gap:4px;margin-top:8px;height:32px;padding:0 14px;border:0;border-radius:999px;background:var(--grad);color:#fff;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.rqk__ant:focus-visible{outline:2px solid #8b5cf6;outline-offset:2px}
+.antwortauf{display:flex;align-items:flex-start;gap:10px;margin:0 12px;padding:10px 12px;border-radius:14px 14px 0 0;background:rgba(139,92,246,.07);border-left:3px solid #8b5cf6}
+.antwortauf[hidden]{display:none}
+.antwortauf>div{flex:1;min-width:0}
+.antwortauf small{display:block;font-size:11.5px;font-weight:700;color:#7c3aed;margin-bottom:2px}
+.antwortauf p{margin:0;font-size:13.5px;line-height:1.4;color:var(--ink);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.antwortauf button{flex:0 0 auto;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:15px;cursor:pointer}
+.antwortauf button:hover{background:rgba(0,0,0,.06)}
+.msg__zitat{display:block;margin:0 0 6px;padding:6px 10px;border-left:3px solid #8b5cf6;border-radius:8px;background:rgba(139,92,246,.10);font-size:13px;line-height:1.4;opacity:.95;overflow-wrap:anywhere}
+.msg__zitat small{display:block;font-size:11px;font-weight:700;letter-spacing:.02em;color:#a78bfa;margin-bottom:1px}
+.msg--client.msg--mine .msg__zitat,.msg--team.msg--mine .msg__zitat{background:rgba(255,255,255,.14);border-left-color:#c4b5fd}
