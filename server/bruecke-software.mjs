@@ -149,7 +149,7 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
       if (!c) return json(res, 404, { error: "Es wartet keine Version auf Freigabe." });
       if (fm[2] === "verwerfen") { await stand.discardCandidate(c); return json(res, 200, { ok: true }); }
       const d = await readJson(req, 64 * 1024);
-      stand.releaseCandidate(c, { text: clean(d.text, 3000) || c.changes, announce: d.announce !== false, author: user?.name || "Team Reeder" });
+      stand.releaseCandidate(c, { text: clean(d.text, 3000) || c.changes, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, author: user?.name || "Team Reeder" });
       const erledigt = anmerkungenErledigen(x.id, idListe(c.erledigt_ids), c.version);
       phaseNachziehen(x.id);
       return json(res, 200, { ok: true, version: c.version, erledigt });
@@ -159,7 +159,7 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
     if (!brueckeEingerichtet()) return json(res, 400, { error: "Dafür braucht es die Brücke auf deinem Rechner. Einrichten unter Einstellungen → Livegang → „Brücke zu Claude“." });
     if (!brueckeVerbunden()) return json(res, 400, { error: "Die Brücke auf deinem Rechner ist gerade nicht verbunden. Bitte dort „Bruecke im Hintergrund starten“ ausführen und noch einmal drücken." });
     const d = await readJson(req, 64 * 1024);
-    if (mm[2] === "stand") brueckeAuftrag(x.id, "sw-stand", "", { changes: clean(d.changes, 3000), announce: d.announce !== false, author: user?.name || "Team Reeder" });
+    if (mm[2] === "stand") brueckeAuftrag(x.id, "sw-stand", "", { changes: clean(d.changes, 3000), announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, author: user?.name || "Team Reeder" });
     else brueckeAuftrag(x.id, mm[2] === "claude" ? "sw-app" : "sw-ordner", d.auftrag);
     return json(res, 200, { ok: true });
   }
@@ -196,7 +196,7 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
         if (bytes > MAX_BYTES) return json(res, 400, { error: "Zusammen größer als 60 MB – bitte Bilder verkleinern." });
         files.push({ path: rel, buf });
       }
-      const r = await publish(db.prepare("SELECT * FROM projects WHERE id = ?").get(x.id), files, { changes: d.changes, announce: d.announce !== false, source: "bruecke", author: clean(d.author, 80) || "Team Reeder", kandidat: d.freigabe === true });
+      const r = await publish(db.prepare("SELECT * FROM projects WHERE id = ?").get(x.id), files, { changes: d.changes, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, source: "bruecke", author: clean(d.author, 80) || "Team Reeder", kandidat: d.freigabe === true });
       // Von Claude als umgesetzt gemeldete Anmerkungen: sofort abhaken, wenn die Version gleich online ist – sonst erst bei der Freigabe
       const ids = [...new Set((Array.isArray(d.erledigt) ? d.erledigt : []).map(Number).filter(Number.isInteger))].slice(0, 200);
       if (r.candidate) db.prepare("UPDATE prototypes SET erledigt_ids = ? WHERE id = ?").run(JSON.stringify(ids), r.id);

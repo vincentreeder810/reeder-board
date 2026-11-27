@@ -206,6 +206,13 @@ export function chatProjekt(clientId, projectId = null) {
   const r = db.prepare("SELECT COUNT(*) n, MIN(id) id FROM projects WHERE client_id = ?").get(clientId);
   return r.n === 1 ? r.id : null;
 }
+/** Team-Nachricht in den Chat des Projekts schreiben (z. B. Karte zu Dokument, Rechnung oder Gesprächs-Zusammenfassung).
+    Der Kunde sieht sie sofort im Portal; die Mail-Benachrichtigung entscheidet der Aufrufer getrennt davon. */
+export function chatPosten({ clientId, projectId = null, user = null, body, art = null, meta = null }) {
+  const pid = chatProjekt(clientId, projectId);
+  return db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id, art, meta, user_id) VALUES(?, 'team', ?, ?, ?, ?, ?, ?)")
+    .run(clientId, user?.name || "Team Reeder", String(body || "").slice(0, 5000), pid, art, meta ? JSON.stringify(meta) : null, user?.id ?? null).lastInsertRowid;
+}
 
 /* ---------- Terminanfragen von Bestandskunden ---------- */
 db.exec(`

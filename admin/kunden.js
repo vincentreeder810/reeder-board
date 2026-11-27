@@ -587,7 +587,8 @@
     const id = d.id, offen = d.kind === "rechnung" && d.status === "offen", rechnung = d.kind === "rechnung" && ["offen", "bezahlt"].includes(d.status);
     return [
       { t: "", items: [{ l: "PDF ansehen", fn: () => window.open(`/api/admin/finance/invoices/${id}/pdf`, "_blank", "noopener") }, { l: "Details öffnen", fn: zuDraft(d) },
-        { l: "Erneut senden", hint: d.sent_at ? "per E-Mail mit PDF" : "noch nicht per E-Mail verschickt", fn: async () => { const r = await api(`/finance/invoices/${id}/send`, { method: "POST", body: {} }); toast(r.mailed ? "Erneut verschickt" : "Mail liegt im Postausgang (E-Mail noch nicht eingerichtet)"); nachDoc(); } }] },
+        { l: "Im Chat schicken", hint: "als Karte im Projekt-Chat", fn: async () => { await api(`/finance/invoices/${id}/send`, { method: "POST", body: { chat: true, mail: false } }); toast("Im Chat geschickt"); } },
+        { l: "Per E-Mail senden", hint: d.sent_at ? "per E-Mail mit PDF" : "noch nicht per E-Mail verschickt", fn: async () => { const r = await api(`/finance/invoices/${id}/send`, { method: "POST", body: {} }); toast(r.mailed ? "Erneut verschickt" : "Mail liegt im Postausgang (E-Mail noch nicht eingerichtet)"); nachDoc(); } }] },
       { t: "Zahlung", items: [
         offen && d.dunning?.overdue > 0 ? { l: `${d.dunning.next} senden`, hint: `${d.dunning.overdue} Tage über dem Zahlungsziel`, fn: async () => { if (!(await UI.confirm(`Mit Rechnung als PDF an ${current.email}.`, { title: `${d.dunning.next} senden?`, ok: "Senden" }))) return; const r = await api(`/finance/invoices/${id}/remind`, { method: "POST", body: {} }); toast(`${r.label} ${r.mailed ? "verschickt" : "im Postausgang"}`); nachDoc(); } } : null,
         offen ? { l: "Als bezahlt markieren", fn: async () => { const dt = await UI.prompt("Zahlung eingegangen", { label: "Eingang am", type: "date", value: new Date().toISOString().slice(0, 10), ok: "Als bezahlt markieren" }); if (!dt) return; await api(`/finance/invoices/${id}/paid`, { method: "POST", body: { date: dt } }); toast("Als bezahlt markiert – Zahlungsplan und Kunde sind aktualisiert."); nachDoc(); } } : null] },
@@ -803,10 +804,10 @@
       </div>
       <div class="span2 mschr__haken">
         ${kuenftig ? `<label class="check"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}><span>Gespräch hat stattgefunden<small>${aid ? "Der Termin wird auf jetzt gesetzt und gilt als geführt." : "Wird mit dem heutigen Datum eingetragen."}</small></span></label>` : ""}
-        <label class="check" data-notify-zeile ${schonAusgewertet ? "" : "hidden"}><input type="checkbox" name="notify"><span>Kunden per E-Mail über die Zusammenfassung informieren<small>Ohne Haken steht sie nur im Kundenportal beim Termin.</small></span></label>
+        <div data-notify-zeile ${schonAusgewertet ? "" : "hidden"}>${KANAL.html({ span: false, titel: "Zusammenfassung an den Kunden schicken", hinweis: "Ohne Haken steht sie nur im Kundenportal beim Termin." })}</div>
       </div>`,
       async f => {
-        const held = !!f.held?.checked, body = { mitschrift: f.mitschrift.value, notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: f.notify.checked };
+        const held = !!f.held?.checked, body = { mitschrift: f.mitschrift.value, notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: KANAL.werte(f).mail, chat: KANAL.werte(f).chat };
         if (held) body.start = new Date(Date.now() - 60000).toISOString();
         if (aid) await api(`/appointments/${aid}`, { method: "PATCH", body });
         else if (held) await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", minutes: 30, kind: "Erstgespräch", project_id: pid || undefined, ...body } });
@@ -841,13 +842,13 @@
       <label>Datum<input type="date" name="doc_date" value="${new Date().toISOString().slice(0, 10)}"></label>
       <label class="span2" id="payPick" hidden>Zu welcher Zahlung gehört die Rechnung?<select name="payment_id"><option value="">– keiner Zahlung zuordnen –</option></select>
         <small class="hint" style="margin:4px 0 0">Die Position springt beim Kunden automatisch auf „Rechnung gestellt“ – mit Link zur PDF.</small></label>
-      <label class="check span2 notify"><input type="checkbox" name="notify" checked> Kunden per E-Mail informieren <small>(mehrere Änderungen werden zu einer Mail gebündelt)</small></label>`,
+      ${KANAL.html({ hinweis: "Mehrere Neuigkeiten werden zu einer Mail gebündelt." })}`,
       async f => {
         const file = f.file.files[0]; if (!file) throw new Error("Bitte eine Datei wählen.");
         if (file.size > 20 * 1048576) throw new Error("Höchstens 20 MB.");
         await api(`/clients/${current.id}/documents`, { method: "POST", body: { file_name: file.name, data: b64(new Uint8Array(await file.arrayBuffer())), kind: f.kind.value, title: f.title.value || file.name.replace(/\.[^.]+$/, ""),
           amount_gross: f.amount_gross.value.trim(), doc_date: f.doc_date.value, project_id: f.project_id.value ? +f.project_id.value : null,
-          payment_id: f.payment_id.value ? +f.payment_id.value : null, notify: f.notify.checked } });
+          payment_id: f.payment_id.value ? +f.payment_id.value : null, notify: KANAL.werte(f).mail, chat: KANAL.werte(f).chat } });
         toast("Dokument hochgeladen – der Kunde sieht es im Portal."); refreshCurrent();
       });
     // Zahlungsauswahl nur bei Rechnungen mit Projekt; Positionen des gewählten Projekts laden
@@ -878,11 +879,11 @@
       <label class="span2">Titel<input name="title" required maxlength="140" value="${esc(v?.title || "")}" placeholder="z. B. Website – Entwurf"></label>
       ${v ? `<label class="span2">Was hat sich geändert? (sieht der Kunde)<textarea name="changes" rows="3" placeholder="z. B. Farben wärmer, Samstag in der Terminbuchung ergänzt"></textarea></label>` : ""}
       <label class="span2">Nachricht im Chat<textarea name="message" rows="2" placeholder="Leer lassen für den Standardtext"></textarea></label>
-      <label class="check span2"><input type="checkbox" name="announce" checked> Im Chat ankündigen und Kunden benachrichtigen</label>`,
+      ${KANAL.html()}`,
       async f => {
         if (!pending?.files.length) throw new Error("Bitte zuerst Dateien auswählen.");
         f.querySelector("[type=submit]").textContent = "Wird hochgeladen …";
-        const r = await api(`/clients/${current.id}/prototypes`, { method: "POST", body: { title: f.title.value, message: f.message.value, announce: f.announce.checked, entry: pending.entry,
+        const r = await api(`/clients/${current.id}/prototypes`, { method: "POST", body: { title: f.title.value, message: f.message.value, announce: KANAL.werte(f).chat, mail: KANAL.werte(f).mail, entry: pending.entry,
           project_id: project?.id, replaces: v ? v.group_id : undefined, changes: f.changes?.value || "", files: pending.files.map(x => ({ path: x.path, data: b64(x.data) })) } });
         toast(r.skipped?.length ? `Hochgeladen · ${r.skipped.length} Datei(en) übersprungen` : v ? `Version ${r.prototype.version} ist online` : "Prototyp hochgeladen");
         refreshCurrent(); loadClients();

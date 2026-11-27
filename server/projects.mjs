@@ -6,7 +6,7 @@ import { projektnamenPflegen } from "./projektname.mjs";
 import { vereinbarungenVonProjekt } from "./vereinbarungen.mjs";
 import { fragebogenVonProjekt, termineVonProjekt, projektZurAnfrage } from "./anfragen.mjs";
 import { callModel, assistantStatus } from "./assistant.mjs";
-import { db } from "./db.mjs";
+import { db, chatPosten } from "./db.mjs";
 import { isOwner, memberProjectIds, FINANCE_DOC_KINDS, FINANCE_EVENT_KINDS } from "./access.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
@@ -105,6 +105,9 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
     db.prepare("UPDATE projects SET stand_summary = ?, stand_summary_ref = ? WHERE id = ?").run(text, st.id, pr.id);
     return text;
   }
+  /** Gesprächs-Zusammenfassung als Karte in den Projekt-Chat */
+  const zusammenfassungPosten = (clientId, projectId, user, z) => chatPosten({ clientId, projectId, user, art: "zusammenfassung",
+    body: `Zusammenfassung unseres Gesprächs:\n${z.summary}${z.next_steps ? `\n\nNächste Schritte:\n${z.next_steps}` : ""}`, meta: z });
   const projectOut = p => p && ({ id: p.id, client_id: p.client_id, title: p.title, bereich: p.bereich || "software", kind: p.kind, description: p.description, phase: p.phase, phaseIndex: PHASES.indexOf(p.phase), phases: PHASES,
     model: p.model, status: p.status, offer_net: p.offer_net, vat_rate: p.vat_rate, anfrage_art: p.anfrage_art || null,
     // Liegt ein versendetes Angebot beim Kunden? Dann ist das Projekt „Angebot offen“.
@@ -308,6 +311,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
         if (pay) db.prepare("UPDATE payments SET invoice_doc_id = ?, status = CASE WHEN status = 'offen' THEN 'berechnet' ELSE status END WHERE id = ?").run(docId, pay.id);
         logEvent(c.id, projectId, "dokument", { Angebot: "Angebot übersendet", Rechnung: "Rechnung gestellt", Vertrag: "Vertrag bereitgestellt", Konzept: "Konzept bereitgestellt", Protokoll: "Protokoll bereitgestellt" }[kind] || "Dokument bereitgestellt",
           title + (amt != null ? ` · ${(amt / 100).toLocaleString("de-DE", { minimumFractionDigits: amt % 100 ? 2 : 0 })} € brutto` : "") + (pay ? ` · ${pay.label}` : ""), d.notify !== false);
+        if (d.chat) chatPosten({ clientId: c.id, projectId, user, art: "dokument", body: `Neues Dokument für Sie: ${title}`, meta: { doc_id: Number(docId), art: kind, titel: title, betrag: amt } });
         return json(res, 201, docOut(db.prepare("SELECT * FROM documents WHERE id = ?").get(r.lastInsertRowid), base));
       }
       if (what === "documents" && m === "GET")
@@ -323,6 +327,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
           .run(c.id, projectId, title, start, Math.min(600, Math.max(0, +d.minutes || 0)) || null, clean(d.kind, 40), clean(d.summary, 6000), clean(d.next_steps, 3000), +d.booking_id || null);
         if (d.notes_intern) db.prepare("UPDATE appointments SET notes_intern = ? WHERE id = ?").run(clean(d.notes_intern, 12000), r.lastInsertRowid);
         if (d.mitschrift) db.prepare("UPDATE appointments SET mitschrift = ? WHERE id = ?").run(clean(d.mitschrift, 20000), r.lastInsertRowid);
+        if (d.chat && clean(d.summary, 6000)) zusammenfassungPosten(c.id, projectId, user, { titel: title, start, summary: clean(d.summary, 6000), next_steps: clean(d.next_steps, 3000) });
         logEvent(c.id, projectId, "termin", new Date(start) > new Date() ? "Termin vereinbart" : "Termin dokumentiert",
           `${title} · ${new Date(start).toLocaleString("de-DE", { timeZone: "Europe/Berlin", weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} Uhr`, d.notify !== false);
         return json(res, 201, apptOut(db.prepare("SELECT * FROM appointments WHERE id = ?").get(r.lastInsertRowid)));
@@ -483,6 +488,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
         { const neu = isoOrNull(d.start); if (neu && neu !== a.start && a.booking_id) db.prepare("UPDATE bookings SET start = ? WHERE id = ?").run(neu, a.booking_id);
           if (neu && neu !== a.start && Date.parse(neu) > Date.now()) logEvent(a.client_id, projectId, "termin", "Termin verschoben", `${a.title}: neu am ${new Date(neu).toLocaleString("de-DE", { timeZone: "Europe/Berlin", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} Uhr`, d.notify !== false); }
         if (d.summary && !a.summary) logEvent(a.client_id, projectId, "protokoll", "Zusammenfassung hinterlegt", a.title, d.notify !== false);
+        if (d.chat && clean(d.summary, 6000)) { const n = db.prepare("SELECT * FROM appointments WHERE id = ?").get(a.id); zusammenfassungPosten(a.client_id, projectId, user, { titel: n.title, start: n.start, summary: n.summary, next_steps: n.next_steps || "" }); }
         return json(res, 200, apptOut(db.prepare("SELECT * FROM appointments WHERE id = ?").get(a.id)));
       }
       if (m === "DELETE") { db.prepare("DELETE FROM appointments WHERE id = ?").run(a.id); return json(res, 200, { ok: true }); }

@@ -49,6 +49,18 @@ const UI = (() => {
 })();
 window.UI = UI;
 
+/* Benachrichtigung des Kunden: zwei getrennte Haken „Im Chat“ und „Per E-Mail“ (beide vorausgewählt).
+   KANAL.html({ titel, chat, mail, chatFest, hinweis }) liefert das Feld, KANAL.werte(form) → { chat, mail } */
+window.KANAL = {
+  html({ titel = "Kunden benachrichtigen", chat = true, mail = true, chatFest = "", hinweis = "", span = true } = {}) {
+    return `<fieldset class="kanal ${span ? "span2" : ""}"><legend>${esc(titel)}</legend>
+      <label class="kanal__k ${chatFest ? "kanal__k--fest" : ""}"><input type="checkbox" name="k_chat" ${chat || chatFest ? "checked" : ""} ${chatFest ? "disabled" : ""}><span><b>Im Chat</b><small>${esc(chatFest || "als Nachricht im Projekt-Chat")}</small></span></label>
+      <label class="kanal__k"><input type="checkbox" name="k_mail" ${mail ? "checked" : ""}><span><b>Per E-Mail</b><small>an die hinterlegte Adresse</small></span></label>
+      ${hinweis ? `<p class="kanal__h">${esc(hinweis)}</p>` : ""}</fieldset>`;
+  },
+  werte(f) { return { chat: !!f.querySelector("[name=k_chat]")?.checked, mail: !!f.querySelector("[name=k_mail]")?.checked }; },
+};
+
 /* ---------- Linien-Icons (statt Emojis – sitzen exakt mittig in Kreisen und Kacheln) ---------- */
 const ICO = (() => {
   const cal = '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>';

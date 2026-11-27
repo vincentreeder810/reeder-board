@@ -509,12 +509,12 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
       const r = db.prepare("INSERT INTO prototypes(client_id, title, note, token, entry, files, bytes, project_id, group_id, version, changes) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
         .run(c.id, title, note, token, entry, saved.length, bytes, projectId, groupId, version, changes);
       if (!groupId) db.prepare("UPDATE prototypes SET group_id = id WHERE id = ?").run(r.lastInsertRowid);
-      projects.logEvent(c.id, projectId, "prototyp", version > 1 ? `Version ${version} veröffentlicht` : "Prototyp veröffentlicht", title + (changes ? ` – ${changes}` : ""), d.announce !== false);
+      projects.logEvent(c.id, projectId, "prototyp", version > 1 ? `Version ${version} veröffentlicht` : "Prototyp veröffentlicht", title + (changes ? ` – ${changes}` : ""), d.mail === undefined ? d.announce !== false : d.mail !== false);
       if (d.announce !== false) {
         const text = clean(d.message, 3000) || (version > 1
           ? `Neue Version ${version} von „${title}“ ist online.${changes ? " Das hat sich geändert:\n" + changes : ""}`
           : `Wir haben einen neuen Prototyp für Sie hochgeladen: „${title}“. Klicken Sie sich gern durch und schreiben Sie uns, was Ihnen auffällt.`);
-        db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)").run(c.id, user.name, text, r.lastInsertRowid, projectId);
+        db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id, user_id) VALUES(?, 'team', ?, ?, ?, ?, ?)").run(c.id, user.name, text, r.lastInsertRowid, projectId, user.id);
         /* Mail kommt gebündelt über den Meilenstein */
       }
       return json(res, 201, { prototype: protoOut(db.prepare("SELECT * FROM prototypes WHERE id = ?").get(r.lastInsertRowid)), skipped });

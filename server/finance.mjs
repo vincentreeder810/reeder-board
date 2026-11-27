@@ -5,7 +5,7 @@
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
-import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
+import { db, getSetting, setSetting, DEFAULT_COMPANY, chatPosten } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
 import { vereinbarungLesen, vereinbarungSpeichern, vereinbarungAusAngebot } from "./vereinbarungen.mjs";
@@ -143,10 +143,15 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
     return sendMail({ to: c.email, ...mail,
       attachments: buf ? [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] : [] });
   }
+  /** Angebot/Rechnung als Karte in den Projekt-Chat (der Kunde öffnet sie im Portal) */
+  const docImChat = (inv, user) => chatPosten({ clientId: inv.client_id, projectId: inv.project_id, user, art: "dokument",
+    body: `${inv.kind === "angebot" ? "Ihr Angebot" : inv.kind === "storno" ? "Stornorechnung" : "Ihre Rechnung"} ${inv.number} liegt im Kundenportal bereit.`,
+    meta: { doc_id: inv.pdf_doc_id || null, invoice_id: inv.id, art: inv.kind === "angebot" ? "Angebot" : inv.kind === "storno" ? "Storno" : "Rechnung", titel: inv.title || "", nummer: inv.number,
+      betrag: Math.abs(inv.gross), faellig: inv.kind === "rechnung" ? inv.due_date : null, gueltig: inv.kind === "angebot" ? inv.valid_until : null } });
   const pdfOf = async inv => inv.pdf_token ? readFile(path.join(FILE_DIR, inv.pdf_token + ".pdf")) : renderInvoicePdf(draftView(inv));
 
   /** Rechnung/Angebot festschreiben: Nummer, Daten-Schnappschuss, PDF, Portal, Zahlungsplan, Verlauf, ggf. Mail */
-  async function issue(id, { send: doSend, message }, user) {
+  async function issue(id, { send: doSend, message, chat }, user) {
     const inv0 = invoiceFull(id);
     if (!inv0 || inv0.locked) throw Object.assign(new Error("Bereits festgeschrieben"), { code: 409 });
     if (!inv0.items.length) throw Object.assign(new Error("Bitte mindestens eine Position anlegen."), { code: 400 });
@@ -176,7 +181,8 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
     if (inv.payment_id && inv.kind === "rechnung") db.prepare("UPDATE payments SET invoice_doc_id = ?, status = CASE WHEN status = 'offen' THEN 'berechnet' ELSE status END WHERE id = ?").run(docId, inv.payment_id);
     audit(user.name, "festgeschrieben", inv.kind, id, `${number} · ${euro(inv.gross)} · ${inv.recipient.company}`);
     logEvent(inv.client_id, inv.project_id, "dokument", inv.kind === "angebot" ? "Angebot übersendet" : inv.kind === "storno" ? "Rechnung storniert" : "Rechnung gestellt",
-      `${number}${inv.title ? " – " + inv.title : ""} · ${euro(Math.abs(inv.gross))} brutto`, !doSend);
+      `${number}${inv.title ? " – " + inv.title : ""} · ${euro(Math.abs(inv.gross))} brutto`, false);   // Mail entscheidet allein der Haken „Per E-Mail“ (dann mit PDF)
+    if (chat) docImChat(invoiceFull(id), user);
     let mailed = null;
     if (doSend) { mailed = await mailInvoice(invoiceFull(id), buf, inv.kind, clean(message, 3000)); db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id); }
     return { invoice: invoiceFull(id), mailed };
@@ -414,7 +420,8 @@ Regeln:
       if (act === "send" && m === "POST") {
         if (!inv.locked) return json(res, 409, { error: "Bitte zuerst festschreiben." });
         const d = await readJson(req), buf = await pdfOf(inv).catch(e => { console.warn(`${inv.number}: PDF nicht verfügbar (${e.message})`); return null; });
-        const mailed = await mailInvoice(inv, buf, inv.kind, clean(d.message, 3000));
+        if (d.chat) docImChat(inv, user);
+        const mailed = d.mail === false ? null : await mailInvoice(inv, buf, inv.kind, clean(d.message, 3000));
         db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id); audit(user.name, "versendet", inv.kind, id, inv.number);
         return json(res, 200, { mailed });
       }
@@ -435,7 +442,7 @@ Regeln:
           .run(inv.client_id, inv.project_id, id, inv.title, today(), inv.service_from, inv.service_to, `Hiermit stornieren wir die Rechnung ${inv.number} vom ${inv.issue_date.split("-").reverse().join(".")}.`, clean(d.reason, 1000) ? `Grund: ${clean(d.reason, 1000)}` : "", user.name);
         const ins = db.prepare("INSERT INTO invoice_items(invoice_id, pos, title, description, qty, unit, unit_net, vat_rate, net) VALUES(?,?,?,?,?,?,?,?,?)");
         for (const it of inv.items) ins.run(r.lastInsertRowid, it.pos, it.title, it.description, -it.qty, it.unit, it.unit_net, it.vat_rate, -it.net);
-        const out = await issue(r.lastInsertRowid, { send: !!d.send, message: d.message }, user);
+        const out = await issue(r.lastInsertRowid, { send: !!d.send, message: d.message, chat: !!d.chat }, user);
         db.prepare("UPDATE invoices SET status = 'storniert' WHERE id = ?").run(id);
         if (inv.payment_id) db.prepare("UPDATE payments SET status = 'offen', invoice_doc_id = NULL, paid_at = NULL WHERE id = ?").run(inv.payment_id);
         audit(user.name, "storniert", "rechnung", id, `${inv.number} durch ${out.invoice.number}${d.reason ? " · " + clean(d.reason, 200) : ""}`);

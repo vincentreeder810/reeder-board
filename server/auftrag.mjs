@@ -137,7 +137,7 @@ export function createAuftrag({ json, readJson, clean, stand }) {
       const items = annRows("a.job_id = ?").all(j.id), done = new Set((Array.isArray(d.done) ? d.done : items.map(a => a.id)).map(Number));
       const ok = items.filter(a => done.has(a.id));
       const text = clean(d.text, 3000) || `${ok.length} Ihrer Anmerkung${ok.length === 1 ? "" : "en"} umgesetzt` + (ok.length ? ": " + ok.slice(0, 5).map(a => (a.comment || "").slice(0, 60)).join(" · ") : "");
-      stand.releaseCandidate(cand, { text, announce: d.announce !== false, author: user.name });
+      stand.releaseCandidate(cand, { text, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, author: user.name });
       const now = new Date().toISOString();
       for (const a of items) {
         if (done.has(a.id)) db.prepare("UPDATE annotations SET status = 'erledigt', done_at = ?, reply = COALESCE(NULLIF(reply, ''), ?) WHERE id = ?").run(now, `Umgesetzt in Version ${cand.version}.`, a.id);

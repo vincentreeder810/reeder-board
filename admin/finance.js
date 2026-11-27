@@ -282,7 +282,7 @@
       <h2 style="margin:0">${isQuote ? "Angebot" : "Rechnung"} festschreiben</h2>
       <p class="hint" style="margin:0">${isQuote ? "Das Angebot bekommt seine Nummer und wird als PDF im Kundenportal abgelegt." : "Die Rechnung bekommt ihre fortlaufende Nummer und ist danach <b>nicht mehr änderbar</b> (GoBD). Korrekturen nur über eine Stornorechnung. Das PDF liegt anschließend im Kundenportal."}</p>
       <div class="fsum"><span>${esc(inv.client_company)}</span><b>${money(inv.gross)}</b></div>
-      <label class="check"><input type="checkbox" name="send" checked> Per E-Mail mit PDF an ${esc(inv.client_email)} senden</label>
+      ${KANAL.html({ span: false, titel: "Dem Kunden schicken", hinweis: `E-Mail mit PDF an ${inv.client_email}. Im Portal liegt das PDF in jedem Fall.` })}
       <label>Persönliche Nachricht (optional)<textarea name="message" rows="3" placeholder="Leer lassen für den Standardtext"></textarea></label>
       <p class="err" hidden></p>
       <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad" type="submit">Jetzt festschreiben</button></div></form>`;
@@ -290,8 +290,9 @@
     m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-close]")) m.remove(); });
     $("form", m).addEventListener("submit", async e => {
       e.preventDefault(); const f = e.target, b = $("[type=submit]", f); b.disabled = true; b.textContent = "Wird erstellt …";
-      try { const r = await api(`/finance/invoices/${inv.id}/issue`, { method: "POST", body: { send: f.send.checked, message: f.message.value } });
-        m.remove(); done(); toast(`${r.invoice.number} festgeschrieben${f.send.checked ? (r.mailed ? " und verschickt" : " – Mail liegt im Postausgang") : ""}.`); openInvoice(r.invoice.id); }
+      const k = KANAL.werte(f);
+      try { const r = await api(`/finance/invoices/${inv.id}/issue`, { method: "POST", body: { send: k.mail, chat: k.chat, message: f.message.value } });
+        m.remove(); done(); toast(`${r.invoice.number} festgeschrieben${k.mail ? (r.mailed ? " und per Mail verschickt" : " – Mail liegt im Postausgang") : ""}${k.chat ? " · im Chat" : ""}.`); openInvoice(r.invoice.id); }
       catch (err) { const p = $(".err", f); p.textContent = err.message; p.hidden = false; b.disabled = false; b.textContent = "Jetzt festschreiben"; }
     });
   }

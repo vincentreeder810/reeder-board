@@ -75,7 +75,39 @@
       <div class="stk__text"><b>${esc(p.title)}</b>${neu.length ? `<small>Das ist neu</small><ul>${neu.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>
       <button type="button" class="stk__btn" data-proto='${esc(JSON.stringify(protoData(p)))}'>${kunde ? "Jetzt ansehen" : "Version ansehen"}</button></div>`;
   }
+  /* Dokument, Angebot oder Rechnung im Chat – eine Karte mit Nummer, Betrag und Knopf zum Öffnen */
+  const DOC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>`;
+  const NOTIZ = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h9"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>`;
+  const euro = c => (Number(c || 0) / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  const datum = s => s ? new Date(String(s).length <= 10 ? s + "T12:00:00Z" : s).toLocaleDateString("de-DE", { timeZone: TZ, day: "numeric", month: "long", year: "numeric" }) : "";
+  const vonZeile = m => `Von ${esc(m.author)}${m.rolle && m.rolle !== "Inhaber" ? ` · ${esc(m.rolle)}` : ""} · ${fmt(m.created_at, { hour: "2-digit", minute: "2-digit" })} Uhr`;
+  function dokumentKarte(m, me) {
+    const d = m.meta || {}, kunde = me === "client", art = d.art || "Dokument";
+    const kopf = art === "Angebot" ? (kunde ? "Ihr Angebot ist da" : "Angebot an den Kunden") : art === "Rechnung" ? (kunde ? "Neue Rechnung für Sie" : "Rechnung an den Kunden")
+      : art === "Storno" ? "Stornorechnung" : (kunde ? `Neues Dokument: ${art}` : `Dokument an den Kunden: ${art}`);
+    const href = art === "Angebot" && d.invoice_id && kunde ? `#angebot/${d.invoice_id}`
+      : d.invoice_id && !kunde ? `/api/admin/finance/invoices/${d.invoice_id}/pdf`
+      : d.doc_id ? `${kunde ? "/api/portal" : "/api/admin"}/documents/${d.doc_id}/file` : (kunde ? "#dokumente" : "");
+    const extern = href && href.startsWith("/api/");
+    const frist = d.faellig ? `Zahlbar bis ${datum(d.faellig)}` : d.gueltig ? `Gültig bis ${datum(d.gueltig)}` : "";
+    return `<div class="stk stk--doc">
+      <div class="stk__kopf"><span class="stk__ic">${DOC}</span><div><b>${esc(kopf)}</b><small>${vonZeile(m)}</small></div></div>
+      <div class="dok"><div class="dok__l"><b>${esc(d.titel || d.nummer || art)}</b>${d.nummer && d.titel ? `<small>${esc(d.nummer)}</small>` : ""}${frist ? `<small>${esc(frist)}</small>` : ""}</div>
+        ${d.betrag != null ? `<div class="dok__b">${euro(d.betrag)}<small>brutto</small></div>` : ""}</div>
+      ${href ? `<a class="stk__btn stk__btn--a" href="${esc(href)}" ${extern ? `target="_blank" rel="noopener"` : ""}>${art === "Angebot" && kunde ? "Angebot ansehen" : "PDF öffnen"}</a>` : ""}</div>`;
+  }
+  /* Zusammenfassung eines Gesprächs – Karte mit Text und nächsten Schritten */
+  function zusammenfassungKarte(m) {
+    const z = m.meta || {}, schritte = punkte(z.next_steps);
+    return `<div class="stk stk--zus">
+      <div class="stk__kopf"><span class="stk__ic">${NOTIZ}</span><div><b>Zusammenfassung unseres Gesprächs</b><small>${esc(z.titel || "Gespräch")}${z.start ? ` · ${datum(z.start)}` : ""}</small></div></div>
+      <div class="zus__text">${esc(z.summary || "").replace(/\n/g, "<br>")}</div>
+      ${schritte.length ? `<div class="stk__text"><small>Nächste Schritte</small><ul>${schritte.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      <p class="zus__von">${vonZeile(m)}</p></div>`;
+  }
   function inhalt(m, me) {
+    if (m.art === "dokument" && m.meta) return dokumentKarte(m, me);
+    if (m.art === "zusammenfassung" && m.meta) return zusammenfassungKarte(m);
     if (m.art === "rueckfragen" && m.meta?.fragen?.length) return rueckfragenCard(m, me);
     if (m.art === "antwort" && m.meta?.frage) return antwortCard(m);
     return `<div class="msg__bubble">${linkify(m.body)}</div>`;
@@ -98,6 +130,10 @@
       const same = m.sender === lastSender && m.author === lastAuthor && t - lastTime < 5 * 60000;
       const mine = m.sender === me;
       const who = m.sender === "team" ? `${esc(m.author)} · ${esc(m.rolle && m.rolle !== "Inhaber" ? m.rolle : "Reeder Software")}` : esc(m.author);
+      if ((m.art === "dokument" || m.art === "zusammenfassung") && m.meta) {   // eigenständige Karten wie beim neuen Stand
+        html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--stand">${inhalt(m, me)}</div>`;
+        lastSender = ""; lastTime = 0; continue;
+      }
       html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--${m.sender} ${same ? "msg--same" : ""} ${m.art === "rueckfragen" ? "msg--karte" : ""}">
         <span class="msg__who">${who}</span>
         ${inhalt(m, me)}
