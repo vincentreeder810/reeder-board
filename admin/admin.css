@@ -1887,3 +1887,5 @@ label.auf__item{cursor:pointer}
 .pue__a{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:620px){.pue{margin:0 12px 14px}.pue__d li{flex-wrap:wrap}.pue__vis{order:3;width:100%}}
 .pue__o{display:flex!important;flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;grid-template-columns:none!important}.pue__o input{width:16px!important;height:16px;flex:none;padding:0;margin:2px 0 0!important}.pue__o span{text-align:left}
+
+.pab__warnbox{margin:0;padding:10px 12px;border-radius:12px;background:#fff4e5;color:#92400e;font-size:13.5px}.pab__ok{font-size:12.5px;font-weight:600;color:#16774f;align-self:center}

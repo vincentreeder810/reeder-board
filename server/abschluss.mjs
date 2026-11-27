@@ -8,8 +8,8 @@ import { isOwner } from "./access.mjs";
 { const pc = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);
   for (const [c, t] of [["abgenommen_at", "TEXT"], ["abgenommen_von", "TEXT"], ["uebergabe_nach", "TEXT NOT NULL DEFAULT 'zahlung'"]]) if (!pc.includes(c)) db.exec(`ALTER TABLE projects ADD COLUMN ${c} ${t}`); }
 
-export function createAbschluss({ json, readJson, logEvent }) {
-  function stand(pr) {
+/** Stand des Abschlusses (auch für „Übergabe senden“) */
+export function abschlussStand(pr) {
     const termine = art => db.prepare("SELECT id, title, start, minutes, kind, summary FROM appointments WHERE project_id = ? AND (kind LIKE ? OR title LIKE ?) ORDER BY start DESC").all(pr.id, `${art}%`, `${art}%`);
     const zahlungen = db.prepare("SELECT * FROM payments WHERE project_id = ? ORDER BY sort, id").all(pr.id);
     const letzte = zahlungen[zahlungen.length - 1] || null;
@@ -28,8 +28,11 @@ export function createAbschluss({ json, readJson, logEvent }) {
       endrechnung: end ? { ...end, locked: !!end.locked, versandt } : null,
       uebergabe_nach: nach,
       uebergabeBereit: !!pr.abgenommen_at && (nach === "zahlung" ? bezahlt : versandt || bezahlt),
+      uebergeben_at: db.prepare("SELECT gesendet_at FROM uebergabe WHERE project_id = ?").get(pr.id)?.gesendet_at || null,
     };
-  }
+}
+export function createAbschluss({ json, readJson, logEvent }) {
+  const stand = abschlussStand;
   async function admin(req, res, p, m, user) {
     const mm = p.match(/^\/projects\/(\d+)\/abschluss$/); if (!mm) return null;
     const pr = db.prepare("SELECT * FROM projects WHERE id = ?").get(+mm[1]); if (!pr) return json(res, 404, { error: "Projekt nicht gefunden" });

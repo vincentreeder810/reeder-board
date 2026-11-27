@@ -105,7 +105,20 @@
       ${schritte.length ? `<div class="stk__text"><small>Nächste Schritte</small><ul>${schritte.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       <p class="zus__von">${vonZeile(m)}</p></div>`;
   }
+  /* Übergabe: Projekt fertig – alle Dateien zum Herunterladen, Prüfung und Endrechnung */
+  function uebergabeKarte(m, me) {
+    const d = m.meta || {}, kunde = me === "client", basis = kunde ? "/api/portal" : "/api/admin";
+    const gr = b => b > 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+    return `<div class="stk stk--ue">
+      <div class="stk__kopf"><span class="stk__ic stk__ic--ok">✓</span><div><b>${kunde ? "Ihr Projekt ist fertig" : "Übergabe an den Kunden"}</b><small>${esc(d.titel || "")} · ${vonZeile(m)}</small></div></div>
+      ${d.nachricht ? `<p class="zus__text">${esc(d.nachricht).replace(/\n/g, "<br>")}</p>` : ""}
+      <ul class="ue__l">${(d.dateien || []).map(x => `<li><a href="${basis}/documents/${x.id}/file" target="_blank" rel="noopener"><span class="ue__i">${DOC}</span><span><b>${esc(x.titel)}</b><small>${esc(x.name)} · ${gr(x.bytes)}</small></span><span class="ue__dl">Laden</span></a></li>`).join("")}</ul>
+      ${d.pruefung ? `<p class="ue__info"><b>Geprüft:</b> ${esc(d.pruefung)}</p>` : ""}
+      ${d.rechnung ? `<p class="ue__info"><b>Endrechnung:</b> ${esc(d.rechnung.nummer)} über ${euro(d.rechnung.betrag)}${d.rechnung.doc_id ? ` · <a href="${basis}/documents/${d.rechnung.doc_id}/file" target="_blank" rel="noopener">PDF</a>` : ""}</p>` : ""}
+      ${kunde ? `<a class="stk__btn stk__btn--a" href="#dokumente">Alle Dateien unter Dokumente</a>` : ""}</div>`;
+  }
   function inhalt(m, me) {
+    if (m.art === "uebergabe" && m.meta) return uebergabeKarte(m, me);
     if (m.art === "dokument" && m.meta) return dokumentKarte(m, me);
     if (m.art === "zusammenfassung" && m.meta) return zusammenfassungKarte(m);
     if (m.art === "rueckfragen" && m.meta?.fragen?.length) return rueckfragenCard(m, me);
@@ -130,7 +143,7 @@
       const same = m.sender === lastSender && m.author === lastAuthor && t - lastTime < 5 * 60000;
       const mine = m.sender === me;
       const who = m.sender === "team" ? `${esc(m.author)} · ${esc(m.rolle && m.rolle !== "Inhaber" ? m.rolle : "Reeder Software")}` : esc(m.author);
-      if ((m.art === "dokument" || m.art === "zusammenfassung") && m.meta) {   // eigenständige Karten wie beim neuen Stand
+      if ((m.art === "dokument" || m.art === "zusammenfassung" || m.art === "uebergabe") && m.meta) {   // eigenständige Karten wie beim neuen Stand
         html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--stand">${inhalt(m, me)}</div>`;
         lastSender = ""; lastTime = 0; continue;
       }

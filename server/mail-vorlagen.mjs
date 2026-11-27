@@ -571,6 +571,27 @@ ${d.portalLink}`,
     }),
     beispiel: { name: B.name, link: `${BSP}/portal/` },
   },
+  projekt_uebergabe: {
+    gruppe: "Projekt & Portal", titel: "Projekt fertig – Ihre Übergabe", an: "kunde",
+    wann: "Wenn du im Projekt unter „Abschluss“ die Übergabe sendest: Liste aller übergebenen Dateien, Prüfbericht in Kurzform, Endrechnung als PDF im Anhang (wenn vorhanden). Große Dateien liegen im Kundenportal zum Herunterladen.",
+    baue: d => {
+      const liste = (d.dateien || []).filter(Boolean);
+      return {
+        subject: `Ihr Projekt „${kurz(d.projekt, 50)}“ ist fertig – Ihre Übergabe`,
+        text: absaetze(anrede(d),
+          `Ihr Projekt ${fett(`„${einzeilig(d.projekt)}“`)} ist abgeschlossen. Vielen Dank für die gute Zusammenarbeit!`,
+          d.nachricht && String(d.nachricht).trim(),
+          liste.length ? `Diese Dateien gehören Ihnen und liegen ab sofort in Ihrem Kundenportal unter **Dokumente → Übergabe** zum Herunterladen bereit:\n${liste.map(x => `- ${einzeilig(x)}`).join("\n")}` : "",
+          d.pruefung && `${fett("Geprüft:")} ${einzeilig(d.pruefung)}`,
+          d.rechnung && `${fett("Endrechnung:")} ${einzeilig(d.rechnung)} – das PDF finden Sie im Anhang.`,
+          "Hinweis: Bewahren Sie die Dateien gut auf, zum Beispiel zusätzlich auf einem eigenen Speicher. Im Kundenportal bleiben sie für Sie abrufbar.",
+          d.link, gruss(d.firma)),
+        knopf: { label: "Übergabe im Kundenportal öffnen", url: d.link },
+      };
+    },
+    beispiel: { name: B.name, projekt: "Website Physiotherapie Am Park", dateien: ["Kompletter Code der Website (ZIP, 4,2 MB)", "Anleitung: So bringen Sie die Seite online (PDF)", "Prüfbericht (PDF)"],
+      pruefung: "960 Prüfungen auf Desktop, Tablet und Handy – nichts offen", rechnung: "RE-2026-00014 über 595,00 €", link: `${BSP}/portal/#dokumente` },
+  },
   portal_erinnerung: {
     gruppe: "Projekt & Portal", titel: "Erinnerung: liegt im Kundenportal bereit", an: "kunde",
     wann: "Wenn eine Chat-Karte (neuer Stand, Dokument, Zusammenfassung, Rückfragen) nach zwei Stunden noch ungelesen ist – oder wenn du etwas über „Erneut schicken“ per E-Mail nachschickst.",

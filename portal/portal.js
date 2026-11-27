@@ -651,8 +651,10 @@ async function viewAppointments() {
     || `<div class="empty">Noch keine Termine. Fragen Sie gern einen an – per Video oder Telefon.</div>`;
 }
 async function viewDocuments() {
-  const list = await api("/documents");
-  $("#docList").innerHTML = list.length ? `<div class="docs">${list.map(docRow).join("")}</div>` : `<p class="muted" style="margin:0;text-align:center;padding:16px">Hier finden Sie später Angebote, Rechnungen und Verträge.</p>`;
+  const list = await api("/documents"), ue = list.filter(d => d.kind === "Übergabe"), rest = list.filter(d => d.kind !== "Übergabe");
+  const ueBlock = ue.length ? `<section class="ueport"><div class="ueport__k"><span class="ueport__ic" aria-hidden="true">✓</span><div><b>Ihre Übergabe</b><small>Diese Dateien gehören Ihnen – bitte zusätzlich auf einem eigenen Speicher sichern.</small></div></div>
+      <div class="docs">${ue.map(docRow).join("")}</div></section>` : "";
+  $("#docList").innerHTML = list.length ? ueBlock + (rest.length ? `<div class="docs">${rest.map(docRow).join("")}</div>` : "") : `<p class="muted" style="margin:0;text-align:center;padding:16px">Hier finden Sie später Angebote, Rechnungen und Verträge.</p>`;
 }
 
 /* ---------- Support ---------- */

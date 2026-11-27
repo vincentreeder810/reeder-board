@@ -178,3 +178,13 @@
 .stk__btn--a{display:flex;align-items:center;justify-content:center;text-decoration:none}
 .zus__text{font-size:14.5px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere}
 .zus__von{margin:0;font-size:12px;color:var(--muted)}
+
+/* Übergabe-Karte */
+.stk__ic--ok{background:linear-gradient(135deg,#22c58b,#16a36a);font-size:18px;font-weight:700}
+.ue__l{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ue__l a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--paper);text-decoration:none;color:var(--ink)}
+.ue__l a:hover{background:#f1ecff}
+.ue__i{flex:none;width:30px;height:30px;border-radius:9px;background:#fff;display:grid;place-items:center;color:#7c3aed}.ue__i svg{width:17px;height:17px}
+.ue__l a>span:nth-child(2){flex:1;min-width:0;display:grid}.ue__l b{font-size:13.5px;overflow-wrap:anywhere}.ue__l small{font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.ue__dl{flex:none;font-size:12.5px;font-weight:600;color:#7c3aed}
+.ue__info{margin:0;font-size:13.5px;color:var(--ink2,#3a3a44)}

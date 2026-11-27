@@ -581,3 +581,9 @@ body.im-chat .main{padding-bottom:34px}
 @media (max-width:520px){.appt summary{grid-template-columns:auto minmax(0,1fr);gap:6px 14px;padding:14px 16px}.appt summary>.pill{grid-column:2;justify-self:start}}
 /* Support-Kategorien: unsichtbare Auswahlfelder dürfen die Seite nicht verbreitern */
 .supcats label{position:relative}.supcats input{width:1px;height:1px;margin:0;left:0;top:0}
+
+/* Dokumente: eigener Bereich „Ihre Übergabe“ */
+.ueport{margin-bottom:18px;padding:14px;border-radius:20px;background:linear-gradient(135deg,rgba(34,197,139,.08),rgba(139,92,246,.06));box-shadow:0 0 0 1px rgba(22,163,106,.25)}
+.ueport__k{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.ueport__ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#22c58b,#16a36a);color:#fff;font-weight:700}
+.ueport__k b{display:block;font-size:16px}.ueport__k small{display:block;font-size:12.5px;color:var(--muted)}

@@ -306,6 +306,22 @@
   let AB = null, UE = null;
   const groesse = b => b > 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
   /* Übergabe-Dateien: was der Kunde bekommt (ankreuzen), Auftrag an Claude, angekommene Dateien */
+  function uebergabeSenden(pid, neu) {
+    const docs = UE?.dateien || [];
+    const warnung = !AB.uebergabeBereit ? (!AB.abgenommen_at ? "Das Projekt ist noch nicht als abgenommen eingetragen." : AB.uebergabe_nach === "zahlung" ? "Die Endrechnung ist noch nicht bezahlt." : "Die Endrechnung ist noch nicht verschickt.") : "";
+    const d = modal(`<h2 class="span2">Übergabe an den Kunden senden</h2>
+      ${warnung ? `<p class="span2 pab__warnbox">⚠ ${warnung} Du kannst trotzdem senden.</p>` : ""}
+      <div class="span2 vlog"><b>Diese Dateien werden für den Kunden freigeschaltet</b><ul>${docs.map(x => `<li><span>${esc(x.title)} · ${esc(x.file_name)} · ${groesse(x.bytes)}</span></li>`).join("")}</ul></div>
+      <label class="span2">Persönliche Nachricht (optional, steht in Mail und Chat)<textarea name="nachricht" rows="3" placeholder="z. B. Vielen Dank für das Vertrauen – bei Fragen sind wir gern weiter für Sie da."></textarea></label>
+      ${KANAL.html({ modus: "haken", titel: "Dem Kunden schicken", mailText: "Abschluss-Mail, Endrechnung als PDF im Anhang", hinweis: "Die Dateien selbst liegen im Kundenportal unter Dokumente → Übergabe (große Dateien passen in keine Mail)." })}
+      <label class="check span2"><input type="checkbox" name="abschliessen" checked> Projekt danach auf „Abgeschlossen“ setzen</label>
+      <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Übergabe senden</button></div>`);
+    d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"), w = KANAL.werte(d.f); k.disabled = true;
+      try { const r = await api(`/projects/${pid}/uebergabe/senden`, { method: "POST", body: { chat: w.chat, mail: w.mail, nachricht: d.f.nachricht.value, abschliessen: d.f.abschliessen.checked, trotzdem: !!warnung } });
+        d.close(); toast(`Übergabe gesendet · ${r.dateien} Datei${r.dateien === 1 ? "" : "en"} freigeschaltet${w.mail ? (r.mailed === false ? " · Mail im Postausgang" : " · Mail ist raus") : ""}${r.abgeschlossen ? " · Projekt abgeschlossen" : ""}`);
+        window.KUNDEN?.openProjectPage(+pid, true); }
+      catch (err) { d.fail(err.message); k.disabled = false; } });
+  }
   function ueBlock() {
     if (!UE) return "";
     const lab = k => UE.katalog.find(x => x.k === k)?.l || k;
@@ -356,13 +372,15 @@
         ${schritt(s4, "Übergabe an den Kunden",
           `${AB.uebergabeBereit ? "Bereit – Code bzw. Dateien, Prüfbericht und Rechnung können raus." : `Wird freigegeben ${AB.uebergabe_nach === "zahlung" ? "nach Zahlungseingang der Endrechnung" : "sobald die Endrechnung verschickt ist"}.`}
             <label class="pab__nach">Freigeben: <select data-ab="nach"><option value="zahlung" ${AB.uebergabe_nach === "zahlung" ? "selected" : ""}>nach Zahlungseingang</option><option value="rechnung" ${AB.uebergabe_nach === "rechnung" ? "selected" : ""}>sofort mit der Endrechnung</option></select></label>`,
-          `<button class="btn btn--ghost btn--sm" disabled title="Kommt im nächsten Schritt: Abschluss-Mail und Ordner im Kundenportal">Übergabe senden</button>`)}
+          AB.uebergeben_at ? `<span class="pab__ok">Gesendet am ${tagZeit(AB.uebergeben_at)}</span><button class="btn btn--ghost btn--sm" data-ue="senden">Erneut senden</button>`
+            : `<button class="btn btn--${AB.uebergabeBereit && UE?.dateien.length ? "grad" : "ghost"} btn--sm" data-ue="senden" ${UE?.dateien.length ? "" : "disabled title=\"Erst die Übergabe-Dateien vorbereiten\""}>Übergabe senden</button>`)}
       </ol>${ueBlock()}</details>`;
   }
   document.addEventListener("click", async e => {
     const u = e.target.closest("#pAbschluss [data-ue], #pAbschluss [data-ue-weg]");
     if (u) { const box = $("#pAbschluss"), pid = box.dataset.pid, neu = () => abschluss({ id: +pid, client_id: +box.dataset.cid, status: AB?.status || "aktiv" });
       try {
+        if (u.dataset.ue === "senden") return uebergabeSenden(pid, neu);
         if (u.dataset.ueWeg) { if (!(await UI.confirm("Die Datei wird aus der Übergabe entfernt.", { title: "Datei entfernen?", ok: "Entfernen", danger: true }))) return;
           await api(`/projects/${pid}/uebergabe/datei/${u.dataset.ueWeg}`, { method: "DELETE", body: {} }); return neu(); }
         if (!(await UI.confirm("Claude öffnet sich auf deinem Rechner im Projektordner und erzeugt die ausgewählten Dateien. Die Brücke bringt sie danach hierher – der Kunde sieht sie erst, wenn du die Übergabe sendest.", { title: "Übergabe vorbereiten lassen?", ok: "Claude beauftragen" }))) return;

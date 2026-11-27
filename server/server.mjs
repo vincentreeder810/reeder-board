@@ -124,7 +124,7 @@ const workspace = createWorkspace({ json, readJson, clean, limited, SITE_URL });
 portal.extend(workspace.portal);   // Rückfragen im Kundenportal beantworten
 const versand = createVersand({ json, readJson, SITE_URL });   // Versandprotokoll, erneut schicken
 const abschluss = createAbschluss({ json, readJson, logEvent: portal.logEvent });   // Abnahme, Endrechnung, Übergabe
-const uebergabe = createUebergabe({ json, readJson, clean });                         // Übergabe-Dateien (über Claude und die Brücke)
+const uebergabe = createUebergabe({ json, readJson, clean, logEvent: portal.logEvent, SITE_URL });                         // Übergabe-Dateien (über Claude und die Brücke)
 erinnerungenStarten(SITE_URL);                                  // E-Mail nur, wenn eine Chat-Karte ungelesen bleibt
 const mailVorschau = createMailVorschau({ json, send });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });

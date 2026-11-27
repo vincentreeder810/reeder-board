@@ -2,10 +2,16 @@
 //   Je Projekt eine Liste „Was der Kunde am Ende bekommt“ (Formate je Bereich, zum Ankreuzen).
 //   „Übergabe vorbereiten“ schickt Claude über die Brücke den Auftrag, die Dateien im Projektordner zu erzeugen (uebergabe/ + uebergabe.json).
 //   Die Brücke lädt sie hoch; sie liegen als Dokumente „Übergabe“ beim Projekt – für den Kunden verborgen, bis die Übergabe gesendet wird (Schritt 3).
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { db } from "./db.mjs";
+import { db, chatPosten } from "./db.mjs";
+import { sendMail } from "./mail.mjs";
+import { vorlage } from "./mail-vorlagen.mjs";
+import { firmaVonProjekt } from "./firmen.mjs";
+import { versandMerken, erinnerungVormerken } from "./versand.mjs";
+import { abschlussStand } from "./abschluss.mjs";
+const FIN_DIR = path.resolve(process.env.DATA_DIR || "data", "finance");
 import { brueckeAuftrag, brueckePruefen, brueckeVerbunden, brueckeEingerichtet } from "./bruecke.mjs";
 import { isOwner } from "./access.mjs";
 
@@ -47,6 +53,7 @@ export const KATALOG = {
 
 db.exec(`CREATE TABLE IF NOT EXISTS uebergabe (project_id INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
   formate TEXT, angefordert_at TEXT, fertig_at TEXT, hinweis TEXT)`);
+if (!db.prepare("PRAGMA table_info(uebergabe)").all().some(c => c.name === "gesendet_at")) db.exec("ALTER TABLE uebergabe ADD COLUMN gesendet_at TEXT");
 { const dc = db.prepare("PRAGMA table_info(documents)").all().map(c => c.name);
   if (!dc.includes("verborgen")) db.exec("ALTER TABLE documents ADD COLUMN verborgen INTEGER NOT NULL DEFAULT 0");
   if (!dc.includes("format")) db.exec("ALTER TABLE documents ADD COLUMN format TEXT"); }
@@ -76,9 +83,10 @@ So gehst du vor:
 Einzelne Datei höchstens 45 MB; größere teilst du auf oder sagst es mir.`;
 }
 
-export function createUebergabe({ json, readJson, clean }) {
+const groesse = b => b > 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+export function createUebergabe({ json, readJson, clean, logEvent, SITE_URL }) {
   async function admin(req, res, p, m, user) {
-    const mm = p.match(/^\/projects\/(\d+)\/uebergabe(\/vorbereiten|\/datei\/(\d+))?$/); if (!mm) return null;
+    const mm = p.match(/^\/projects\/(\d+)\/uebergabe(\/vorbereiten|\/senden|\/datei\/(\d+))?$/); if (!mm) return null;
     const pr = db.prepare("SELECT * FROM projects WHERE id = ?").get(+mm[1]); if (!pr) return json(res, 404, { error: "Projekt nicht gefunden" });
     const out = () => { const z = zeile(pr.id); return { bereich: bereichVon(pr), katalog: KATALOG[bereichVon(pr)], gewaehlt: gewaehlt(pr), dateien: dateien(pr.id), angefordert_at: z?.angefordert_at || null, fertig_at: z?.fertig_at || null, hinweis: z?.hinweis || "" }; };
     if (!mm[2] && m === "GET") return json(res, 200, out());
@@ -96,6 +104,37 @@ export function createUebergabe({ json, readJson, clean }) {
       brueckeAuftrag(pr.id, bereichVon(pr) === "hardware" ? "app" : "sw-app", auftragText(pr, l));
       db.prepare("INSERT INTO uebergabe(project_id, formate, angefordert_at) VALUES(?, ?, datetime('now')) ON CONFLICT(project_id) DO UPDATE SET angefordert_at = datetime('now'), fertig_at = NULL").run(pr.id, JSON.stringify(l));
       return json(res, 200, out());
+    }
+    if (mm[2] === "/senden" && m === "POST") {   // Schritt 3: Dateien freischalten, Abschluss-Mail, Chat-Karte, Projekt abschließen
+      const d = await readJson(req, 64 * 1024), st = abschlussStand(pr), docs = dateien(pr.id);
+      if (!docs.length) return json(res, 400, { error: "Es gibt noch keine Übergabe-Dateien." });
+      if (!st.uebergabeBereit && !d.trotzdem) return json(res, 409, { error: !st.abgenommen_at ? "Das Projekt ist noch nicht als abgenommen eingetragen." : st.uebergabe_nach === "zahlung" ? "Die Endrechnung ist noch nicht bezahlt." : "Die Endrechnung ist noch nicht verschickt.", frage: true });
+      const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(pr.client_id);
+      db.prepare("UPDATE documents SET verborgen = 0 WHERE project_id = ? AND kind = 'Übergabe'").run(pr.id);
+      const end = st.endrechnung?.locked ? db.prepare("SELECT * FROM invoices WHERE id = ?").get(st.endrechnung.id) : null;
+      const pb = db.prepare("SELECT daten FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 1").get(pr.id);
+      let pruefung = ""; try { const b = JSON.parse(pb?.daten || "null"); if (b) { const offen = (b.funde || []).filter(f => f.status === "offen").length; pruefung = `${b.zahlen?.pruefungen ? `${b.zahlen.pruefungen} Prüfungen` : "Geprüft"}${b.geprueft?.length ? ` auf ${b.geprueft.join(", ")}` : ""} – ${offen ? `${offen} Hinweis${offen === 1 ? "" : "e"} offen` : "nichts offen"}`; } } catch {}
+      const liste = docs.map(x => `${x.title} (${x.file_name.split(".").pop().toUpperCase()}, ${groesse(x.bytes)})`);
+      const euro = c2 => (Math.abs(c2) / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+      let mailed = null;
+      if (d.mail !== false && c?.email) {
+        const anhang = [];
+        if (end?.pdf_token) { try { anhang.push({ filename: `${end.number}.pdf`, content: await readFile(path.join(FIN_DIR, end.pdf_token + ".pdf")), contentType: "application/pdf" }); } catch {} }
+        mailed = await sendMail({ to: c.email, attachments: anhang, ...vorlage("projekt_uebergabe", { name: c.name, projekt: pr.title, dateien: liste, pruefung, nachricht: clean(d.nachricht, 2000),
+          rechnung: end ? `${end.number} über ${euro(end.gross)}` : "", link: `${SITE_URL}/portal/#dokumente`, firma: firmaVonProjekt(pr.id) }) }).catch(e => { console.warn("Übergabe-Mail:", e.message); return false; });
+        versandMerken({ clientId: pr.client_id, projectId: pr.id, art: "uebergabe", refId: pr.id, kanal: "mail", von: user.name, an: c.email });
+      }
+      if (d.chat !== false) {
+        const mid = chatPosten({ clientId: pr.client_id, projectId: pr.id, user, art: "uebergabe", body: `Ihr Projekt „${pr.title}“ ist fertig – hier ist Ihre Übergabe.`,
+          meta: { titel: pr.title, nachricht: clean(d.nachricht, 2000), pruefung, rechnung: end ? { nummer: end.number, betrag: Math.abs(end.gross), doc_id: end.pdf_doc_id || null } : null,
+            dateien: docs.map(x => ({ id: x.id, titel: x.title, name: x.file_name, bytes: x.bytes })) } });
+        if (d.erinnern) erinnerungVormerken(mid);
+        versandMerken({ clientId: pr.client_id, projectId: pr.id, art: "uebergabe", refId: pr.id, kanal: "chat", von: user.name });
+      }
+      db.prepare("INSERT INTO uebergabe(project_id, gesendet_at) VALUES(?, datetime('now')) ON CONFLICT(project_id) DO UPDATE SET gesendet_at = datetime('now')").run(pr.id);
+      if (d.abschliessen !== false) db.prepare("UPDATE projects SET status = 'abgeschlossen', updated_at = datetime('now') WHERE id = ?").run(pr.id);
+      logEvent?.(pr.client_id, pr.id, "projekt", "Projekt abgeschlossen – Übergabe", liste.join(" · ").slice(0, 500), false);
+      return json(res, 200, { ok: true, mailed, dateien: docs.length, abgeschlossen: d.abschliessen !== false });
     }
     if (mm[3] && m === "DELETE") {
       const doc = db.prepare("SELECT * FROM documents WHERE id = ? AND project_id = ? AND kind = 'Übergabe'").get(+mm[3], pr.id); if (!doc) return json(res, 404, { error: "Datei nicht gefunden" });
