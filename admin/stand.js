@@ -274,32 +274,36 @@
   const SCHW = { kritisch: "Kritisch", hoch: "Hoch", mittel: "Mittel", hinweis: "Hinweis" };
   const ZAHLEN = [["zeilenGeaendert", "Zeilen geändert"], ["dateienGeaendert", "Dateien"], ["aenderungen", "Änderungen"], ["testlaeufe", "Testläufe"], ["pruefungen", "Prüfungen"], ["behoben", "Behoben"], ["offen", "Offen"]];
   const n = v => Number(v || 0).toLocaleString("de-DE");
+  /* Kurzfassung (auch auf der Freigabe-Karte): sagt, was geprüft und gelöst wurde – keine Entscheidungen */
   function pbKurz(b) {
     if (!b) return `<p class="pb__kurz pb__kurz--nix">Kein Prüfbericht von Claude zu dieser Version.</p>`;
-    const offen = (b.funde || []).filter(f => f.status === "offen"), krit = offen.filter(f => ["kritisch", "hoch"].includes(f.schwere)).length;
-    return `<p class="pb__kurz ${krit ? "pb__kurz--warn" : "pb__kurz--ok"}">${krit ? "⚠" : "✓"} Von Claude geprüft${b.zahlen?.pruefungen ? ` · ${n(b.zahlen.pruefungen)} Prüfungen` : ""}${b.geprueft?.length ? ` · ${b.geprueft.length} Größen` : ""} · ${offen.length ? `${offen.length} offen${krit ? ` (${krit} wichtig)` : ""}` : "nichts offen"}</p>`;
+    const geloest = (b.funde || []).filter(f => f.status === "behoben").length, hinweise = (b.funde || []).filter(f => f.status === "offen").length;
+    return `<p class="pb__kurz pb__kurz--ok">✓ Von Claude geprüft${b.zahlen?.pruefungen ? ` · ${n(b.zahlen.pruefungen)} Prüfungen` : ""}${b.geprueft?.length ? ` auf ${b.geprueft.length} Größen` : ""}${geloest ? ` · ${geloest} Problem${geloest === 1 ? "" : "e"} gelöst` : ""}${hinweise ? ` · ${hinweise} Hinweis${hinweise === 1 ? "" : "e"}` : ""}</p>`;
   }
   async function pruefbericht(p) {
     const box = $("#pPruef"); if (!box || !p || !ME.owner || p.bereich === "hardware") return;
-    const r = await api(`/bruecke/projekt/${p.id}/pruefbericht`).catch(() => null), b = r?.aktuell;
+    const r = await api(`/bruecke/projekt/${p.id}/pruefbericht`).catch(() => null), b = r?.aktuell, g = r?.gesamt;
     box.hidden = false;
-    if (!b) { box.innerHTML = `<div class="chead" style="margin-bottom:6px"><div><h2 style="font-size:18px">Prüfbericht</h2><p>Von Claude, vor jedem neuen Stand</p></div></div>
-        <p class="hint" style="margin:0">Noch kein Bericht. Claude prüft die Website selbst in allen Größen und legt den Bericht vor dem Hochladen in den Projektordner – die Brücke bringt ihn hierher. Du kannst Claude auch direkt sagen: <b>„Prüfe die Website in allen Größen und schreib den Prüfbericht.“</b></p>`; return; }
-    const offen = (b.funde || []).filter(f => f.status === "offen"), behoben = (b.funde || []).filter(f => f.status === "behoben");
-    const fund = f => `<li class="pb__f pb__f--${f.schwere}"><span class="pb__s">${SCHW[f.schwere] || f.schwere}</span><span><b>${esc(f.titel)}</b><small>${[f.seite, f.geraet].filter(Boolean).map(esc).join(" · ")}</small></span></li>`;
-    const kacheln = ZAHLEN.filter(([k]) => b.zahlen?.[k] != null).map(([k, l]) => `<div class="pb__z ${k === "offen" && b.zahlen[k] ? "pb__z--offen" : ""}"><b>${n(b.zahlen[k])}</b><small>${l}</small></div>`).join("");
-    const kosten = [["Claude (Bericht)", b.kiKosten]].concat(r.pruefKosten != null ? [["KI im Board (Projekt gesamt)", { betrag: r.pruefKosten, waehrung: "USD" }]] : []).filter(([, k]) => k);
+    if (!b) { box.innerHTML = `<div class="pb__leer"><span class="pb__logo" aria-hidden="true">✓</span><div><b>Prüfbericht</b><p>Noch kein Bericht. Sag Claude, wenn er fertig ist: <b>„Prüfe die Website in allen Größen und schreib den Prüfbericht.“</b> Daraus entsteht am Ende auch der Prüfbericht als PDF für den Kunden.</p></div></div>`; return; }
+    const z = g?.zahlen || b.zahlen || {}, geloest = g ? g.behoben.length : (b.funde || []).filter(f => f.status === "behoben").length;
+    const kachel = (wert, text, haupt) => `<div class="pb__t ${haupt ? "pb__t--haupt" : ""}"><b>${n(wert)}</b><small>${text}</small></div>`;
+    const tokens = g?.tokens, kosten = [["Claude", g?.kosten ? { betrag: g.kosten, waehrung: "USD" } : b.kiKosten], ["KI im Board", r.pruefKosten != null ? { betrag: r.pruefKosten, waehrung: "USD" } : null]].filter(([, k]) => k);
     const geld = k => Number(k.betrag).toLocaleString("de-DE", { style: "currency", currency: k.waehrung || "USD" });
+    const fund = f => `<li class="pb__f pb__f--${f.schwere}"><span class="pb__s">${SCHW[f.schwere] || f.schwere}</span><span><b>${esc(f.titel)}</b>${f.loesung ? `<em>→ ${esc(f.loesung)}</em>` : ""}<small>${[f.seite, f.geraet].filter(Boolean).map(esc).join(" · ")}</small></span></li>`;
+    const offen = (b.funde || []).filter(f => f.status === "offen"), behoben = (b.funde || []).filter(f => f.status === "behoben");
     const auf = (() => { try { return sessionStorage.getItem("pb-auf") === "1"; } catch { return false; } })();
-    box.innerHTML = `<details class="pb__auf" ${auf ? "open" : ""}><summary class="pb__sum"><span class="pb__sumt"><b>Prüfbericht von Claude</b><small>${b.version ? `Version ${b.version} · ` : ""}${ago(b.created_at)}${kosten.length ? ` · KI-Kosten ${kosten.map(([, k]) => geld(k)).join(" + ")}` : ""}</small></span>
-        ${pbKurz(b).replace("pb__kurz", "pb__kurz pb__kurz--kopf")}<svg class="pb__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
-      <div class="pb__body">
-      ${kacheln ? `<div class="pb__zahlen">${kacheln}</div>` : ""}
-      ${kosten.length ? `<p class="pb__kosten">KI-Kosten: ${kosten.map(([l, k]) => `${l} <b>${geld(k)}</b>${k.hinweis ? ` <small>(${esc(k.hinweis)})</small>` : ""}`).join(" · ")}${r.frueher?.length ? ` · ${r.frueher.length} frühere Berichte` : ""}</p>` : ""}
-      ${b.zusammenfassung ? `<p class="pb__text">${esc(b.zusammenfassung)}</p>` : ""}
-      ${b.geprueft?.length ? `<div class="pb__chips">${b.geprueft.map(g => `<span>${esc(g)}</span>`).join("")}</div>` : ""}
-      ${offen.length ? `<p class="pb__h">Offen <em>${offen.length}</em></p><ul class="pb__l">${offen.map(fund).join("")}</ul>` : ""}
-      ${behoben.length ? weitere(behoben.length, `<ul class="pb__l pb__l--ok">${behoben.map(fund).join("")}</ul>`, ["behobener Fund", "behobene Funde"]) : ""}</div></details>`;
+    box.innerHTML = `<div class="pb__kopf"><div class="pb__titel"><span class="pb__logo" aria-hidden="true">✓</span><div><b>Prüfbericht</b><small>Ganzes Projekt · ${g?.berichte || 1} Bericht${(g?.berichte || 1) === 1 ? "" : "e"} von Claude · zuletzt ${ago(b.created_at)}${b.version ? ` (Version ${b.version})` : ""}</small></div></div>
+        <a class="btn btn--ghost btn--sm pb__pdf" href="/api/admin/bruecke/projekt/${p.id}/pruefbericht/pdf" target="_blank" rel="noopener">PDF ansehen</a></div>
+      <div class="pb__kacheln">${kachel(z.zeilenGeaendert, "Zeilen Code", true)}${kachel(z.aenderungen, "Änderungen")}${kachel(z.pruefungen, `Prüfungen${z.testlaeufe ? ` · ${n(z.testlaeufe)} Läufe` : ""}`)}${kachel(geloest, "Probleme gelöst")}</div>
+      ${pbKurz(b)}
+      <details class="pb__auf" ${auf ? "open" : ""}><summary>Details zum letzten Bericht</summary><div class="pb__body">
+        ${b.zusammenfassung ? `<p class="pb__text">${esc(b.zusammenfassung)}</p>` : ""}
+        ${(b.aenderungen || []).length ? `<p class="pb__h">Umgesetzt</p><ul class="pb__u">${b.aenderungen.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+        ${behoben.length ? `<p class="pb__h">Gefunden und gelöst</p><ul class="pb__l pb__l--ok">${behoben.map(fund).join("")}</ul>` : ""}
+        ${offen.length ? `<p class="pb__h">Hinweise</p><ul class="pb__l">${offen.map(fund).join("")}</ul>` : ""}
+        ${b.geprueft?.length ? `<div class="pb__chips">${b.geprueft.map(x => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
+        ${tokens || kosten.length ? `<p class="pb__kosten">KI: ${[tokens ? `${n(tokens)} Tokens` : "", ...kosten.map(([l, k]) => `${l} ${geld(k)}`)].filter(Boolean).join(" · ")}</p>` : ""}
+      </div></details>`;
     box.querySelector("details").addEventListener("toggle", e => { try { sessionStorage.setItem("pb-auf", e.target.open ? "1" : "0"); } catch {} });
   }
   /* ---------- Abschluss: Abnahme → Abgenommen → Endrechnung → Übergabe (Schritt 1 von 3) ---------- */

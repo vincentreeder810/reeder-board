@@ -13,6 +13,14 @@ import { antwortenView } from "./onboarding.mjs";
 import { PROTO_MIME, safeRel } from "./portal.mjs";
 import { workspaceSpeichern, workspaceLesen, workspaceFuerBruecke, phaseNachziehen } from "./workspace.mjs";
 import { anmerkungenText, anmerkungenStempel, anmerkungenErledigen } from "./anmerkungen.mjs";
+import { gesamtBericht, renderGesamtPruefberichtPdf } from "./pruefbericht-gesamt-pdf.mjs";
+import { firmaVonProjekt, firmaDaten } from "./firmen.mjs";
+/** Gesamt-Prüfbericht eines Projekts als PDF – oder null, wenn es noch keinen Bericht gibt */
+export async function gesamtPruefberichtPdf(pr) {
+  const g = gesamtBericht(pr.id); if (!g) return null;
+  const c = db.prepare("SELECT company, name FROM clients WHERE id = ?").get(pr.client_id) || {}, fd = firmaDaten(firmaVonProjekt(pr.id));
+  return renderGesamtPruefberichtPdf({ firma: { name: fd?.name || "Reeder Software GmbH", zusatz: /hardware/i.test(fd?.name || "") ? "Hardware" : "Software" }, kunde: c.company || c.name || "", projekt: pr.title, bericht: g });
+}
 
 const PROTO_DIR = path.resolve(process.env.DATA_DIR || "data", "prototypes");
 const MAX_BYTES = 60 * 1024 * 1024, MAX_FILES = 600;
@@ -143,18 +151,21 @@ So prüfst du:
 
 \`\`\`json
 {
-  "zusammenfassung": "Ein bis zwei Sätze für den Inhaber: Was wurde gemacht und geprüft, wie ist der Zustand?",
+  "zusammenfassung": "Ein bis zwei Sätze: Was wurde gemacht und geprüft, wie ist der Zustand? (Kann im Prüfbericht für den Kunden stehen – sachlich, ohne Fachjargon.)",
+  "umgesetzt": ["Startseite: Öffnungszeiten nach oben geholt", "Kontaktformular mit Pflichtfeldern ergänzt"],
   "zahlen": { "zeilenGeaendert": 0, "dateienGeaendert": 0, "aenderungen": 0, "testlaeufe": 0, "pruefungen": 0, "behoben": 0, "offen": 0 },
   "geprueft": ["Desktop 1440", "Tablet 820", "Handy 390", "Handy 320"],
   "seiten": ["Startseite", "Leistungen"],
-  "funde": [ { "schwere": "kritisch | hoch | mittel | hinweis", "titel": "Kurz, was nicht stimmt", "seite": "Startseite", "geraet": "Handy 390", "status": "offen | behoben" } ],
-  "kiKosten": { "betrag": 0.00, "waehrung": "USD", "hinweis": "z. B. laut /cost dieser Sitzung" }
+  "funde": [ { "schwere": "kritisch | hoch | mittel | hinweis", "titel": "Das Problem in einem Satz", "loesung": "Was du dagegen getan hast", "seite": "Startseite", "geraet": "Handy 390", "status": "behoben | offen" } ],
+  "kiNutzung": { "tokens": 0, "kosten": { "betrag": 0.00, "waehrung": "USD" } }
 }
 \`\`\`
 
 - \`zeilenGeaendert\` und \`dateienGeaendert\` z. B. aus \`git diff --stat\` seit dem letzten Stand, \`testlaeufe\` = wie oft du die Seiten insgesamt durchgeprüft hast, \`pruefungen\` = Anzahl Einzelprüfungen (Seite × Größe × Prüfpunkt).
-- \`kiKosten\`: nur eintragen, wenn du die Kosten dieser Sitzung wirklich kennst (z. B. aus \`/cost\`); sonst ganz weglassen – nie schätzen.
-- In \`funde\` gehören alle in dieser Sitzung gefundenen Punkte – behobene mit \`"behoben"\`, nicht behobene mit \`"offen"\` und einem Satz im Gespräch, warum.
+- \`umgesetzt\`: was du in dieser Sitzung an der Website gebaut oder geändert hast – je Punkt ein kurzer, für den Kunden verständlicher Satz. Daraus entsteht am Ende der Gesamt-Prüfbericht als PDF für den Kunden.
+- \`kiNutzung\`: Tokens und Kosten dieser Sitzung nur eintragen, wenn du sie wirklich kennst (z. B. aus \`/cost\`); was du nicht kennst, ganz weglassen – nie schätzen.
+- Der Bericht trifft keine Entscheidungen und stellt keine Fragen. Was der Inhaber entscheiden muss, sagst du ihm im Gespräch.
+- In \`funde\` gehören alle in dieser Sitzung gefundenen Probleme – mit \`loesung\` (was du getan hast). Behobene mit \`"behoben"\`; was bewusst so bleibt oder später kommt, mit \`"offen"\` und in \`loesung\` kurz, warum.
 - Die Brücke überträgt die Datei wenige Sekunden nach dem Speichern. Der Inhaber sieht den Bericht auf der Projektseite und bei der Freigabe der Version. Der Kunde sieht ihn nicht.
 `;
 
@@ -172,9 +183,12 @@ const SCHWERE = ["kritisch", "hoch", "mittel", "hinweis"];
 function berichtSaeubern(d) {
   const z = d?.zahlen || {}, zahlen = {};
   for (const k of ["zeilenGeaendert", "dateienGeaendert", "aenderungen", "testlaeufe", "pruefungen", "behoben", "offen"]) { const n = zahl(z[k]); if (n !== null) zahlen[k] = n; }
-  const funde = (Array.isArray(d?.funde) ? d.funde : []).slice(0, 80).map(f => ({ schwere: SCHWERE.includes(f?.schwere) ? f.schwere : "hinweis", titel: txt(f?.titel, 200), seite: txt(f?.seite, 80), geraet: txt(f?.geraet, 40), status: f?.status === "behoben" ? "behoben" : "offen" })).filter(f => f.titel);
+  const funde = (Array.isArray(d?.funde) ? d.funde : []).slice(0, 80).map(f => ({ schwere: SCHWERE.includes(f?.schwere) ? f.schwere : "hinweis", titel: txt(f?.titel || f?.problem, 200), loesung: txt(f?.loesung, 300), seite: txt(f?.seite, 80), geraet: txt(f?.geraet, 40), status: f?.status === "behoben" ? "behoben" : "offen" })).filter(f => f.titel);
+  const aenderungen = (Array.isArray(d?.umgesetzt) ? d.umgesetzt : Array.isArray(d?.aenderungen) ? d.aenderungen : []).slice(0, 60).map(x => txt(x, 240)).filter(Boolean);
+  const n = d?.kiNutzung, kiNutzung = n && (Number.isFinite(+n.tokens) || n.kosten) ? { tokens: Number.isFinite(+n.tokens) && +n.tokens > 0 ? Math.round(+n.tokens) : null,
+    kosten: n.kosten && Number.isFinite(+n.kosten.betrag) ? { betrag: Math.round(+n.kosten.betrag * 100) / 100, waehrung: /^(EUR|USD)$/.test(n.kosten.waehrung) ? n.kosten.waehrung : "USD" } : null } : null;
   const k = d?.kiKosten, kiKosten = k && Number.isFinite(+k.betrag) && +k.betrag >= 0 ? { betrag: Math.round(+k.betrag * 100) / 100, waehrung: /^(EUR|USD)$/.test(k.waehrung) ? k.waehrung : "USD", hinweis: txt(k.hinweis, 80) } : null;
-  return { kiKosten, zusammenfassung: txt(d?.zusammenfassung, 600), zahlen, geprueft: (Array.isArray(d?.geprueft) ? d.geprueft : []).slice(0, 10).map(x => txt(x, 30)).filter(Boolean),
+  return { kiKosten: kiKosten || kiNutzung?.kosten || null, kiNutzung, aenderungen, zusammenfassung: txt(d?.zusammenfassung, 600), zahlen, geprueft: (Array.isArray(d?.geprueft) ? d.geprueft : []).slice(0, 10).map(x => txt(x, 30)).filter(Boolean),
     seiten: (Array.isArray(d?.seiten) ? d.seiten : []).slice(0, 40).map(x => txt(x, 60)).filter(Boolean), funde };
 }
 const berichtOut = r => { if (!r) return null; let d = {}; try { d = JSON.parse(r.daten); } catch {} return { id: r.id, version: r.version, prototype_id: r.prototype_id, created_at: r.created_at, ...d }; };
@@ -183,11 +197,17 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
   /** Board (nur Inhaber): Aufträge für die Brücke anstoßen – /bruecke/projekt/<id>/(claude|ordner|stand) */
   async function admin(req, res, p, m, user) {
     // Freigabe einer wartenden Version – braucht die Brücke nicht
+    const pdfm = p.match(/^\/bruecke\/projekt\/(\d+)\/pruefbericht\/pdf$/);
+    if (pdfm && m === "GET") {   // Gesamt-Prüfbericht als PDF (Vorschau für den Inhaber; geht bei der Übergabe an den Kunden)
+      const x = projekt(+pdfm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
+      const buf = await gesamtPruefberichtPdf(x); if (!buf) return json(res, 404, { error: "Noch kein Prüfbericht von Claude." });
+      res.writeHead(200, { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="Pruefbericht.pdf"`, "Cache-Control": "no-store" }); return res.end(buf);
+    }
     const fm = p.match(/^\/bruecke\/projekt\/(\d+)\/(wartend|freigeben|verwerfen|pruefbericht)$/);
     if (fm) {
       const x = projekt(+fm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
       const c = wartend(x.id);
-      if (fm[2] === "pruefbericht" && m === "GET") return json(res, 200, { aktuell: berichtOut(db.prepare("SELECT * FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 1").get(x.id)),
+      if (fm[2] === "pruefbericht" && m === "GET") return json(res, 200, { gesamt: gesamtBericht(x.id), aktuell: berichtOut(db.prepare("SELECT * FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 1").get(x.id)),
         frueher: db.prepare("SELECT * FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 6 OFFSET 1").all(x.id).map(berichtOut),
         pruefKosten: (() => { try { return Math.round(db.prepare("SELECT COALESCE(SUM(cost_usd), 0) s FROM assistant_usage WHERE project_id = ?").get(x.id).s * 100) / 100 || null; } catch { return null; } })() });   // KI im Board für dieses Projekt (alle Stufen, gesamt)
       if (fm[2] === "wartend" && m === "GET") {

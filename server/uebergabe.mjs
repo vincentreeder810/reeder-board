@@ -11,6 +11,7 @@ import { vorlage } from "./mail-vorlagen.mjs";
 import { firmaVonProjekt } from "./firmen.mjs";
 import { versandMerken, erinnerungVormerken } from "./versand.mjs";
 import { abschlussStand } from "./abschluss.mjs";
+import { gesamtPruefberichtPdf } from "./bruecke-software.mjs";
 const FIN_DIR = path.resolve(process.env.DATA_DIR || "data", "finance");
 import { brueckeAuftrag, brueckePruefen, brueckeVerbunden, brueckeEingerichtet } from "./bruecke.mjs";
 import { isOwner } from "./access.mjs";
@@ -70,7 +71,7 @@ const dateien = pid => db.prepare("SELECT id, title, file_name, bytes, format, v
 
 /** Auftrag an Claude (wird in der Claude-App als erste Nachricht geöffnet) */
 function auftragText(pr, formate) {
-  const kat = KATALOG[bereichVon(pr)], liste = kat.filter(x => formate.includes(x.k));
+  const kat = KATALOG[bereichVon(pr)], liste = kat.filter(x => formate.includes(x.k) && !["pruefbericht_pdf"].includes(x.k));
   return `Bitte bereite die Übergabe an den Kunden für „${pr.title}“ vor. Gewünscht sind diese Dateien:
 ${liste.map(x => `- ${x.l} (Schlüssel: ${x.k})${x.h ? ` – ${x.h}` : ""}`).join("\n")}
 
@@ -80,7 +81,7 @@ So gehst du vor:
 3. Schreibe danach \`uebergabe.json\` in den Projektordner:
 { "dateien": [ { "datei": "uebergabe/name.zip", "format": "Schlüssel aus der Liste", "titel": "Kurzer Titel für den Kunden" } ], "hinweis": "Ein Satz für mich: was fehlt oder zu beachten ist" }
 4. Die Brücke lädt die Dateien in wenigen Sekunden ins Board und schreibt das Ergebnis in \`uebergabe-ergebnis.json\`. Lies es und sag mir, was angekommen ist. Der Kunde sieht noch nichts – erst wenn ich die Übergabe im Board sende.
-Einzelne Datei höchstens 45 MB; größere teilst du auf oder sagst es mir.`;
+Einzelne Datei höchstens 45 MB; größere teilst du auf oder sagst es mir.${formate.includes("pruefbericht_pdf") ? "\nDen Prüfbericht als PDF erzeugt das Board selbst aus deinen Prüfberichten – den brauchst du nicht zu machen." : ""}`;
 }
 
 const groesse = b => b > 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
@@ -106,7 +107,13 @@ export function createUebergabe({ json, readJson, clean, logEvent, SITE_URL }) {
       return json(res, 200, out());
     }
     if (mm[2] === "/senden" && m === "POST") {   // Schritt 3: Dateien freischalten, Abschluss-Mail, Chat-Karte, Projekt abschließen
-      const d = await readJson(req, 64 * 1024), st = abschlussStand(pr), docs = dateien(pr.id);
+      const d = await readJson(req, 64 * 1024), st = abschlussStand(pr);
+      if (gewaehlt(pr).includes("pruefbericht_pdf")) { const buf = await gesamtPruefberichtPdf(pr).catch(e => { console.warn("Prüfbericht-PDF:", e.message); return null; });
+        if (buf) { for (const alt of db.prepare("SELECT id, file_token FROM documents WHERE project_id = ? AND kind = 'Übergabe' AND format = 'pruefbericht_pdf'").all(pr.id)) { await rm(path.join(DOC_DIR, alt.file_token), { force: true }); db.prepare("DELETE FROM documents WHERE id = ?").run(alt.id); }
+          const token = randomBytes(24).toString("hex"); await mkdir(DOC_DIR, { recursive: true }); await writeFile(path.join(DOC_DIR, token), buf);
+          db.prepare("INSERT INTO documents(client_id, project_id, kind, title, file_token, file_name, mime, bytes, verborgen, format) VALUES(?, ?, 'Übergabe', 'Prüfbericht zum Projekt', ?, ?, 'application/pdf', ?, 1, 'pruefbericht_pdf')")
+            .run(pr.client_id, pr.id, token, `Pruefbericht-${pr.title.replace(/[^\wäöüÄÖÜß-]+/g, "-").slice(0, 60)}.pdf`, buf.length); } }
+      const docs = dateien(pr.id);
       if (!docs.length) return json(res, 400, { error: "Es gibt noch keine Übergabe-Dateien." });
       if (!st.uebergabeBereit && !d.trotzdem) return json(res, 409, { error: !st.abgenommen_at ? "Das Projekt ist noch nicht als abgenommen eingetragen." : st.uebergabe_nach === "zahlung" ? "Die Endrechnung ist noch nicht bezahlt." : "Die Endrechnung ist noch nicht verschickt.", frage: true });
       const c = db.prepare("SELECT * FROM clients WHERE id = ?").get(pr.client_id);
