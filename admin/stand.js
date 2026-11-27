@@ -288,14 +288,19 @@
     const offen = (b.funde || []).filter(f => f.status === "offen"), behoben = (b.funde || []).filter(f => f.status === "behoben");
     const fund = f => `<li class="pb__f pb__f--${f.schwere}"><span class="pb__s">${SCHW[f.schwere] || f.schwere}</span><span><b>${esc(f.titel)}</b><small>${[f.seite, f.geraet].filter(Boolean).map(esc).join(" · ")}</small></span></li>`;
     const kacheln = ZAHLEN.filter(([k]) => b.zahlen?.[k] != null).map(([k, l]) => `<div class="pb__z ${k === "offen" && b.zahlen[k] ? "pb__z--offen" : ""}"><b>${n(b.zahlen[k])}</b><small>${l}</small></div>`).join("");
-    box.innerHTML = `<div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Prüfbericht von Claude</h2>
-        <p>${b.version ? `Version ${b.version} · ` : ""}${ago(b.created_at)}${r.frueher?.length ? ` · ${r.frueher.length} frühere` : ""}</p></div>
-        ${pbKurz(b).replace("pb__kurz", "pb__kurz pb__kurz--kopf")}</div>
+    const kosten = [["Claude (Bericht)", b.kiKosten]].concat(r.pruefKosten != null ? [["KI im Board (Projekt gesamt)", { betrag: r.pruefKosten, waehrung: "USD" }]] : []).filter(([, k]) => k);
+    const geld = k => Number(k.betrag).toLocaleString("de-DE", { style: "currency", currency: k.waehrung || "USD" });
+    const auf = (() => { try { return sessionStorage.getItem("pb-auf") === "1"; } catch { return false; } })();
+    box.innerHTML = `<details class="pb__auf" ${auf ? "open" : ""}><summary class="pb__sum"><span class="pb__sumt"><b>Prüfbericht von Claude</b><small>${b.version ? `Version ${b.version} · ` : ""}${ago(b.created_at)}${kosten.length ? ` · KI-Kosten ${kosten.map(([, k]) => geld(k)).join(" + ")}` : ""}</small></span>
+        ${pbKurz(b).replace("pb__kurz", "pb__kurz pb__kurz--kopf")}<svg class="pb__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+      <div class="pb__body">
       ${kacheln ? `<div class="pb__zahlen">${kacheln}</div>` : ""}
+      ${kosten.length ? `<p class="pb__kosten">KI-Kosten: ${kosten.map(([l, k]) => `${l} <b>${geld(k)}</b>${k.hinweis ? ` <small>(${esc(k.hinweis)})</small>` : ""}`).join(" · ")}${r.frueher?.length ? ` · ${r.frueher.length} frühere Berichte` : ""}</p>` : ""}
       ${b.zusammenfassung ? `<p class="pb__text">${esc(b.zusammenfassung)}</p>` : ""}
       ${b.geprueft?.length ? `<div class="pb__chips">${b.geprueft.map(g => `<span>${esc(g)}</span>`).join("")}</div>` : ""}
       ${offen.length ? `<p class="pb__h">Offen <em>${offen.length}</em></p><ul class="pb__l">${offen.map(fund).join("")}</ul>` : ""}
-      ${behoben.length ? weitere(behoben.length, `<ul class="pb__l pb__l--ok">${behoben.map(fund).join("")}</ul>`, ["behobener Fund", "behobene Funde"]) : ""}`;
+      ${behoben.length ? weitere(behoben.length, `<ul class="pb__l pb__l--ok">${behoben.map(fund).join("")}</ul>`, ["behobener Fund", "behobene Funde"]) : ""}</div></details>`;
+    box.querySelector("details").addEventListener("toggle", e => { try { sessionStorage.setItem("pb-auf", e.target.open ? "1" : "0"); } catch {} });
   }
   window.STAND = { projectCard, workspace, freigabe, pruefbericht };
 })();

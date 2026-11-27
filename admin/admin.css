@@ -1836,3 +1836,19 @@ label.auf__item{cursor:pointer}
 .pb__f--mittel .pb__s{background:#fff8db;color:#a16207;box-shadow:none}
 .pb__l--ok .pb__f{opacity:.75}.pb__l--ok b{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3)}
 @media (max-width:560px){.pb__zahlen{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pb__z{padding:8px 10px}.pb__z b{font-size:16px}.pb__z small{font-size:11px}}
+
+/* Prüfbericht: zugeklappt nur die Kopfzeile */
+.pb{padding:0!important;overflow:hidden}
+.pb__sum{list-style:none;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;cursor:pointer}
+.pb__sum::-webkit-details-marker{display:none}
+.pb__sum:hover{background:var(--paper,#f6f6f8)}
+.pb__sumt{flex:1 1 220px;min-width:0;display:grid}
+.pb__sumt b{font-size:16px}
+.pb__sumt small{font-size:12.5px;color:var(--muted)}
+.pb__chev{flex:none;width:14px;height:14px;color:var(--muted);transition:transform .25s}
+.pb__auf[open] .pb__chev{transform:rotate(180deg)}
+.pb__body{padding:4px 18px 16px;border-top:1px solid var(--line)}
+.pb__body .pb__zahlen{margin-top:12px}
+.pb__kosten{margin:0 0 10px;font-size:13px;color:var(--ink2,#3a3a44)}
+.pb__kosten small{color:var(--muted)}
+#pPruef>.chead{padding:16px 18px 0}#pPruef>.hint{padding:0 18px 16px}
