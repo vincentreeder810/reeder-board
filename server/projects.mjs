@@ -150,7 +150,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
       ...projectOut(p), payments,
       paid_net: paid, open_net: payments.filter(x => x.status !== "bezahlt").reduce((s, x) => s + x.amount_net, 0),
       appointments: db.prepare("SELECT * FROM appointments WHERE project_id = ? ORDER BY start DESC").all(p.id).map(apptOut),
-      documents: db.prepare("SELECT * FROM documents WHERE project_id = ? ORDER BY COALESCE(doc_date, created_at) DESC").all(p.id).map(d => docOut(d, base)),
+      documents: db.prepare(`SELECT * FROM documents WHERE project_id = ?${includeInactive ? "" : " AND COALESCE(verborgen, 0) = 0"} ORDER BY COALESCE(doc_date, created_at) DESC`).all(p.id).map(d => docOut(d, base)),
       prototypes: protoGroups(`project_id = ?${includeInactive ? "" : " AND active = 1"}`, p.id),
       events: db.prepare("SELECT * FROM events WHERE project_id = ? AND kind != 'anmerkung' ORDER BY id DESC LIMIT 200").all(p.id),
       openNotes: db.prepare("SELECT COUNT(*) n FROM annotations a JOIN prototypes pr ON pr.id = a.prototype_id WHERE pr.project_id = ? AND a.status = 'offen'").get(p.id).n,
@@ -235,10 +235,10 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
       return json(res, 200, out);
     }
     if (p === "/documents" && m === "GET")
-      return json(res, 200, db.prepare("SELECT d.*, p.title project_title FROM documents d LEFT JOIN projects p ON p.id = d.project_id WHERE d.client_id = ? ORDER BY COALESCE(d.doc_date, d.created_at) DESC").all(c.id).map(d => docOut(d, base)));
+      return json(res, 200, db.prepare("SELECT d.*, p.title project_title FROM documents d LEFT JOIN projects p ON p.id = d.project_id WHERE d.client_id = ? AND COALESCE(d.verborgen, 0) = 0 ORDER BY COALESCE(d.doc_date, d.created_at) DESC").all(c.id).map(d => docOut(d, base)));
     mm = p.match(/^\/documents\/(\d+)\/file$/);
     if (mm && m === "GET") {
-      const d = db.prepare("SELECT * FROM documents WHERE id = ? AND client_id = ?").get(+mm[1], c.id);
+      const d = db.prepare("SELECT * FROM documents WHERE id = ? AND client_id = ? AND COALESCE(verborgen, 0) = 0").get(+mm[1], c.id);
       return d ? sendDoc(res, d) : json(res, 404, { error: "Nicht gefunden" });
     }
     mm = p.match(/^\/prototypes\/(\d+)\/annotations$/);

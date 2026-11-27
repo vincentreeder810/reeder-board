@@ -36,6 +36,7 @@ import { createBrueckeSoftware } from "./bruecke-software.mjs";
 import { createWorkspace } from "./workspace.mjs";
 import { createVersand, erinnerungenStarten } from "./versand.mjs";
 import { createAbschluss } from "./abschluss.mjs";
+import { createUebergabe } from "./uebergabe.mjs";
 import { createMailVorschau } from "./mail-vorschau.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
@@ -123,6 +124,7 @@ const workspace = createWorkspace({ json, readJson, clean, limited, SITE_URL });
 portal.extend(workspace.portal);   // Rückfragen im Kundenportal beantworten
 const versand = createVersand({ json, readJson, SITE_URL });   // Versandprotokoll, erneut schicken
 const abschluss = createAbschluss({ json, readJson, logEvent: portal.logEvent });   // Abnahme, Endrechnung, Übergabe
+const uebergabe = createUebergabe({ json, readJson, clean });                         // Übergabe-Dateien (über Claude und die Brücke)
 erinnerungenStarten(SITE_URL);                                  // E-Mail nur, wenn eine Chat-Karte ungelesen bleibt
 const mailVorschau = createMailVorschau({ json, send });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });
@@ -472,6 +474,7 @@ async function adminApi(req, res, url) {
     const from = d(url.searchParams.get("from")) || new Date(Date.now() - 31 * 864e5).toISOString(), to = d(url.searchParams.get("to")) || new Date(Date.now() + 62 * 864e5).toISOString();
     return json(res, 200, kalender(user, from, to)); }
   if (p === "/inbox") return json(res, 200, inbox(user));
+  if (/^\/projects\/\d+\/uebergabe(\/|$)/.test(p)) { const r = await uebergabe.admin(req, res, p, m, user); if (r !== null) return; }
   if (/^\/projects\/\d+\/abschluss$/.test(p)) { const r = await abschluss.admin(req, res, p, m, user); if (r !== null) return; }
   if (p === "/versand" || /^\/projects\/\d+\/stand\/erneut$|^\/documents\/\d+\/erneut$/.test(p)) { const r = await versand.admin(req, res, url, p, m, user); if (r !== null) return; }
   if (p === "/chats" || p.startsWith("/chats/")) { const r = await portal.chatAdmin(req, res, url, p, m, user); if (r !== null) return; }   // Ansicht „Chats“: Fäden, Teilnehmer, neuer Chat
@@ -679,6 +682,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === "/login" || url.pathname === "/login/") return send(res, 302, "", { Location: "/portal/" + (url.search || "") });
     if (url.pathname.startsWith("/api/onboarding/")) { const r = await onboarding.publicRoute(req, res, url); if (r !== null) return; }
     if (url.pathname.startsWith("/api/bruecke/software/")) return await brueckeSw.publicRoute(req, res, url);
+    if (url.pathname.startsWith("/api/bruecke/uebergabe/")) return await uebergabe.publicRoute(req, res, url);
     if (url.pathname.startsWith("/api/bruecke/")) return await bruecke.publicRoute(req, res, url);
     if (url.pathname.startsWith("/api/vorab/")) { const r = await vorab.publicRoute(req, res, url); if (r !== null) return; }
     if (url.pathname === "/api/stand" || url.pathname === "/api/stand/auftrag") return await stand.publicRoute(req, res, url);

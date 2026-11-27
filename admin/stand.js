@@ -303,13 +303,27 @@
     box.querySelector("details").addEventListener("toggle", e => { try { sessionStorage.setItem("pb-auf", e.target.open ? "1" : "0"); } catch {} });
   }
   /* ---------- Abschluss: Abnahme → Abgenommen → Endrechnung → Übergabe (Schritt 1 von 3) ---------- */
-  let AB = null;
+  let AB = null, UE = null;
+  const groesse = b => b > 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+  /* Übergabe-Dateien: was der Kunde bekommt (ankreuzen), Auftrag an Claude, angekommene Dateien */
+  function ueBlock() {
+    if (!UE) return "";
+    const lab = k => UE.katalog.find(x => x.k === k)?.l || k;
+    const status = UE.fertig_at ? `Von Claude geliefert am ${tagZeit(UE.fertig_at)} Uhr${UE.hinweis ? ` · „${esc(UE.hinweis)}“` : ""}`
+      : UE.angefordert_at ? `Auftrag an Claude geschickt am ${tagZeit(UE.angefordert_at)} Uhr – die Dateien kommen über die Brücke.` : "Noch nicht vorbereitet.";
+    return `<div class="pue"><div class="pue__k"><b>Übergabe-Dateien</b><small>${status}</small></div>
+      <details class="pue__wahl"><summary>Was der Kunde bekommt · ${UE.gewaehlt.length} ausgewählt</summary>
+        <div class="pue__liste">${UE.katalog.map(x => `<label class="pue__o"><input type="checkbox" data-ue-format value="${esc(x.k)}" ${UE.gewaehlt.includes(x.k) ? "checked" : ""}><span><b>${esc(x.l)}</b>${x.h ? `<small>${esc(x.h)}</small>` : ""}</span></label>`).join("")}</div></details>
+      ${UE.dateien.length ? `<ul class="pue__d">${UE.dateien.map(d => `<li><a href="${d.url}" target="_blank" rel="noopener"><b>${esc(d.title)}</b><small>${esc(d.file_name)} · ${groesse(d.bytes)}${d.format ? ` · ${esc(lab(d.format))}` : ""}</small></a><span class="pue__vis">${d.verborgen ? "für den Kunden noch verborgen" : "beim Kunden"}</span><button type="button" class="link link--leise" data-ue-weg="${d.id}" title="Datei entfernen">✕</button></li>`).join("")}</ul>` : ""}
+      <div class="pue__a"><button type="button" class="btn btn--${UE.dateien.length ? "ghost" : "grad"} btn--sm" data-ue="vorbereiten">${UE.dateien.length ? "Neu vorbereiten lassen" : "Übergabe vorbereiten (Claude)"}</button></div></div>`;
+  }
   const euroN = c => (Number(c || 0) / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
   const tagZeit = s => C.fmt(String(s).includes("T") ? s : String(s).replace(" ", "T") + "Z", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   async function abschluss(p) {
     const box = $("#pAbschluss"); if (!box || !p || !ME.owner) return;
     if (!["aktiv", "abgeschlossen"].includes(p.status)) { box.hidden = true; return; }
     AB = await api(`/projects/${p.id}/abschluss`).catch(() => null); if (!AB) return;
+    UE = await api(`/projects/${p.id}/uebergabe`).catch(() => null);
     box.hidden = false; box.dataset.pid = p.id; box.dataset.cid = p.client_id;
     const sw = AB.bereich === "software", jetzt = Date.now();
     const abn = AB.abnahme[0], inst = AB.installation[0];
@@ -342,10 +356,18 @@
         ${schritt(s4, "Übergabe an den Kunden",
           `${AB.uebergabeBereit ? "Bereit – Code bzw. Dateien, Prüfbericht und Rechnung können raus." : `Wird freigegeben ${AB.uebergabe_nach === "zahlung" ? "nach Zahlungseingang der Endrechnung" : "sobald die Endrechnung verschickt ist"}.`}
             <label class="pab__nach">Freigeben: <select data-ab="nach"><option value="zahlung" ${AB.uebergabe_nach === "zahlung" ? "selected" : ""}>nach Zahlungseingang</option><option value="rechnung" ${AB.uebergabe_nach === "rechnung" ? "selected" : ""}>sofort mit der Endrechnung</option></select></label>`,
-          `<button class="btn btn--ghost btn--sm" disabled title="Kommt im nächsten Schritt: Übergabe-Paket und Abschluss-Mail">Übergabe senden</button>`)}
-      </ol></details>`;
+          `<button class="btn btn--ghost btn--sm" disabled title="Kommt im nächsten Schritt: Abschluss-Mail und Ordner im Kundenportal">Übergabe senden</button>`)}
+      </ol>${ueBlock()}</details>`;
   }
   document.addEventListener("click", async e => {
+    const u = e.target.closest("#pAbschluss [data-ue], #pAbschluss [data-ue-weg]");
+    if (u) { const box = $("#pAbschluss"), pid = box.dataset.pid, neu = () => abschluss({ id: +pid, client_id: +box.dataset.cid, status: AB?.status || "aktiv" });
+      try {
+        if (u.dataset.ueWeg) { if (!(await UI.confirm("Die Datei wird aus der Übergabe entfernt.", { title: "Datei entfernen?", ok: "Entfernen", danger: true }))) return;
+          await api(`/projects/${pid}/uebergabe/datei/${u.dataset.ueWeg}`, { method: "DELETE", body: {} }); return neu(); }
+        if (!(await UI.confirm("Claude öffnet sich auf deinem Rechner im Projektordner und erzeugt die ausgewählten Dateien. Die Brücke bringt sie danach hierher – der Kunde sieht sie erst, wenn du die Übergabe sendest.", { title: "Übergabe vorbereiten lassen?", ok: "Claude beauftragen" }))) return;
+        u.disabled = true; await api(`/projects/${pid}/uebergabe/vorbereiten`, { method: "POST", body: {} }); toast("Auftrag an Claude geschickt – die Claude-App öffnet sich gleich."); return neu();
+      } catch (err) { toast(err.message); u.disabled = false; } return; }
     const b = e.target.closest("[data-ab]"); if (!b || b.tagName === "SELECT" || !b.closest("#pAbschluss")) return;
     const box = $("#pAbschluss"), pid = +box.dataset.pid, cid = +box.dataset.cid, neu = () => abschluss({ id: pid, client_id: cid, status: AB?.status || "aktiv" });
     try {
@@ -362,6 +384,9 @@
     } catch (err) { toast(err.message); }
   });
   document.addEventListener("change", async e => {
+    const cb = e.target.closest("#pAbschluss [data-ue-format]");
+    if (cb) { const box = $("#pAbschluss"), formate = $$("[data-ue-format]:checked", box).map(x => x.value);
+      try { UE = await api(`/projects/${box.dataset.pid}/uebergabe`, { method: "POST", body: { formate } }); const s = $(".pue__wahl summary", box); if (s) s.textContent = `Was der Kunde bekommt · ${UE.gewaehlt.length} ausgewählt`; } catch (err) { toast(err.message); } return; }
     const s = e.target.closest("#pAbschluss [data-ab=nach]"); if (!s) return;
     const box = $("#pAbschluss");
     try { await api(`/projects/${box.dataset.pid}/abschluss`, { method: "POST", body: { aktion: "uebergabe_nach", wert: s.value } }); toast("Gespeichert"); abschluss({ id: +box.dataset.pid, client_id: +box.dataset.cid, status: AB?.status || "aktiv" }); }
