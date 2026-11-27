@@ -118,6 +118,7 @@ Halte die Datei aktuell: am Ende jeder Sitzung, nach jedem größeren Schritt un
 
 Sagt der Inhaber ausdrücklich, dass du den Stand hochladen sollst („lade den aktuellen Stand hoch“), dann:
 
+0. Gibt es zum jetzigen Stand noch keinen frischen Prüfbericht (siehe unten), prüfe zuerst – nie einen ungeprüften Stand hochladen. Bleibt danach etwas Wichtiges offen (kritisch oder hoch), lade **nicht** hoch, sondern sag dem Inhaber, was offen ist, und frag, ob du es erst beheben oder trotzdem hochladen sollst.
 1. \`arbeitsstand.json\` aktualisieren.
 2. Im Projektordner die Datei \`hochladen.json\` anlegen: \`{ "aenderungen": "Ein, höchstens zwei kurze Sätze für den Kunden: Was ist neu?", "erledigteAnmerkungen": [12, 15] }\` – in \`erledigteAnmerkungen\` die Nummern der Anmerkungen aus \`anmerkungen.md\`, die in diesem Stand wirklich umgesetzt sind (sonst leere Liste).
 3. Die Brücke lädt den Inhalt von \`website/\` innerhalb weniger Sekunden hoch, löscht \`hochladen.json\` und schreibt das Ergebnis in \`hochladen-ergebnis.json\`. Lies diese Datei nach etwa zehn Sekunden und sag dem Inhaber, welche Version hochgeladen ist (oder was nicht geklappt hat).
@@ -128,10 +129,16 @@ Eine Anmerkung, die du bewusst nicht umgesetzt hast, meldest du nicht als erledi
 
 ## Prüfbericht für das Board (pruefbericht.json)
 
-Das Board hat keinen eigenen Browser zum Testen – die Prüfung machst du. Immer wenn du an der Website etwas geändert hast und **bevor** du einen Stand hochlädst:
+Das Board hat keinen eigenen Browser zum Testen – die Prüfung machst du. Die Reihenfolge ist immer: **fertig arbeiten → prüfen und beheben → Bericht → erst dann hochladen.**
+
+- Bist du mit einer Aufgabe fertig, sag das dem Inhaber und biete von dir aus an: „Soll ich die Website jetzt in allen Größen prüfen und den Prüfbericht schreiben?“ Erst nach seinem Ja prüfen.
+- Nach dem Bericht fragst du: „Der Prüfbericht ist im Board. Soll ich den Stand jetzt hochladen?“ Hochladen nur auf sein ausdrückliches Ja.
+- Ändert sich nach dem Bericht noch etwas an der Website, ist der Bericht veraltet: vor dem Hochladen erneut prüfen und einen neuen Bericht schreiben.
+
+So prüfst du:
 
 1. Prüfe die Seite in einem echten Browser in diesen Größen: Desktop 1440 px, Tablet 820 px, Handy 390 px und kleines Handy 320 px. Achte auf abgeschnittene oder überlappende Inhalte, waagerechtes Scrollen, kaputte Links und Bilder, Fehler in der Konsole, Lesbarkeit und Kontrast, Tippfehler und widersprüchliche Angaben (z. B. Öffnungszeiten), Impressum und Datenschutz erreichbar.
-2. Behebe, was du findest, und prüfe erneut.
+2. Behebe, was du findest, und prüfe erneut – so lange, bis nichts Kritisches oder Hohes mehr offen ist (oder du den Inhaber gefragt hast, weil sich etwas nicht beheben lässt).
 3. Schreibe das Ergebnis in \`pruefbericht.json\` im Projektordner (Datei jedes Mal ganz neu schreiben, nur echte Zahlen – nichts schätzen oder erfinden; was du nicht gezählt hast, lässt du weg):
 
 \`\`\`json
