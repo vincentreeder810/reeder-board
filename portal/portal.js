@@ -232,7 +232,25 @@ window.addEventListener("rs:viewer-open", e => { if (e.detail?.id) api(`/prototy
 // und zeigt auch, wenn schon alles beantwortet ist, eine kurze Bestätigung.
 let RQ = { offen: [], beantwortet: [] }, rqFrisch = new Set();
 const absatz = t => esc(t).replace(/\n/g, "<br>");
-function renderRueck(direkt) {
+/* Übersicht: nur noch ein kleiner Hinweis – beantwortet wird im Chat des Projekts.
+   Zeigt offene Rückfragen und ungelesene Nachrichten, jeweils mit Sprung in den passenden Chat. */
+async function renderRueck() {
+  const el = $("#ovRueck"), offen = RQ.offen;
+  const faeden = await api("/threads").catch(() => []), ungelesen = faeden.filter(t => t.unread), nUngelesen = ungelesen.reduce((s, t) => s + t.unread, 0);
+  const zeilen = [];
+  if (offen.length) {
+    const ziel = offen[0].project_id ?? "allgemein";
+    zeilen.push(`<a class="ovhin ovhin--frage" href="#chat/${ziel}"><span class="ovhin__ic">${ICON_FRAGE}</span><span class="ovhin__t"><b>${offen.length === 1 ? "Eine Rückfrage wartet" : `${offen.length} Rückfragen warten`} auf Ihre Antwort</b><small>${new Set(offen.map(x => x.project_id)).size > 1 ? "in mehreren Projekten" : `zu „${esc(offen[0].projekt)}“`}</small></span><span class="ovhin__go">Im Chat beantworten →</span></a>`);
+  }
+  if (nUngelesen) {
+    const ziel = ungelesen[0].key ?? (ungelesen[0].project_id ?? "allgemein");
+    zeilen.push(`<a class="ovhin" href="#chat/${ziel}"><span class="ovhin__ic">${ICON_CHAT}</span><span class="ovhin__t"><b>${nUngelesen === 1 ? "Eine neue Nachricht" : `${nUngelesen} neue Nachrichten`} im Chat</b><small>${ungelesen.length > 1 ? `in ${ungelesen.length} Chats` : esc(ungelesen[0].title)}</small></span><span class="ovhin__go">Öffnen →</span></a>`);
+  }
+  el.innerHTML = zeilen.length ? `<div class="ovhins">${zeilen.join("")}</div>` : "";
+}
+const ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>`;
+// Früherer großer Rückfragen-Block (bleibt ungenutzt im Code, falls er wieder gebraucht wird)
+function renderRueckAlt(direkt) {
   const el = $("#ovRueck"), offen = RQ.offen, fertig = RQ.beantwortet.filter(b => rqFrisch.has(b.id));
   if (!offen.length && !fertig.length && !direkt) { el.innerHTML = ""; return; }
   const projekte = new Set([...offen, ...fertig].map(x => x.project_id)), mitProjekt = projekte.size > 1;
@@ -258,10 +276,9 @@ async function ladeRueck(direkt) {
   renderRueck(direkt);
 }
 async function viewRueckfragen() {
-  await viewOverview(true);
-  const k = $("#rueckfragen"); if (!k) return;
-  k.scrollIntoView({ behavior: "smooth", block: "start" });
-  const erstes = $("textarea", k); if (erstes) setTimeout(() => erstes.focus({ preventScroll: true }), 400);
+  // Alte Links (#rueckfragen aus früheren Mails) führen jetzt direkt in den Chat mit der ersten offenen Rückfrage
+  RQ = await api("/rueckfragen").catch(() => ({ offen: [], beantwortet: [] }));
+  location.replace(`#chat/${RQ.offen[0]?.project_id ?? ""}`);
 }
 $("#ovRueck").addEventListener("submit", async e => {
   const f = e.target.closest("[data-rq]"); if (!f) return; e.preventDefault();

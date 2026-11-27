@@ -59,6 +59,24 @@
   }
   // Antwort auf eine Rückfrage: ganz normale Chat-Blase mit der Frage als Zitat darüber (wie „Antworten“ bei WhatsApp)
   const antwortCard = m => `<div class="msg__bubble msg__bubble--zitat"><span class="msg__zitat"><small>Rückfrage</small>${absatz(m.meta.frage || "")}</span>${linkify(m.meta.antwort || "").replace(/\n/g, "<br>")}</div>`;
+  /* Neuer Stand: alles in einer Karte – Kopf „Neuer Stand für Sie verfügbar“, wer freigegeben hat und wann,
+     eine echte Mini-Vorschau der Version, „Das ist neu“ als Liste und der Knopf „Jetzt ansehen“. */
+  const MONITOR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2.5"/><path d="M8 21h8M12 17v4"/></svg>`;
+  const punkte = t => String(t || "").split(/\n+|;\s+|(?<=[.!])\s+(?=[A-ZÄÖÜ])/).map(s => s.replace(/^[-–•*]\s*/, "").replace(/[.;]\s*$/, "").trim()).filter(Boolean).slice(0, 6);
+  function standKarte(m, me, vorschau) {
+    const p = m.prototype, v = p?.version || 1, kunde = me === "client";
+    if (!p) return `<div class="stk stk--weg"><div class="stk__kopf"><span class="stk__ic">${MONITOR}</span><div><b>Ein früherer Stand</b><small>Diese Version ist nicht mehr verfügbar.</small></div></div></div>`;
+    const neu = punkte(p.changes || m.body.split("\n").slice(1).join("\n"));
+    const kopf = v > 1 ? (kunde ? "Neuer Stand für Sie verfügbar" : "Neuer Stand an den Kunden") : (kunde ? "Ihr erster Entwurf ist da" : "Erster Entwurf an den Kunden");
+    const zeit = fmt(m.created_at, { hour: "2-digit", minute: "2-digit" });
+    return `<div class="stk">
+      <div class="stk__kopf"><span class="stk__ic">${MONITOR}</span><div><b>${kopf}</b><small>${kunde ? "Freigegeben von" : "Freigegeben von"} ${esc(m.author)}${m.rolle && m.rolle !== "Inhaber" ? ` · ${esc(m.rolle)}` : ""} · ${zeit} Uhr</small></div><em class="stk__v">V${v}</em></div>
+      <button type="button" class="stk__bild" data-proto='${esc(JSON.stringify(protoData(p)))}' aria-label="${esc(p.title)} öffnen">
+        ${vorschau ? `<iframe src="${esc(p.url)}" loading="lazy" sandbox="allow-scripts" tabindex="-1" aria-hidden="true" title=""></iframe>` : `<span class="stk__deko">${MONITOR}</span>`}
+        <span class="stk__leiste"><i></i><i></i><i></i><span>${esc(p.title)}</span></span></button>
+      <div class="stk__text"><b>${esc(p.title)}</b>${neu.length ? `<small>Das ist neu</small><ul>${neu.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</div>
+      <button type="button" class="stk__btn" data-proto='${esc(JSON.stringify(protoData(p)))}'>${kunde ? "Jetzt ansehen" : "Version ansehen"}</button></div>`;
+  }
   function inhalt(m, me) {
     if (m.art === "rueckfragen" && m.meta?.fragen?.length) return rueckfragenCard(m, me);
     if (m.art === "antwort" && m.meta?.frage) return antwortCard(m);
@@ -69,11 +87,17 @@
   function render(log, msgs, me, emptyHtml) {
     if (!msgs.length) { log.innerHTML = `<div class="chat__empty">${emptyHtml}</div>`; return; }
     let html = "", lastDay = "", lastSender = "", lastAuthor = "", lastTime = 0;
+    const letzterStand = [...msgs].reverse().find(m => m.has_prototype)?.id;   // nur die neueste Stand-Karte bekommt eine echte Live-Vorschau
     for (const m of msgs) {
       const d = dayKey(m.created_at), t = toDate(m.created_at).getTime();
       if (d !== lastDay) { html += `<div class="chat__day">${dayLabel(m.created_at)}</div>`; lastDay = d; lastSender = ""; }
       // Hinweise wie „X hat Y zum Chat hinzugefügt“ stehen klein in der Mitte
       if (m.art === "system") { html += `<div class="chat__sys">${esc(m.body)}</div>`; lastSender = ""; continue; }
+      // Neuer Stand: eigenständige Karte, steht für sich (nicht an die Nachricht darüber angehängt)
+      if (m.has_prototype) {
+        html += `<div class="msg ${m.sender === me ? "msg--mine" : "msg--theirs"} msg--stand">${standKarte(m, me, m.id === letzterStand)}</div>`;
+        lastSender = ""; lastTime = 0; continue;
+      }
       const same = m.sender === lastSender && m.author === lastAuthor && t - lastTime < 5 * 60000;
       const mine = m.sender === me;
       const who = m.sender === "team" ? `${esc(m.author)} · ${esc(m.rolle && m.rolle !== "Inhaber" ? m.rolle : "Reeder Software")}` : esc(m.author);

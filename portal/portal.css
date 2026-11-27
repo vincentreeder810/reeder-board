@@ -563,3 +563,16 @@ body.im-chat .main{padding-bottom:34px}
   body.im-chat .chat--full .chat__log{padding:24px max(32px,calc((100% - 860px) / 2)) 12px}
   body.im-chat .chat--full .composer{padding:14px max(28px,calc((100% - 860px) / 2)) 18px}
 }
+
+/* Übersicht: kleine Hinweise (offene Rückfragen, neue Nachrichten) mit Sprung in den Chat */
+.ovhins{display:grid;gap:8px;margin-bottom:18px}
+.ovhin{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:16px;background:var(--white);box-shadow:0 0 0 1px var(--line);text-decoration:none;color:var(--ink);transition:box-shadow .2s,transform .2s}
+.ovhin:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(139,92,246,.35),0 12px 26px -18px rgba(139,92,246,.7)}
+.ovhin--frage{box-shadow:0 0 0 1px rgba(139,92,246,.3);background:linear-gradient(90deg,rgba(139,92,246,.07),rgba(236,72,153,.04) 70%,var(--white))}
+.ovhin__ic{flex:none;width:34px;height:34px;border-radius:11px;background:var(--grad);color:#fff;display:grid;place-items:center}
+.ovhin__ic svg{width:18px;height:18px}
+.ovhin__t{flex:1;min-width:0;display:grid}
+.ovhin__t b{font-size:14.5px;letter-spacing:-.01em}
+.ovhin__t small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovhin__go{flex:none;font-size:13px;font-weight:600;color:#7c3aed;white-space:nowrap}
+@media (max-width:520px){.ovhin__go{font-size:0}.ovhin__go::after{content:"›";font-size:22px;line-height:1}}
