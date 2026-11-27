@@ -117,7 +117,8 @@ const support = createSupport({ json, readJson, clean, SITE_URL });
 const vereinbarungen = createVereinbarungen({ json, readJson, clean });
 const bruecke = createBruecke({ json, send, readJson });
 const brueckeSw = createBrueckeSoftware({ json, send, readJson, clean, publish: (...a) => stand.publish(...a), stand: { discardCandidate: (...a) => stand.discardCandidate(...a), releaseCandidate: (...a) => stand.releaseCandidate(...a) } });
-const workspace = createWorkspace({ json, readJson, clean, SITE_URL });
+const workspace = createWorkspace({ json, readJson, clean, limited, SITE_URL });
+portal.extend(workspace.portal);   // Rückfragen im Kundenportal beantworten
 const mailVorschau = createMailVorschau({ json, send });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });
 const onboarding = createOnboarding({ json, readJson, clean, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient: (...a) => portal.currentClient(...a), clientLogin: (...a) => portal.clientLogin(...a) });

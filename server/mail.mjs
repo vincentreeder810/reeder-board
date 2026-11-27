@@ -38,7 +38,7 @@ export async function testSmtp(to) {
     await transporter.verify();
     const cfg = getSetting("mail", DEFAULT_MAIL);
     const betreff = "Ihr Mailversand ist eingerichtet", text = `Hallo,\n\ndiese Nachricht bestätigt, dass Ihr Board E-Mails über das Postfach ${cfg.fromAddress} verschicken kann.\n\nSie müssen nichts weiter tun.\n\nViele Grüße\n${cfg.fromName}`;
-    const html = mailHtml({ subject: betreff, text, vorschautext: "Der Versand über Ihr eigenes Postfach funktioniert." });
+    const html = mailHtml({ subject: betreff, text, vorschautext: "Der Versand über Ihr eigenes Postfach funktioniert.", an: "team" });
     await transporter.sendMail({ from: `"${cfg.fromName}" <${cfg.fromAddress}>`, to, subject: betreff, text, html });
     protokoll(to, betreff, text, html, "versendet", null, "testmail");
     return { ok: true };
@@ -54,7 +54,7 @@ export async function testSmtp(to) {
  * text = Klartext; html optional (sonst aus text gebaut); knopf = { label, url } optional; art = Vorlagen-Schlüssel fürs Protokoll;
  * firma = "software" | "hardware" (Absendername, Wortmarke und Fuß; Hardware nur, wenn die Hardware GmbH aktiv ist).
  */
-export async function sendMail({ to, subject, text, html, knopf, attachments, art, firma = "software" }) {
+export async function sendMail({ to, subject, text, html, knopf, attachments, art, firma = "software", an = "kunde" }) {
   const cfg = getSetting("mail", DEFAULT_MAIL), f = firmaDaten(firma);
   // Gleiche Absenderadresse, nur der Name wechselt mit der Firma
   const von = `"${String(f.firma === "hardware" ? f.name : cfg.fromName).replace(/["\r\n]/g, "")}" <${cfg.fromAddress}>`;
@@ -62,8 +62,9 @@ export async function sendMail({ to, subject, text, html, knopf, attachments, ar
   // Steht der Knopf-Link nicht im Text, bekommt auch die Klartext-Fassung ihn (vor dem Gruß)
   if (knopf?.url && !text.includes(knopf.url)) text = linkInText(text, knopf);
   let fassung = html || null;
-  if (!fassung) { try { fassung = mailHtml({ subject, text, knopf, firma: f }); } catch (e) { console.warn("E-Mail: HTML-Fassung nicht erzeugt –", e.message); } }
+  if (!fassung) { try { fassung = mailHtml({ subject, text, knopf, firma: f, an }); } catch (e) { console.warn("E-Mail: HTML-Fassung nicht erzeugt –", e.message); } }
   text = ohneSternchen(text);   // Klartext ohne **Markierungen**
+  if (an !== "team") text = `${text.replace(/\s+$/, "")}\n\n—\n${NICHT_ANTWORTEN}`;   // Kundenmails: gleiche Zeile wie im HTML-Fuß
   if (!smtpReady) { protokoll(to, subject, text, fassung, "nicht versendet – SMTP nicht eingerichtet", null, art || null); return false; }
   try {
     await transporter.sendMail({ from: von, to, subject, text, ...(fassung ? { html: fassung } : {}), attachments });
@@ -261,7 +262,9 @@ function grussHtml(gruss) {
 </tr></table></td></tr>`;
 }
 
-function fussHtml(firma) {
+/** Fußzeile jeder Kundenmail: Antworten bitte über das Kundenportal, nicht per E-Mail */
+export const NICHT_ANTWORTEN = "Bitte antworten Sie nicht auf diese E-Mail – Nachrichten an uns schreiben Sie am besten im Kundenportal.";
+function fussHtml(firma, an = "kunde") {
   const adr = [firma.street, [firma.zip, firma.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const web = String(firma.website || "").trim(), webUrl = web && (/^https?:\/\//i.test(web) ? web : `https://${web}`);
   const mail = String(firma.email || "").trim();
@@ -271,7 +274,7 @@ function fussHtml(firma) {
   return `<tr><td class="r-fuss" align="center" style="padding:28px 40px 8px;${st}">
 <span style="font-weight:600;color:${F.tinte2}">${esc(firma.name || "")}</span>${adr ? `<br>${esc(adr)}` : ""}${kontakt ? `<br>${kontakt}` : ""}
 </td></tr>
-<tr><td class="r-fuss" align="center" style="padding:10px 40px 40px;${st}">Sie erhalten diese Nachricht im Rahmen Ihrer Anfrage bzw. Zusammenarbeit mit ${esc(firma.name || "uns")}.</td></tr>`;
+<tr><td class="r-fuss" align="center" style="padding:10px 40px 40px;${st}">${an !== "team" ? `${esc(NICHT_ANTWORTEN)}<br>` : ""}Sie erhalten diese Nachricht im Rahmen Ihrer Anfrage bzw. Zusammenarbeit mit ${esc(firma.name || "uns")}.</td></tr>`;
 }
 
 /**
@@ -279,8 +282,9 @@ function fussHtml(firma) {
  * subject = Betreff (auch als Überschrift), text = Klartext, knopf = { label, url } optional,
  * vorschautext = unsichtbarer Vorschautext im Posteingang (sonst der erste Satz),
  * firma = "software" | "hardware" (über firmaDaten) oder direkt ein Firmendaten-Objekt (z. B. für die Vorschau).
+ * an = "kunde" (Vorgabe; Fuß mit „Bitte antworten Sie nicht …“) | "team" (ohne diese Zeile).
  */
-export function mailHtml({ subject, text, knopf = null, vorschautext = "", firma = "software" }) {
+export function mailHtml({ subject, text, knopf = null, vorschautext = "", firma = "software", an = "kunde" }) {
   const f = firma && typeof firma === "object" ? firma : firmaDaten(firma);
   const { teile, gruss } = zerlege(text);
   const vorschau = String(vorschautext || ersterSatz(teile) || "").trim();
@@ -354,7 +358,7 @@ ${rows.join("\n")}
 <tr><td height="40" style="height:40px;font-size:0;line-height:0">&nbsp;</td></tr>
 </table>
 </td></tr>
-${fussHtml(f)}
+${fussHtml(f, an)}
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>

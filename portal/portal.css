@@ -518,3 +518,25 @@ a.tile:hover{transform:translateY(-3px)}
 @media (max-width:400px){.nav .brand em{display:none}}
 /* Schmale Fenster: Die Leiste bleibt flach, auch wenn die Seite wenig Inhalt hat (vorher teilte sie sich die Höhe mit dem Inhalt) */
 @media (max-width:860px){.shell{grid-template-rows:auto 1fr}.nav{align-self:start}}
+
+/* ---------- Rückfragen von Reeder Software (oben auf der Startseite) ---------- */
+.rq{margin-bottom:18px;padding:22px;border-radius:22px;scroll-margin-top:16px;min-width:0;
+  background:linear-gradient(#fff,#fff) padding-box,var(--grad) border-box;border:1.5px solid transparent;box-shadow:0 22px 46px -30px rgba(139,92,246,.6)}
+.rq__head{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;min-width:0}
+.rq__ic{width:52px;height:52px;border-radius:16px;background:var(--grad);display:grid;place-items:center;color:#fff}
+.rq__ic svg{width:26px;height:26px;display:block}
+.rq__head h2{margin:0;font-size:20px;letter-spacing:-.025em;line-height:1.25}
+.rq__head p{margin:3px 0 0;font-size:14px;color:var(--ink2);overflow-wrap:anywhere}
+.rq__list{display:grid;gap:12px;margin-top:18px}
+.rq__item{display:grid;gap:10px;padding:16px;border-radius:16px;background:var(--paper);min-width:0}
+.rq__q{margin:0;font-size:15.5px;line-height:1.45;overflow-wrap:anywhere}
+.rq__q small{display:block;margin-bottom:2px;font-size:12px;font-weight:600;color:var(--violet)}
+.rq__lbl{display:block}
+.rq textarea{font-size:16px;line-height:1.45;background:#fff;border-color:var(--line);resize:vertical;min-height:84px;max-width:100%}
+.rq textarea:focus{border-color:var(--violet)}
+.rq__acts{display:flex;justify-content:flex-end}
+.rq__item--ok{background:#f1faf4}
+.rq__ok{justify-self:start;font-size:12.5px;font-weight:600;color:var(--green);background:#fff;border-radius:999px;padding:3px 10px;box-shadow:inset 0 0 0 1px rgba(31,157,85,.25)}
+.rq__a{margin:0;font-size:14.5px;color:var(--ink2);white-space:pre-wrap;overflow-wrap:anywhere}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@media (max-width:640px){.rq{padding:18px}.rq__ic{width:44px;height:44px;border-radius:14px}.rq__ic svg{width:22px;height:22px}.rq__head h2{font-size:18px}.rq__item{padding:14px}.rq__acts .btn{width:100%;height:44px}}

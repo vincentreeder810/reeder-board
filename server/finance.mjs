@@ -367,6 +367,19 @@ Regeln:
       audit(user.name, "entwurf", kind, r.lastInsertRowid, `${c.company} · ${euro(t.gross)}`);
       return json(res, 201, invoiceFull(r.lastInsertRowid));
     }
+    // Alle Angebote, Rechnungen und Stornos eines Projekts (nur lesen) – für die Karte „Angebote und Rechnungen“ auf der Projektseite
+    let pd = q.match(/^\/projects\/(\d+)\/dokumente$/);
+    if (pd && m === "GET") {
+      const rows = db.prepare("SELECT * FROM invoices WHERE project_id = ? AND kind IN ('angebot','rechnung','storno') ORDER BY COALESCE(issue_date, created_at) DESC, id DESC").all(+pd[1]);
+      return json(res, 200, rows.map(r => {
+        const acc = r.kind === "angebot" ? db.prepare("SELECT decision, created_at, doc_id FROM acceptances WHERE invoice_id = ?").get(r.id) : null;
+        const storniert = r.cancels_id ? db.prepare("SELECT number FROM invoices WHERE id = ?").get(r.cancels_id)?.number : null;
+        return { id: r.id, kind: r.kind, number: r.number, status: r.status, title: r.title, locked: !!r.locked, issue_date: r.issue_date, due_date: r.due_date, valid_until: r.valid_until,
+          gross: r.locked ? r.gross : totals(db.prepare("SELECT * FROM invoice_items WHERE invoice_id = ?").all(r.id)).gross, payment_id: r.payment_id, sent_at: r.sent_at, paid_at: r.paid_at,
+          dunning: r.kind === "rechnung" && r.status === "offen" ? dunningOf(r) : null, cancels_number: storniert,
+          acceptance: acc ? { decision: acc.decision, at: acc.created_at, doc_id: acc.doc_id } : null };
+      }));
+    }
     let mm = q.match(/^\/invoices\/(\d+)(\/(pdf|issue|send|paid|cancel|remind|convert|status))?$/);
     if (mm) {
       const id = +mm[1], act = mm[3], inv = invoiceFull(id);

@@ -183,6 +183,7 @@ export function createWork({ json, readJson, clean, logEvent }) {
       return json(res, 200, { timer: timerOut(user.id), stopped });
     }
     if (p === "/timer" && m === "DELETE") { const r = stopTimer(user); return json(res, 200, { stopped: r }); }
+    if (p === "/timer" && m === "GET") return json(res, 200, { timer: timerOut(user.id) });   // laufende Stoppuhr (für die Vorgangskarten im Arbeitsplatz)
     // Zeiteinträge
     if (p === "/time" && m === "POST") {
       const d = await readJson(req), min = parseMinutes(d.duration ?? d.minutes), pid = +d.project_id || null;

@@ -71,7 +71,7 @@
   // Auf der Projektseite nur die Zeit-Karte neu zeichnen – nicht die ganze Seite (sonst springt sie)
   const zeitNeu = () => location.hash.startsWith("#projekte/") ? projectCards({ id: +location.hash.split("/")[1] }) : refreshViews();
   async function stopTimer() { const r = await api("/timer", { method: "DELETE", body: {} }); toast(r.stopped?.minutes ? `${hm(r.stopped.minutes)} Std. gespeichert${r.stopped.capped ? " (auf 12 Std. begrenzt – bitte prüfen)" : ""}.` : "Stoppuhr gestoppt (unter einer Minute, nichts gespeichert)."); window.updateBadges?.(); zeitNeu(); }
-  const refreshViews = () => { if (location.hash.startsWith("#arbeitsplatz") || !location.hash) load(); else if (location.hash.startsWith("#projekte/")) window.KUNDEN.openProjectPage(+location.hash.split("/")[1], true); else if (location.hash.startsWith("#cockpit")) window.BOARD.cockpit(); };
+  const refreshViews = () => { if (location.hash.startsWith("#arbeitsplatz") || !location.hash) { load(); window.BOARD?.vorgaenge?.(); } else if (location.hash.startsWith("#projekte/")) window.KUNDEN.openProjectPage(+location.hash.split("/")[1], true); else if (location.hash.startsWith("#cockpit")) window.BOARD.cockpit(); };
 
   /* ---------- Dialoge ---------- */
   function modal(html, onSave, { ok = "Speichern", extra = "", wide = false } = {}) {

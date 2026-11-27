@@ -28,7 +28,7 @@ function rendere(v, firma = null) {
   const key = MODUL?.VORLAGEN ? Object.keys(MODUL.VORLAGEN).find(k => MODUL.VORLAGEN[k] === v) : null;
   const r = (key && MODUL.vorlage ? MODUL.vorlage(key, daten, { vorschau: true }) : v.baue(daten)) || {};
   const subject = String(r.subject ?? ""), text = String(r.text ?? "");
-  const html = mailHtml({ subject, text, knopf: r.knopf || null, vorschautext: r.vorschautext || "", firma: vorschauFirma(firma || r.firma || "software") });
+  const html = mailHtml({ subject, text, knopf: r.knopf || null, vorschautext: r.vorschautext || "", firma: vorschauFirma(firma || r.firma || "software"), an: v.an === "team" ? "team" : "kunde" });
   return { subject, text, html, knopf: r.knopf || null, firma: r.firma || null };
 }
 

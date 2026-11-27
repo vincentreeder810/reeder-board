@@ -135,6 +135,7 @@ function mockAnswer(stage, user) {
   if (stage === "pruefen") return { findings: [{ severity: "mittel", title: "Öffnungszeiten nicht auf den ersten Blick", detail: "Auf dem Handy muss man weit scrollen, bis Öffnungszeiten oder Telefonnummer auftauchen.", where: "Startseite, oberer Bereich" }, { severity: "hinweis", title: "Testfund ohne Beleg", detail: "Nur zum Test der Gegenprüfung.", where: "?" }] };
   if (stage === "gegenpruefen") return { confirmed: [0] };
   if (stage === "name") return { name: "Testname Projekt" };
+  if (stage === "mitschrift") return { intern: "– Testmodus: auf Budget achten", zusammenfassung: "Testmodus: Sie wünschen sich eine neue Website.", naechste_schritte: "– Wir schicken das Angebot bis Freitag." };
   if (stage === "angebot") return { titel: "Entwicklungskonzept (Testvorschlag)", einleitung: "vielen Dank für das Gespräch. Wie besprochen bieten wir Ihnen Folgendes an:", schlusstext: "Bei Fragen sind wir jederzeit für Sie da.",
     positionen: [{ titel: "Entwicklungskonzept", beschreibung: "Anforderungen, Varianten, 3D-Modell und Prüfplan als Konzeptdokument.", menge: 1, einheit: "pauschal", preis_bekannt: true, einzelpreis: 2500 },
       { titel: "Abstimmungstermin", beschreibung: "Vorstellung des Konzepts per Video.", menge: 1, einheit: "pauschal", preis_bekannt: false, einzelpreis: 0 }],

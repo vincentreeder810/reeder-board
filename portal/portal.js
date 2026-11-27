@@ -87,13 +87,14 @@ async function refreshBadge() {
   api("/support").then(s => { const n = s.list.filter(t => t.unread).length, bs = $("#bSupport"); bs.hidden = !n; bs.textContent = n; }).catch(() => {});
   return o;
 }
-const VIEWS = { support: viewSupport, vertraege: viewContracts, angebot: viewQuote, uebersicht: viewOverview, projekte: viewProjects, projekt: viewProject, chat: viewChat, termine: viewAppointments, dokumente: viewDocuments, konto: viewAccount };
+const VIEWS = { rueckfragen: viewRueckfragen, support: viewSupport, vertraege: viewContracts, angebot: viewQuote, uebersicht: viewOverview, projekte: viewProjects, projekt: viewProject, chat: viewChat, termine: viewAppointments, dokumente: viewDocuments, konto: viewAccount };
 function route() {
   if (!me) return;
   const [name, arg] = location.hash.slice(1).split("/");
   const v = VIEWS[name] ? name : "uebersicht";
-  $$("[data-view]").forEach(s => s.hidden = s.dataset.view !== v);
-  $$(".nav nav a").forEach(a => a.classList.toggle("on", a.dataset.v === v || ((v === "projekt" || v === "angebot") && a.dataset.v === "projekte")));
+  const bereich = v === "rueckfragen" ? "uebersicht" : v;   // Rückfragen stehen oben auf der Startseite
+  $$("[data-view]").forEach(s => s.hidden = s.dataset.view !== bereich);
+  $$(".nav nav a").forEach(a => a.classList.toggle("on", a.dataset.v === bereich || ((v === "projekt" || v === "angebot") && a.dataset.v === "projekte")));
   // Schmale Fenster: Der Menüknopf zeigt, wo man gerade ist; nach der Auswahl klappt das Menü wieder zu
   { const an = $(".nav nav a.on span"), jetzt = $("#navNow"); if (an && jetzt) jetzt.textContent = an.textContent; menuZu(); }
   if (v !== "chat") { stopChat?.(); stopChat = null; }
@@ -213,9 +214,65 @@ $("#ovNews").addEventListener("click", e => {
 // Geöffnete Version merken – Grundlage für „Seit Ihrem letzten Besuch“ und für die Anzeige im Board
 window.addEventListener("rs:viewer-open", e => { if (e.detail?.id) api(`/prototypes/${e.detail.id}/seen`, { method: "POST", body: {} }).catch(() => {}); });
 
+/* ---------- Rückfragen: jede Frage einzeln beantworten, mit eigenem Antwortfeld ---------- */
+// Auf der Startseite nur, solange etwas offen ist. Über #rueckfragen (Link aus Mail und Chat) springt die Seite zur Karte
+// und zeigt auch, wenn schon alles beantwortet ist, eine kurze Bestätigung.
+let RQ = { offen: [], beantwortet: [] }, rqFrisch = new Set();
+const absatz = t => esc(t).replace(/\n/g, "<br>");
+function renderRueck(direkt) {
+  const el = $("#ovRueck"), offen = RQ.offen, fertig = RQ.beantwortet.filter(b => rqFrisch.has(b.id));
+  if (!offen.length && !fertig.length && !direkt) { el.innerHTML = ""; return; }
+  const projekte = new Set([...offen, ...fertig].map(x => x.project_id)), mitProjekt = projekte.size > 1;
+  const eins = [...offen, ...fertig][0];
+  const unter = offen.length
+    ? `${offen.length === 1 ? "Wir haben noch eine Frage" : `Wir haben noch ${offen.length} Fragen`}${!mitProjekt && eins ? ` zu Ihrem Projekt „${esc(eins.projekt)}“` : ""}. Jede Frage hat ein eigenes Antwortfeld – Ihre Antwort kommt sofort bei uns an.`
+    : fertig.length ? "Vielen Dank – alle Rückfragen sind beantwortet. Wir arbeiten mit Ihren Antworten weiter."
+    : "Zurzeit gibt es keine offenen Rückfragen. Vielen Dank!";
+  const q = x => `<p class="rq__q">${mitProjekt ? `<small>${esc(x.projekt)}</small>` : ""}<b>${absatz(x.text)}</b></p>`;
+  el.innerHTML = `<section class="rq" id="rueckfragen" aria-labelledby="rqTitel">
+    <div class="rq__head"><span class="rq__ic">${ICON_FRAGE}</span><div><h2 id="rqTitel">Rückfragen von Reeder Software</h2><p>${unter}</p></div></div>
+    ${offen.length || fertig.length ? `<div class="rq__list">
+      ${offen.map(x => `<form class="rq__item" data-rq="${x.id}">${q(x)}
+        <label class="rq__lbl"><span class="sr">Ihre Antwort</span><textarea name="antwort" rows="3" maxlength="1000" required placeholder="Ihre Antwort …"></textarea></label>
+        <p class="err" hidden></p>
+        <div class="rq__acts"><button class="btn btn--grad btn--sm" type="submit">Antwort senden</button></div></form>`).join("")}
+      ${fertig.map(x => `<div class="rq__item rq__item--ok">${q(x)}<span class="rq__ok">beantwortet ✓</span><p class="rq__a">${absatz(x.antwort)}</p></div>`).join("")}
+    </div>` : ""}</section>`;
+}
+const ICON_FRAGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.8 9.4a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.3"/><path d="M12 16.6h.01"/></svg>`;
+async function ladeRueck(direkt) {
+  RQ = await api("/rueckfragen").catch(() => ({ offen: [], beantwortet: [] }));
+  renderRueck(direkt);
+}
+async function viewRueckfragen() {
+  await viewOverview(true);
+  const k = $("#rueckfragen"); if (!k) return;
+  k.scrollIntoView({ behavior: "smooth", block: "start" });
+  const erstes = $("textarea", k); if (erstes) setTimeout(() => erstes.focus({ preventScroll: true }), 400);
+}
+$("#ovRueck").addEventListener("submit", async e => {
+  const f = e.target.closest("[data-rq]"); if (!f) return; e.preventDefault();
+  const id = +f.dataset.rq, antwort = f.antwort.value.trim(), err = $(".err", f), b = $("button", f);
+  const fehler = m => { err.textContent = m; err.hidden = !m; };
+  if (!antwort) return fehler("Bitte schreiben Sie eine Antwort.");
+  b.disabled = true; b.textContent = "Wird gesendet …"; fehler("");
+  try {
+    const r = await api(`/rueckfragen/${id}`, { method: "POST", body: { antwort } });
+    const x = RQ.offen.find(y => y.id === id);
+    RQ.offen = RQ.offen.filter(y => y.id !== id);
+    if (x) { RQ.beantwortet.unshift({ ...x, antwort: r.antwort, beantwortet_at: r.beantwortet_at }); rqFrisch.add(id); }
+    renderRueck(true); toast("Danke – Ihre Antwort ist bei uns angekommen.");
+    $("#ovRueck textarea")?.focus({ preventScroll: true });
+  } catch (e2) {
+    fehler(e2.message); b.disabled = false; b.textContent = "Antwort senden";
+    if (/erledigt|bereits/.test(e2.message)) setTimeout(() => ladeRueck(true), 2500);
+  }
+});
+
 /* ---------- Übersicht ---------- */
-async function viewOverview() {
-  const [o, quotes, news, anfragen] = await Promise.all([api("/overview"), api("/quotes").catch(() => []), api("/neu").catch(() => []), api("/anfragen").catch(() => [])]);
+async function viewOverview(direkt = false) {
+  rqFrisch = new Set();
+  const [o, quotes, news, anfragen] = await Promise.all([api("/overview"), api("/quotes").catch(() => []), api("/neu").catch(() => []), api("/anfragen").catch(() => []), ladeRueck(direkt === true)]);
   renderNews(news);
   const h = new Date().getHours();
   const pending = quotes.filter(q => q.status === "versendet");

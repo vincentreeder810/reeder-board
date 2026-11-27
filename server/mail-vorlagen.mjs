@@ -110,8 +110,8 @@ const videoSatz = url => `Zum Video-Gespräch klicken Sie zur Uhrzeit einfach au
 const videoKnopf = url => url ? { label: "Zum Video-Gespräch", url } : undefined;
 const kalenderSatz = "Den Termin finden Sie als Kalendereintrag im Anhang.";
 const aenderungHinweis = d => hinweis(d.portalLink
-  ? "Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail oder schreiben Sie uns im Kundenportal."
-  : "Falls etwas dazwischenkommt, antworten Sie einfach auf diese E-Mail.");
+  ? "Falls etwas dazwischenkommt, schreiben Sie uns einfach über die Nachrichten in Ihrem Kundenportal."
+  : "Falls etwas dazwischenkommt, geben Sie uns bitte kurz Bescheid – unsere Kontaktdaten finden Sie unten in dieser E-Mail.");
 /** Übersicht eines Termins – in allen Termin-Mails gleich */
 const terminZeilen = (d, start = d.start) => zeilen([["Termin", d.titel || [d.art, d.produkt].filter(Boolean).join(" – ")], ["Datum", terminLang(start)],
   ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""], ["Gespräch", d.videoUrl ? "Video-Gespräch" : d.kanal]]);
@@ -242,7 +242,7 @@ export const VORLAGEN = {
         zeilen([["Termin", d.titel], ["Bisher", terminLang(d.alt)], ["Neu", terminLang(d.neu)], ["Dauer", d.minuten ? `${d.minuten} Minuten` : ""], ["Gespräch", d.videoUrl ? "Video-Gespräch (Link bleibt gleich)" : ""]]),
         d.videoUrl && videoSatz(d.videoUrl),
         kalenderSatz,
-        hinweis(`Passt Ihnen der neue Termin nicht? Wählen Sie einfach einen anderen unter ${d.terminLink} – oder antworten Sie auf diese E-Mail.`),
+        hinweis(`Passt Ihnen der neue Termin nicht? Dann wählen Sie einfach einen anderen unter ${d.terminLink}`),
         gruss(d.firma)),
       knopf: d.videoUrl ? videoKnopf(d.videoUrl) : { label: "Anderen Termin wählen", url: d.terminLink },
     }),
@@ -255,7 +255,7 @@ export const VORLAGEN = {
       subject: `Ihr Termin am ${tagMittel(d.start)} entfällt leider`,
       text: absaetze(anrede(d), `leider können wir den Termin${d.titel ? ` „${d.titel}“` : ""} am ${fett(terminLang(d.start))} nicht wahrnehmen. Bitte entschuldigen Sie die Umstände.`,
         d.grund,
-        `${fett("Neuen Termin wählen")} – oder antworten Sie einfach auf diese E-Mail:\n${d.terminLink}`,
+        `${fett("Neuen Termin wählen")} – suchen Sie sich einfach einen freien Termin aus:\n${d.terminLink}`,
         d.kalender !== false && "Im Anhang finden Sie die Absage für Ihren Kalender – damit verschwindet der Termin dort.",
         gruss(d.firma)),
       knopf: { label: "Neuen Termin wählen", url: d.terminLink },
@@ -269,7 +269,7 @@ export const VORLAGEN = {
       subject: `Ihre Anfrage bei ${marke(d.firma)}: Wann passt Ihnen ein kurzes Gespräch?`,
       text: absaetze(anrede(d), `vielen Dank noch einmal für Ihre Anfrage${d.arten ? ` (${d.arten})` : ""}. Am schnellsten kommen wir in einem ${fett("kostenlosen Erstgespräch")} weiter – 30 Minuten per Video, ganz unverbindlich.`,
         `Hier können Sie sich direkt einen freien Termin aussuchen:\n${d.terminLink}`,
-        hinweis("Lieber telefonieren oder Fragen vorab? Antworten Sie einfach auf diese E-Mail."),
+        hinweis("Lieber erst telefonieren oder vorab etwas fragen? Buchen Sie dafür einfach einen kurzen Termin über den Link oben."),
         gruss(d.firma)),
       knopf: { label: "Termin auswählen", url: d.terminLink },
     }),
@@ -405,7 +405,7 @@ export const VORLAGEN = {
 ${d.portalLink}`,
         d.zugangLink,
         pdfSatz("Das Angebot", mitAnhang(d)),
-        hinweis("Bei Fragen antworten Sie einfach auf diese E-Mail."),
+        hinweis("Fragen beantworten wir Ihnen gern über die Nachrichten in Ihrem Kundenportal."),
         gruss(d.firma)),
       knopf: d.zugangLink ? { label: "Zugang anlegen und Angebot ansehen", url: d.zugangLink } : { label: "Angebot ansehen und unterschreiben", url: d.portalLink },
     }),
@@ -483,7 +483,7 @@ ${d.portalLink}`,
         zeilen([["Rechnung", d.nummer], ["Projekt", d.titel], ["Betrag", euro(d.betrag)], ["Zahlbar bis", datum(d.faellig)]]),
         pdfSatz("Die Rechnung", mitAnhang(d)),
         d.portalLink,
-        hinweis("Bei Fragen zur Rechnung antworten Sie einfach auf diese E-Mail."),
+        hinweis("Fragen zur Rechnung beantworten wir Ihnen gern über die Nachrichten in Ihrem Kundenportal."),
         gruss(d.firma)),
       knopf: { label: "Im Kundenportal ansehen", url: d.portalLink },
     }),
@@ -499,7 +499,7 @@ ${d.portalLink}`,
         zeilen([["Stornorechnung", d.nummer], ["Storniert wird", d.storniert ? `Rechnung ${d.storniert}` : ""], ["Projekt", d.titel], ["Betrag", euro(Math.abs(d.betrag || 0))]]),
         pdfSatz("Die Stornorechnung", mitAnhang(d)),
         d.portalLink,
-        hinweis("Bei Fragen antworten Sie einfach auf diese E-Mail."),
+        hinweis("Fragen beantworten wir Ihnen gern über die Nachrichten in Ihrem Kundenportal."),
         gruss(d.firma)),
       knopf: { label: "Im Kundenportal ansehen", url: d.portalLink },
     }),
@@ -528,7 +528,7 @@ ${d.portalLink}`,
         `trotz unserer Zahlungserinnerung ist der Betrag aus Rechnung ${d.nummer} über ${euro(d.betrag)} bisher nicht bei uns eingegangen. Bitte überweisen Sie den offenen Betrag ${fett("bis spätestens " + datum(d.frist))}${d.iban ? ` auf das Konto IBAN ${d.iban}` : ""}.`,
         zeilen([["Rechnung", d.nummer], ["Offener Betrag", euro(d.betrag)], ["Zahlbar bis spätestens", datum(d.frist)], ["IBAN", d.iban]]),
         pdfSatz("Die Rechnung", mitAnhang(d), false),
-        hinweis("Bei Fragen melden Sie sich gern direkt bei uns."),
+        hinweis("Fragen beantworten wir Ihnen gern über die Nachrichten in Ihrem Kundenportal."),
         gruss(d.firma)),
     }),
     beispiel: { name: B.name, stufe: "1. Mahnung", nummer: "R-2026-00031", betrag: 32904, frist: "2026-12-04", iban: "DE00 0000 0000 0000 0000 00" },
@@ -595,20 +595,35 @@ ${d.portalLink}`,
   },
   rueckfragen: {
     gruppe: "Projekt & Portal", titel: "Rückfragen zum Projekt", an: "kunde",
-    wann: "Wenn der Inhaber im Arbeitsbereich eines Projekts offene Fragen an den Kunden schickt (auch als Nachricht im Kundenportal).",
+    wann: "Wenn der Inhaber im Arbeitsbereich eines Projekts offene Fragen an den Kunden schickt und „Zusätzlich per E-Mail benachrichtigen“ angehakt lässt. Nur eine Benachrichtigung – die Fragen selbst stehen im Kundenportal unter „Rückfragen“.",
     baue: d => {
-      const fragen = (d.fragen || []).filter(Boolean);
+      // Die Fragen stehen bewusst nicht in der Mail: Beantwortet werden sie einzeln im Portal, sonst kommt die Antwort nicht im Board an
+      const n = (d.fragen || []).filter(Boolean).length || +d.anzahl || 0;
+      const was = n > 1 ? `${n} Rückfragen` : n === 1 ? "eine Rückfrage" : "Rückfragen";
       return {
-        subject: `Rückfragen zu Ihrem Projekt „${kurz(d.projekt, 50)}“`,
+        subject: `${n === 1 ? "Eine Rückfrage" : "Rückfragen"} zu Ihrem Projekt „${kurz(d.projekt, 50)}“`,
         text: absaetze(anrede(d),
-          d.einleitung || `für Ihr Projekt „${d.projekt}“ haben wir noch ${fragen.length === 1 ? "eine Frage" : "ein paar Fragen"}:`,
-          fragen.map((f, i) => `${fragen.length > 1 ? `${i + 1}. ` : ""}${f}`).join("\n"),
-          `Sie können einfach auf diese E-Mail antworten oder im Kundenportal schreiben:\n${d.link}`,
+          `in Ihrem Kundenportal ${n === 1 ? "wartet" : "warten"} ${fett(`${was} zu Ihrem Projekt „${einzeilig(d.projekt)}“`)} auf Sie. Sie können sie dort direkt beantworten – Ihre Antwort kommt sofort bei uns an.`,
+          d.link,
           gruss(d.firma)),
-        knopf: { label: "Im Kundenportal antworten", url: d.link },
+        knopf: { label: "Rückfragen beantworten", url: d.link },
       };
     },
-    beispiel: { name: B.name, projekt: "Website Physiotherapie Am Park", fragen: ["Sollen die Öffnungszeiten auf jeder Seite unten stehen?", "Haben Sie Fotos der Praxisräume, oder sollen wir einen Fotografen vorschlagen?"], link: `${BSP}/portal/#chat` },
+    beispiel: { name: B.name, projekt: "Website Physiotherapie Am Park", fragen: ["Sollen die Öffnungszeiten auf jeder Seite unten stehen?", "Haben Sie Fotos der Praxisräume, oder sollen wir einen Fotografen vorschlagen?", "Wie lautet Ihre Umsatzsteuer-ID für das Impressum?"], link: `${BSP}/portal/#rueckfragen` },
+  },
+  rueckfrage_beantwortet_team: {
+    gruppe: "Projekt & Portal", titel: "Kunde hat eine Rückfrage beantwortet (an dich)", an: "team",
+    wann: "Wenn ein Kunde im Kundenportal unter „Rückfragen“ eine Frage beantwortet. Die Antwort steht dann schon als geklärt im Arbeitsbereich und kommt über die Brücke in Claudes Projektordner.",
+    baue: d => ({
+      subject: `Antwort · ${kurz(d.unternehmen || d.name, 30)} · ${kurz(d.frage, 40)}`,
+      text: absaetze(`${wer(d.name, d.unternehmen)} hat im Kundenportal eine Rückfrage beantwortet.`,
+        zeilen([["Projekt", einzeilig(d.projekt)], ["Frage", einzeilig(d.frage)]]),
+        d.antwort && `Antwort:\n${d.antwort}`,
+        "Die Frage ist im Arbeitsbereich als geklärt eingetragen, Claude bekommt die Antwort im Projektordner.",
+        `Zum Projekt:\n${d.link}`),
+      knopf: { label: "Projekt öffnen", url: d.link },
+    }),
+    beispiel: { ...B, projekt: "Website Physiotherapie Am Park", frage: "Wie lautet Ihre Umsatzsteuer-ID für das Impressum?", antwort: "DE123456789", link: `${BSP}/admin/#projekte/27` },
   },
   konzept_versand: {
     gruppe: "Projekt & Portal", titel: "Entwicklungskonzept (Hardware)", an: "kunde",
@@ -786,5 +801,5 @@ export function vorlage(schluessel, daten = {}, { vorschau = false } = {}) {
   let d, r;
   try { d = { ...(daten || {}) }; d.firma = firmaKey(d.firma); r = v.baue(d); }
   finally { vorschauLaeuft = false; }
-  return { subject: einzeilig(r.subject), text: r.text, knopf: r.knopf?.url ? r.knopf : undefined, art: schluessel, firma: d.firma };
+  return { subject: einzeilig(r.subject), text: r.text, knopf: r.knopf?.url ? r.knopf : undefined, art: schluessel, firma: d.firma, an: v.an === "team" ? "team" : "kunde" };
 }

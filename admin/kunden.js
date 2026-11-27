@@ -86,9 +86,27 @@
           <span class="pteam">${teamAv(c.team) || `<small class="muted">–</small>`}</span>
           <span class="lc">${c.next ? `<b>${C.fmt(c.next.start, { day: "numeric", month: "short" })}</b><small>${esc(c.next.title)}</small>` : `<small class="muted">–</small>`}</span>
           ${ME.owner ? `<span class="num">${c.open_net ? moneyR(c.open_net) : "–"}</span>` : ""}
-          <span class="lc"><small>${c.last_at ? ago(c.last_at) : "–"}</small></span></a>`; }).join("")
+          <span class="lc"><small>${c.last_at ? ago(c.last_at) : "–"}</small></span>
+          <span class="akt-zeile">${AKT.knopf("kZeile", { punkte: true, extra: `data-cid="${c.id}"`, titel: `Aktionen für ${c.company}` })}</span></a>`; }).join("")
       : `<div class="empty">${search ? "Kein Kontakt gefunden." : listMode === "archiv" ? "Das Archiv ist leer." : listMode === "interessent" ? "Keine Interessenten." : listMode === "mandant" ? "Noch keine Kunden mit Auftrag." : "Noch keine Kontakte."}</div>`;
   }
+  // ⋯ in der Kundenliste: die wichtigsten Wege, ohne die Akte erst zu öffnen
+  AKT.on("kZeile", btn => {
+    const c = clients.find(x => x.id === +btn.dataset.cid); if (!c) return [];
+    const lead = c.stage !== "mandant";
+    return [
+      { t: "", items: [{ l: "Öffnen", fn: () => { location.hash = `#kunden/${c.id}`; } }] },
+      { t: "Verkaufen", items: ME.owner && c.stage !== "archiv" ? [lead ? { l: "Auftrag starten", fn: () => window.BOARD.startOrder(c) } : { l: "Neues Projekt", fn: () => window.BOARD.newProject(c.id) },
+        { l: "Angebot erstellen", fn: () => window.angebotErstellen({ client_id: c.id }) }] : [] },
+      { t: "Kunde", items: [nachrichtItem(c)] },
+      { danger: true, items: !ME.owner ? [] : c.stage === "archiv" ? [{ l: "Reaktivieren", fn: async () => { await api(`/clients/${c.id}/stage`, { method: "PATCH", body: { stage: "interessent" } }); toast("Reaktiviert"); loadClients(); } }]
+        : [{ l: "Archivieren", danger: true, fn: async () => { if (!(await UI.confirm("Der Kontakt verschwindet aus der Liste, bleibt aber unter „Archiv“ erhalten.", { title: `${c.company} archivieren?`, ok: "Archivieren" }))) return;
+          await api(`/clients/${c.id}/stage`, { method: "PATCH", body: { stage: "archiv" } }); toast("Archiviert"); loadClients(); window.updateBadges?.(); } }] },
+    ];
+  });
+  // Nachricht: Kunden mit Portal bekommen sie im Chat, alle anderen per E-Mail
+  const nachrichtItem = c => c.stage === "mandant" ? { l: "Nachricht schreiben", hint: "im Kundenportal-Chat", fn: () => { location.hash = `#kunden/${c.id}/chat`; } }
+    : c.email ? { l: "Nachricht schreiben", hint: `per E-Mail an ${c.email}`, fn: () => { location.href = `mailto:${c.email}`; } } : null;
   DD.on("kMode", v => { listMode = v; renderList(); });
   DD.on("kSort", v => { sortBy = v; renderList(); });
   document.addEventListener("input", e => { if (e.target.id === "kSearch") { search = e.target.value; renderList(); } });
@@ -102,8 +120,6 @@
     const c = current, lead = c.stage !== "mandant", ap = activeProjects(c);
     if (lead && ["chat", "anmerkungen", "dokumente"].includes(tab)) tab = "ueberblick";
     const back = lead && c.stage !== "archiv" ? ["#anfragen", "Vertrieb"] : ["#kunden", "Alle Kunden"];
-    const more = !ME.owner ? [] : lead ? [{ v: "invite", l: "Neuen Zugangslink (Passwort neu setzen)" }, { v: "makeClient", l: "Nur Portalzugang freischalten" }, c.stage !== "archiv" ? { v: "archive", l: "Archivieren" } : { v: "unarchive", l: "Reaktivieren" }, { v: "loeschen", l: "Endgültig löschen", danger: true }]
-      : [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, { v: "billing", l: "Rechnungsadresse" }, { v: "invite", l: c.status === "aktiv" ? "Neuen Zugangslink senden" : "Einladungslink senden" }, { v: "toggle", l: c.active ? "Portalzugang sperren" : "Portalzugang aktivieren", danger: c.active }, { v: "archive", l: "Archivieren" }];
     const facts = lead ? [["Status", STAGE[c.stage][0]], ["Kontakt kam über", quelle(c) || "–"], ["Erster Kontakt", day(c.created_at)], ["Nächster Termin", c.next ? dayShort(c.next.start) : "–"]]
       : [["Kunde seit", day(c.created_at)], ["Aktive Projekte", String(ap.length)], ...(ME.owner ? [["Offen (netto)", c.open_net ? moneyR(c.open_net) : "–"]] : []), ["Nächster Termin", c.next ? dayShort(c.next.start) : "–"], ["Kundenportal", c.active ? (STATUS_LABEL[c.status] || c.status) : "gesperrt"]];
     const T = lead ? [["ueberblick", "Überblick"], ["termine", "Termine", c.requests], ["projekte", "Projekte", (c.projects || []).length], ...(ME.owner ? [["finanzen", "Angebote"]] : [])]
@@ -115,16 +131,29 @@
           <div class="khead__id"><h1>${esc(c.company)} ${stagePill(c.stage)}</h1>
             <p>${esc(c.name)} · <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.phone ? ` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ""}${c.last_seen ? ` · zuletzt im Portal ${ago(c.last_seen)}` : ""}</p></div>
           <div class="khead__acts">
-            <button class="btn btn--ghost btn--sm" data-act="schedule">Termin vereinbaren</button>
             ${ME.owner ? lead ? `<button class="btn btn--grad btn--sm" data-act="startOrder">Auftrag starten</button>` : `<button class="btn btn--grad btn--sm" data-act="newProject">Neues Projekt</button>` : ""}
-            ${more.length ? DD.html("kMore", more, "", { trigger: "Mehr", align: "right" }) : ""}</div></div>
+            ${AKT.knopf("kKopf")}</div></div>
         <dl class="kfacts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
       </div>
       <nav class="utabs" id="ctabs">${T.map(([k, l, n]) => `<button data-t="${k}">${esc(l)}${n ? `<em>${n}</em>` : ""}</button>`).join("")}</nav>
       <div id="cpane"></div>`;
     await showTab(tab);
   }
-  DD.on("kMore", v => Promise.resolve().then(() => actions[v]?.()).catch(err => toast(err.message)));
+  // „Aktionen ▾“ im Kopf der Kundenakte (ersetzt das frühere „Mehr“); Einträge rufen die bestehenden Aktionen auf
+  AKT.on("kKopf", () => {
+    const c = current; if (!c) return [];
+    const lead = c.stage !== "mandant", a = k => () => actions[k]();
+    const nachricht = c.stage === "mandant" ? { l: "Nachricht schreiben", hint: "im Kundenportal-Chat", fn: () => showTab("chat") } : nachrichtItem(c);
+    if (!ME.owner) return [{ t: "Kunde", items: [c.stage === "mandant" ? nachricht : null, { l: "Termin vereinbaren", fn: a("schedule") }] }];
+    return [
+      { t: "Verkaufen und abrechnen", items: [{ l: "Angebot erstellen", fn: () => window.angebotErstellen({ client_id: c.id }) }, !lead ? { l: "Laufenden Vertrag anlegen", fn: a("newContract") } : null, !lead ? { l: "Rechnungsadresse", fn: a("billing") } : null] },
+      { t: "Kunde", items: [nachricht, { l: "Termin vereinbaren", fn: a("schedule") }] },
+      { t: "Kundenportal", items: lead ? [{ l: "Neuen Zugangslink (Passwort neu setzen)", fn: a("invite") }, { l: "Nur Portalzugang freischalten", fn: a("makeClient") }]
+        : [{ l: c.status === "aktiv" ? "Neuen Zugangslink senden" : "Einladungslink senden", fn: a("invite") }, { l: c.active ? "Portalzugang sperren" : "Portalzugang aktivieren", danger: c.active, fn: a("toggle") }] },
+      { danger: true, items: c.stage === "archiv" ? [{ l: "Reaktivieren", fn: a("unarchive") }, { l: "Endgültig löschen", danger: true, fn: a("loeschen") }]
+        : [{ l: "Archivieren", danger: true, fn: a("archive") }, lead ? { l: "Endgültig löschen", danger: true, fn: a("loeschen") } : null] },
+    ];
+  });
 
   /* ---------- Vertrieb: der einzige Ort für neue Kontakte – Spalten nach Gesprächsstand ---------- */
   const TYPE_L = { erstgespraech: "Erstgespräch", produktdemo: "Produktdemo", workshop: "Projekt-Workshop", beratung: "Beratung" };
@@ -405,7 +434,10 @@
     const liveV = p.prototypes.flat().filter(v => v.state !== "kandidat" && v.active).sort((x, y) => y.id - x.id)[0] || null;
     const evZeile = e => `<li><b>${esc(e.title)}</b><span>${C.fmt(e.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>${e.detail ? `<p class="pclamp pclamp--2">${esc(e.detail)}</p>` : ""}</li>`;
     const paid = p.payments.filter(x => x.status === "bezahlt").reduce((s, x) => s + x.amount_net, 0), total = p.payments.reduce((s, x) => s + x.amount_net, 0);
-    const more = [{ v: "newContract", l: "Laufenden Vertrag anlegen" }, ...(p.status === "aktiv" && !p.offer_net ? [{ v: "zurAnfrage", l: "Zurück zur Anfrage" }] : []), p.status === "anfrage" ? { v: "resume", l: "Als Auftrag übernehmen" } : p.status === "aktiv" ? { v: "pause", l: "Projekt pausieren" } : { v: "resume", l: "Projekt fortsetzen" }, ...(p.status !== "abgeschlossen" ? [{ v: "finish", l: "Als abgeschlossen markieren" }] : []), { v: "deleteProject", l: "Projekt löschen", danger: true }];
+    // Angebote, Rechnungen und Stornos dieses Projekts – Grundlage für den Hauptknopf und die Karte „Angebote und Rechnungen“
+    const docs = ME.owner ? await api(`/finance/projects/${id}/dokumente`).catch(() => []) : [];
+    p.docs = docs;
+    const haupt = hauptSchritt(p);
     const statusPill = p.status === "aktiv" ? `<span class="pill pill--aktiv">aktiv</span>` : `<span class="pill">${esc(p.status)}</span>`;
     host.innerHTML = `
       <a class="back" href="#projekte">← Alle Projekte</a>
@@ -414,10 +446,8 @@
           <div class="khead__id"><p class="kicker">${esc(p.kind || "Projekt")}${p.model ? " · " + esc(p.model) : ""}</p><h1>${esc(p.title)} ${statusPill}</h1>
             <p>für <a href="#kunden/${current.id}">${esc(current.company)}</a>${current.name ? " · " + esc(current.name) : ""} · seit ${day(p.created_at)}</p></div>
           <div class="khead__acts">
-            ${current.stage === "mandant" ? `<a class="btn btn--ghost btn--sm" href="#kunden/${current.id}/chat">Nachricht an Kunden</a>` : ""}
-            <button class="btn btn--ghost btn--sm" data-act="schedule">Termin</button>
-            <button class="btn btn--ghost btn--sm" data-act="editProject">Bearbeiten</button>
-            ${ME.owner ? DD.html("pMore", more, "", { trigger: "Mehr", align: "right" }) : ""}</div></div>
+            ${haupt ? `<button class="btn btn--grad btn--sm" data-act="pHaupt" title="${esc(haupt.hint || "")}">${esc(haupt.l)}</button>` : ""}
+            ${AKT.knopf("pKopf")}</div></div>
         <div class="pweb">${liveV ? `<button class="btn btn--grad btn--sm" data-web="0">Aktuelle Website ansehen</button><a class="btn btn--ghost btn--sm" href="${esc(liveV.url)}" target="_blank" rel="noopener" title="Die Website ohne Board in einem neuen Tab öffnen – so, wie der Kunde sie sieht">↗ Neuer Tab</a><button class="btn btn--ghost btn--sm" data-web="1">Mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="1">Website ansehen</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--ghost btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span>` : ""}</div>
         <div class="pphase" role="list">${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
       </div>
@@ -469,6 +499,7 @@
             <div class="ppays">${p.payments.map(x => `<div class="ppay ppay--${x.status}"><span><b>${esc(x.label)}</b><small>${x.due ? "fällig " + x.due.split("-").reverse().join(".") : x.due_on ? (x.due_on === "Auftrag" ? "bei Auftrag" : "ab Phase " + esc(x.due_on)) + (x.pct ? ` · ${String(x.pct).replace(".", ",")} %` : "") : "ohne Fälligkeit"}</small></span><span class="num">${money(x.amount_net)}</span>
               <span class="ppay__st">${x.status === "bezahlt" ? "bezahlt" : x.status === "berechnet" ? "Rechnung gestellt" : "offen"}</span>
               ${x.invoice_url ? `<a class="payinv" href="${esc(x.invoice_url)}" target="_blank" rel="noopener">PDF</a>` : x.status !== "bezahlt" ? `<button type="button" class="payinv payinv--new" data-act="invoicePay" data-id="${x.id}" title="Rechnung für diese Position erstellen">+ RE</button>` : `<span></span>`}</div>`).join("") || `<p class="hint" style="margin:0">Noch kein Zahlungsplan.</p>`}</div></div>` : ""}
+          ${ME.owner ? docsCard(p) : ""}
           <div class="card" id="pVerein" hidden></div>
         </div>
         <div class="stack p-more">
@@ -484,7 +515,99 @@
     window.BOARD?.vereinbarungen?.(p);
     if (keepScroll) scrollTo(0, y); else scrollTo(0, 0);
   }
-  DD.on("pMore", v => Promise.resolve().then(() => actions[v]?.()).catch(err => toast(err.message)));
+  /* ---------- Projektseite: Hauptknopf, „Aktionen ▾“ und Karte „Angebote und Rechnungen“ ---------- */
+  const deD = d => d ? d.split("-").reverse().join(".") : "";
+  // Nächste Zahlung aus dem Plan, für die noch keine gültige Rechnung festgeschrieben ist (ein Entwurf dazu wird mitgeliefert)
+  function naechsteZahlung(p) {
+    const docs = p.docs || [], gueltig = d => d.kind === "rechnung" && d.locked && d.status !== "storniert";
+    const pay = (p.payments || []).find(x => x.status === "offen" && !x.invoice_url && !docs.some(d => gueltig(d) && d.payment_id === x.id));
+    return pay ? { pay, entwurf: docs.find(d => d.kind === "rechnung" && !d.locked && d.payment_id === pay.id) || null } : null;
+  }
+  const zuDraft = d => () => window.FIN.open(d.id);
+  const rechnungZuZahlung = pay => () => actions.invoicePay({ dataset: { id: String(pay.id) }, closest: () => null });
+  const freieRechnung = () => { try { sessionStorage.setItem("rs-new-invoice", JSON.stringify({ client_id: project.client_id, project_id: project.id, title: project.title })); } catch {} location.hash = "#finanzen/rechnungen"; };
+  const angebotFuerProjekt = () => window.angebotErstellen({ client_id: project.client_id, project_id: project.id, title: project.title, bereich: project.bereich });
+  const nachrichtProjekt = () => current.stage === "mandant" ? { l: "Nachricht an Kunden", hint: "im Kundenportal-Chat", fn: () => { location.hash = `#kunden/${current.id}/chat`; } }
+    : current.email ? { l: "Nachricht an Kunden", hint: `per E-Mail an ${current.email}`, fn: () => { location.href = `mailto:${current.email}`; } } : null;
+  // Der nächste sinnvolle Schritt: erst das Angebot, nach der Annahme die nächste Rechnung, sonst eine Nachricht
+  function hauptSchritt(p) {
+    const msg = nachrichtProjekt();
+    if (!ME.owner) return current.stage === "mandant" ? msg : null;
+    const angebote = (p.docs || []).filter(d => d.kind === "angebot"), lebend = angebote.filter(d => d.status !== "abgelehnt");
+    const angenommen = angebote.some(d => d.status === "angenommen"), nz = naechsteZahlung(p);
+    // Projekte mit Zahlungsplan, aber ohne Angebot im Board (von Hand beauftragt), werden wie angenommene behandelt
+    if (nz && p.status !== "anfrage" && (angenommen || !angebote.length)) return nz.entwurf ? { l: "Rechnung fertigstellen", hint: `Entwurf zu „${nz.pay.label}“`, fn: zuDraft(nz.entwurf) } : { l: "Rechnung erstellen", hint: `für „${nz.pay.label}“`, fn: rechnungZuZahlung(nz.pay) };
+    if (!lebend.length && p.status !== "abgeschlossen") return { l: "Angebot erstellen", fn: angebotFuerProjekt };
+    if (lebend.length && lebend.every(d => !d.locked)) return { l: "Angebot fertigstellen", hint: "Der Entwurf wartet auf das Festschreiben", fn: zuDraft(lebend[0]) };
+    return msg;
+  }
+  AKT.on("pKopf", () => {
+    const p = project; if (!p) return [];
+    const a = k => () => actions[k](), nz = naechsteZahlung(p);
+    const ws = $("#pWs"), fragen = ws && !ws.hidden ? () => { (ws.querySelector(".ws__fragen") || ws).scrollIntoView({ behavior: "smooth", block: "start" }); } : null;
+    const kunde = { t: "Kunde", items: [nachrichtProjekt(), { l: "Termin vereinbaren", fn: () => scheduleDialog(current.id, { project_id: p.id }) }, fragen ? { l: "Fragen senden", hint: "im Arbeitsbereich unten", fn: fragen } : null] };
+    const projektG = { t: "Projekt", items: [{ l: "Bearbeiten", fn: a("editProject") }] };
+    if (!ME.owner) return [kunde, projektG];
+    projektG.items.push(p.status === "anfrage" ? { l: "Als Auftrag übernehmen", fn: a("resume") } : p.status === "aktiv" ? { l: "Projekt pausieren", fn: a("pause") } : { l: "Projekt fortsetzen", fn: a("resume") },
+      p.status === "aktiv" && !p.offer_net ? { l: "Zurück zur Anfrage", fn: a("zurAnfrage") } : null,
+      p.status !== "abgeschlossen" ? { l: "Abschließen", hint: "steht danach unter „Abgeschlossen“", fn: a("finish") } : null);
+    return [
+      { t: "Verkaufen und abrechnen", items: [{ l: "Angebot erstellen", fn: angebotFuerProjekt },
+        nz ? (nz.entwurf ? { l: "Rechnung fertigstellen", hint: `Entwurf zu „${nz.pay.label}“`, fn: zuDraft(nz.entwurf) } : { l: "Rechnung erstellen", hint: `nächste Zahlung: ${nz.pay.label} · ${money(nz.pay.amount_net)} netto`, fn: rechnungZuZahlung(nz.pay) })
+          : { l: "Rechnung erstellen", hint: (p.payments || []).length ? "freie Rechnung, alle Zahlungen sind berechnet" : "freie Rechnung, es gibt keinen Zahlungsplan", fn: freieRechnung },
+        { l: "Laufenden Vertrag anlegen", fn: a("newContract") }] },
+      kunde, projektG,
+      { danger: true, items: [{ l: "Projekt löschen", danger: true, fn: a("deleteProject") }] },
+    ];
+  });
+
+  // Status in Klartext; Ton für das Schild
+  function docStatus(d) {
+    if (!d.locked) return ["Entwurf", "aus"];
+    if (d.kind === "angebot") return d.status === "versendet" ? ["verschickt – wartet auf Unterschrift", "warte"] : d.status === "angenommen" ? ["angenommen", "ok"] : d.status === "abgelehnt" ? ["abgelehnt", "aus"] : [d.status, ""];
+    if (d.kind === "storno") return ["Storno", "aus"];
+    if (d.status === "bezahlt") return ["bezahlt", "ok"];
+    if (d.status === "storniert") return ["storniert", "aus"];
+    if (d.status === "offen" && d.dunning?.overdue > 0) return [`überfällig · ${d.dunning.overdue} Tag${d.dunning.overdue === 1 ? "" : "e"}`, "warn"];
+    return ["offen", "warte"];
+  }
+  function docsCard(p) {
+    const rows = [];
+    for (const d of p.docs || []) {
+      const [st, ton] = docStatus(d), art = d.kind === "angebot" ? ["AN", "an", "Angebot"] : d.kind === "storno" ? ["ST", "st", "Stornorechnung"] : ["RE", "re", "Rechnung"];
+      const sub = [art[2], d.title, !d.locked ? "noch nicht festgeschrieben" : d.kind === "storno" && d.cancels_number ? `zu ${d.cancels_number}` : d.kind === "rechnung" && d.status === "offen" && d.due_date ? `fällig ${deD(d.due_date)}` : d.kind === "rechnung" && d.paid_at ? `bezahlt am ${deD(d.paid_at)}` : d.kind === "angebot" && d.status === "versendet" && d.valid_until ? `gültig bis ${deD(d.valid_until)}` : d.issue_date ? deD(d.issue_date) : ""].filter(Boolean).join(" · ");
+      // Die Auftragsbestätigung steht direkt über ihrem Angebot
+      if (d.acceptance?.decision === "angenommen" && d.acceptance.doc_id) rows.push(`<div class="pdoc"><span class="pdoc__k pdoc__k--ab">AB</span><span class="pdoc__m"><b>Auftragsbestätigung</b><small>zu ${esc(d.number || "")} · ${esc(C.fmt(d.acceptance.at.replace(" ", "T") + "Z", { day: "numeric", month: "short", year: "numeric" }))}</small></span>
+        <span class="pdoc__r"><b>${money(d.gross)}</b><span class="pdoc__st pdoc__st--ok">angenommen</span></span>${AKT.knopf("pDoc", { punkte: true, extra: `data-ab="${d.acceptance.doc_id}"`, titel: "Aktionen zur Auftragsbestätigung" })}</div>`);
+      rows.push(`<div class="pdoc"><span class="pdoc__k pdoc__k--${art[1]}">${art[0]}</span><span class="pdoc__m"><b>${esc(d.number || "Entwurf")}</b><small>${esc(sub)}</small></span>
+        <span class="pdoc__r"><b>${money(d.gross)}</b><span class="pdoc__st pdoc__st--${ton}">${esc(st)}</span></span>${AKT.knopf("pDoc", { punkte: true, extra: `data-doc="${d.id}"`, titel: `Aktionen zu ${d.number || "diesem Entwurf"}` })}</div>`);
+    }
+    return `<div class="card" id="pDocs"><div class="chead" style="margin-bottom:8px"><h2 style="font-size:18px">Angebote und Rechnungen</h2></div>
+      ${rows.length ? `<div class="pdocs">${rows.join("")}</div>` : `<p class="hint" style="margin:0">Zu diesem Projekt gibt es noch kein Angebot und keine Rechnung.</p>`}</div>`;
+  }
+  // ⋯ je Dokument: nur Aktionen, die es in den Finanzen schon gibt (gleiche Routen und Rückfragen wie dort)
+  const nachDoc = () => openProjectPage(project.id, true);
+  AKT.on("pDoc", btn => {
+    if (btn.dataset.ab) return [{ t: "", items: [{ l: "PDF ansehen", fn: () => window.open(`/api/admin/documents/${btn.dataset.ab}/file`, "_blank", "noopener") }] }];
+    const d = (project?.docs || []).find(x => x.id === +btn.dataset.doc); if (!d) return [];
+    if (!d.locked) return [{ t: "", items: [{ l: "Entwurf öffnen", hint: "bearbeiten, festschreiben und senden", fn: zuDraft(d) }] }];
+    const id = d.id, offen = d.kind === "rechnung" && d.status === "offen", rechnung = d.kind === "rechnung" && ["offen", "bezahlt"].includes(d.status);
+    return [
+      { t: "", items: [{ l: "PDF ansehen", fn: () => window.open(`/api/admin/finance/invoices/${id}/pdf`, "_blank", "noopener") }, { l: "Details öffnen", fn: zuDraft(d) },
+        { l: "Erneut senden", hint: d.sent_at ? "per E-Mail mit PDF" : "noch nicht per E-Mail verschickt", fn: async () => { const r = await api(`/finance/invoices/${id}/send`, { method: "POST", body: {} }); toast(r.mailed ? "Erneut verschickt" : "Mail liegt im Postausgang (E-Mail noch nicht eingerichtet)"); nachDoc(); } }] },
+      { t: "Zahlung", items: [
+        offen && d.dunning?.overdue > 0 ? { l: `${d.dunning.next} senden`, hint: `${d.dunning.overdue} Tage über dem Zahlungsziel`, fn: async () => { if (!(await UI.confirm(`Mit Rechnung als PDF an ${current.email}.`, { title: `${d.dunning.next} senden?`, ok: "Senden" }))) return; const r = await api(`/finance/invoices/${id}/remind`, { method: "POST", body: {} }); toast(`${r.label} ${r.mailed ? "verschickt" : "im Postausgang"}`); nachDoc(); } } : null,
+        offen ? { l: "Als bezahlt markieren", fn: async () => { const dt = await UI.prompt("Zahlung eingegangen", { label: "Eingang am", type: "date", value: new Date().toISOString().slice(0, 10), ok: "Als bezahlt markieren" }); if (!dt) return; await api(`/finance/invoices/${id}/paid`, { method: "POST", body: { date: dt } }); toast("Als bezahlt markiert – Zahlungsplan und Kunde sind aktualisiert."); nachDoc(); } } : null] },
+      { t: "Angebot", items: d.kind === "angebot" && d.status === "versendet" ? [
+        { l: "Zusage außerhalb des Portals", hint: "nur bei Zusage per Telefon oder E-Mail", fn: async () => { const who = await UI.prompt("Zusage außerhalb des Portals", { text: "Projekt, Zahlungsplan und die erste Rechnung (als Entwurf) werden genauso angelegt wie bei einer Annahme im Portal. Der Kunde bekommt die Auftragsbestätigung per E-Mail.", label: "Wer hat zugesagt? (Name)", value: current.name || "", ok: "Auftrag anlegen" }); if (!who) return;
+          await api(`/contracts/quote/${id}/accept`, { method: "POST", body: { name: who, via: "Zusage per Telefon/E-Mail" } }); toast("Auftrag angelegt – die erste Rechnung wartet im Cockpit auf Freigabe."); nachDoc(); } },
+        { l: "Als abgelehnt markieren", fn: async () => { if (!(await UI.confirm("Das Angebot wird als abgelehnt markiert.", { title: "Angebot abgelehnt?", ok: "Als abgelehnt markieren" }))) return; await api(`/finance/invoices/${id}/status`, { method: "POST", body: { status: "abgelehnt" } }); toast("Als abgelehnt markiert."); nachDoc(); } }] : [] },
+      { danger: true, items: rechnung ? [{ l: "Stornieren", danger: true, hint: "erstellt eine Stornorechnung", fn: async () => {
+        const reason = await UI.prompt("Rechnung stornieren", { text: "Es wird eine Stornorechnung mit negativem Betrag erstellt.", label: "Grund (erscheint auf der Stornorechnung)", ok: "Weiter" }); if (reason === null) return;
+        const sendSt = await UI.choice("Soll der Kunde die Stornorechnung per E-Mail bekommen?", [{ label: "Nur ablegen", value: false }, { label: "Per E-Mail senden", value: true, primary: true }], { title: "Stornorechnung" }); if (sendSt === null) return;
+        const r = await api(`/finance/invoices/${id}/cancel`, { method: "POST", body: { reason, send: sendSt } }); toast(`Storniert durch ${r.invoice.number}`); nachDoc(); } }] : [] },
+    ];
+  });
   const setProject = async (body, msg) => { await api(`/projects/${project.id}`, { method: "PATCH", body }); toast(msg); openProjectPage(project.id, true); };
 
   const payRow = x => `<div class="payrow" data-id="${x.id || ""}">
@@ -674,21 +797,43 @@
     const kuenftig = !aid || Date.parse(a.start) > Date.now();
     const wann = aid ? C.fmt(a.start, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
     const klein = t => `<small class="muted" style="font-weight:400">– ${t}</small>`;
-    dialog(`<h2 class="span2">Gespräch${firma ? " · " + esc(firma) : ""}</h2>
-      <p class="hint span2" style="margin:-6px 0 0">${aid ? `Termin ${wann} Uhr. ` : "Noch kein Termin eingetragen. "}Du kannst schon vor und während des Gesprächs mitschreiben und jederzeit speichern.</p>
-      <label class="span2">Interne Notizen ${klein("sieht der Kunde nicht. Grundlage für das Angebot.")}<textarea name="notes_intern" rows="6" placeholder="z. B. will nur ein Konzept, Budget ca. …, Entscheidung bis …">${esc(a.notes_intern || "")}</textarea></label>
-      <label class="span2">Zusammenfassung für den Kunden ${klein("steht nach dem Speichern im Kundenportal beim Termin")}<textarea name="summary" rows="5" placeholder="Was wurde besprochen? Was möchte der Kunde?">${esc(a.summary || "")}</textarea></label>
-      <label class="span2">Nächste Schritte ${klein("sieht der Kunde ebenfalls")}<textarea name="next_steps" rows="3" placeholder="z. B. Wir schicken bis Freitag das Angebot.">${esc(a.next_steps || "")}</textarea></label>
-      ${kuenftig ? `<label class="check span2"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}> Gespräch hat stattgefunden <small>(${aid ? "der Termin wird auf jetzt gesetzt und gilt als geführt" : "wird mit dem heutigen Datum eingetragen"})</small></label>` : ""}
-      <label class="check span2"><input type="checkbox" name="notify"> Kunden per E-Mail über die Zusammenfassung informieren</label>`,
+    const schonAusgewertet = !!(a.notes_intern || a.summary || a.next_steps);
+    const form = dialog(`<h2 class="span2">Gespräch${firma ? " · " + esc(firma) : ""}</h2>
+      <p class="hint span2" style="margin:-6px 0 0">${aid ? `Termin ${wann} Uhr. ` : "Noch kein Termin eingetragen. "}Schreib oder diktier während des Gesprächs einfach alles in die Mitschrift – Tippfehler egal. Danach „Auswerten“: Die KI bereinigt den Text und teilt ihn auf.</p>
+      <label class="span2">Mitschrift ${klein("nur fürs Team, wird mitgespeichert")}<textarea name="mitschrift" rows="10" placeholder="z. B. Kunde möchte Online-Terminbuchung, auf keinen Fall Pop-ups. Ich muss darauf achten, dass die Seite bis März fertig ist …">${esc(a.mitschrift || "")}</textarea></label>
+      <div class="span2 mschr__leiste"><button type="button" class="btn" data-auswerten>✨ Auswerten</button>
+        <small class="muted" data-auswerten-hinweis>teilt auf in interne Notiz, Zusammenfassung für den Kunden und nächste Schritte</small></div>
+      <div class="span2 mschr__erg" ${schonAusgewertet ? "" : "hidden"}>
+        <label>Interne Notizen ${klein("sieht der Kunde nicht. Grundlage für das Angebot.")}<textarea name="notes_intern" rows="5">${esc(a.notes_intern || "")}</textarea></label>
+        <label>Zusammenfassung für den Kunden ${klein("steht nach dem Speichern im Kundenportal beim Termin")}<textarea name="summary" rows="5">${esc(a.summary || "")}</textarea></label>
+        <label>Nächste Schritte ${klein("sieht der Kunde ebenfalls")}<textarea name="next_steps" rows="3">${esc(a.next_steps || "")}</textarea></label>
+        <label class="check"><input type="checkbox" name="notify"> Kunden per E-Mail über die Zusammenfassung informieren</label>
+      </div>
+      ${kuenftig ? `<label class="check span2"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}> Gespräch hat stattgefunden <small>(${aid ? "der Termin wird auf jetzt gesetzt und gilt als geführt" : "wird mit dem heutigen Datum eingetragen"})</small></label>` : ""}`,
       async f => {
-        const held = !!f.held?.checked, body = { notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: f.notify.checked };
+        const held = !!f.held?.checked, body = { mitschrift: f.mitschrift.value, notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: f.notify.checked };
         if (held) body.start = new Date(Date.now() - 60000).toISOString();
         if (aid) await api(`/appointments/${aid}`, { method: "PATCH", body });
         else if (held) await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", minutes: 30, kind: "Erstgespräch", project_id: pid || undefined, ...body } });
         else throw new Error("Es gibt noch keinen Termin. Bitte „Gespräch hat stattgefunden“ ankreuzen oder zuerst einen Termin eintragen.");
         toast(held ? "Eingetragen – als Nächstes das Angebot." : "Gespeichert"); danach?.();
       });
+    // „Auswerten“: Mitschrift von der KI bereinigen und auf die drei Felder verteilen – gespeichert wird erst mit „Speichern“
+    const knopf = form.querySelector("[data-auswerten]"), erg = form.querySelector(".mschr__erg"), hinweis = form.querySelector("[data-auswerten-hinweis]");
+    knopf.addEventListener("click", async () => {
+      const text = form.mitschrift.value.trim();
+      if (text.length < 5) { toast("Bitte zuerst etwas in die Mitschrift schreiben."); form.mitschrift.focus(); return; }
+      const belegt = [form.notes_intern, form.summary, form.next_steps].some(t => t.value.trim());
+      if (belegt && !confirm("Die drei Felder darunter werden durch die neue Auswertung ersetzt. Fortfahren?")) return;
+      knopf.disabled = true; const alt = knopf.textContent; knopf.textContent = "Wird ausgewertet …";
+      try {
+        const r = await api("/appointments/auswerten", { method: "POST", body: { mitschrift: text, client_id: cid || undefined, project_id: pid || a.project_id || undefined } });
+        form.notes_intern.value = r.intern || ""; form.summary.value = r.zusammenfassung || ""; form.next_steps.value = r.naechste_schritte || "";
+        erg.hidden = false; hinweis.textContent = "Ausgewertet – bitte kurz prüfen und dann speichern.";
+        erg.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) { toast(e.message || "Die Auswertung hat nicht geklappt."); }
+      finally { knopf.disabled = false; knopf.textContent = alt; }
+    });
   }
   async function docDialog() {
     await ensureProjects();
@@ -904,6 +1049,7 @@ Danach kann sich die Person mit derselben E-Mail-Adresse ganz neu anmelden.`, { 
     newProject: () => window.BOARD.newProject(current.id),
     startOrder: () => window.BOARD.startOrder(current),
     editProject: () => editProjectDialog(),
+    pHaupt: () => hauptSchritt(project)?.fn?.(),
     assign: () => window.BOARD.assign(project, () => openProjectPage(project.id, true)),
     setPhase: a => a.dataset.ph === project.phase ? null : setProject({ phase: a.dataset.ph, notify: true }, `Phase „${a.dataset.ph}“ – der Kunde sieht es im Portal.`),
     pause: () => setProject({ status: "pausiert", notify: false }, "Projekt pausiert"),

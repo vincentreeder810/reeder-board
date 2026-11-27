@@ -69,6 +69,23 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
 
   // Interne Gesprächsnotizen: nur fürs Team. Bewusst nicht in apptOut, weil der Kunde seine Termine darüber im Portal sieht.
   if (!db.prepare("PRAGMA table_info(appointments)").all().some(c => c.name === "notes_intern")) db.exec("ALTER TABLE appointments ADD COLUMN notes_intern TEXT");
+  // Rohe Mitschrift während des Gesprächs (diktiert oder getippt) – nur fürs Team, wird per „Auswerten“ aufgeteilt
+  if (!db.prepare("PRAGMA table_info(appointments)").all().some(c => c.name === "mitschrift")) db.exec("ALTER TABLE appointments ADD COLUMN mitschrift TEXT");
+  const MITSCHRIFT_SCHEMA = { type: "object", additionalProperties: false, required: ["intern", "zusammenfassung", "naechste_schritte"],
+    properties: { intern: { type: "string" }, zusammenfassung: { type: "string" }, naechste_schritte: { type: "string" } } };
+  /** Mitschrift bereinigen und aufteilen: interne Notiz / Zusammenfassung für den Kunden / nächste Schritte (kleines, günstiges Modell) */
+  async function mitschriftAuswerten(text, kontext) {
+    if (!assistantStatus().available) throw Object.assign(new Error("Die KI ist gerade nicht verfügbar (Einstellungen → KI-Assistent: ausgeschaltet, kein Schlüssel oder Monatsbudget erreicht)."), { status: 503 });
+    const r = await callModel("mitschrift", "claude-haiku-5-5",
+      "Du bekommst die rohe Gesprächsmitschrift eines Software- und Hardware-Dienstleisters (Reeder) aus einem Kundentermin – oft per Diktierprogramm entstanden, mit Hör- und Rechtschreibfehlern (z. B. „Reda“ = Reeder). " +
+      "Bereinige Fehler, erfinde nichts dazu und lass nichts Inhaltliches weg. Teile den Inhalt auf:\n" +
+      "1. intern: alles, was nur das Team wissen soll – eigene Merkposten („ich muss darauf achten …“), Einschätzungen, Budget, Preise, Risiken, Bauchgefühl, was der Kunde auf keinen Fall will. Knappe Stichpunkte, je Zeile ein Punkt mit „– “.\n" +
+      "2. zusammenfassung: freundliche, sachliche Zusammenfassung für den Kunden in der Sie-Form (was besprochen wurde, was er sich wünscht, was er nicht möchte). Keine internen Einschätzungen, keine Preise, die nicht ausdrücklich zugesagt wurden. Kurze Absätze oder Stichpunkte.\n" +
+      "3. naechste_schritte: konkrete nächste Schritte, je Zeile einer mit „– “, wer was bis wann macht (soweit genannt), für den Kunden lesbar.\n" +
+      "Ist für ein Feld nichts da, gib einen leeren Text zurück. Antworte auf Deutsch.",
+      `Werte diese Mitschrift aus.\n<<DATEN>>\n${JSON.stringify({ ...kontext, mitschrift: text })}`, MITSCHRIFT_SCHEMA, null, kontext.projekt_id || null);
+    return { intern: clean(r?.intern, 12000), zusammenfassung: clean(r?.zusammenfassung, 6000), naechste_schritte: clean(r?.naechste_schritte, 3000) };
+  }
   // Arbeitsstand: tägliche Updates zugesagt?, Notiz fürs nächste Mal, Zusammenfassung der letzten Sitzung (zur Version gemerkt)
   { const pc = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);
     for (const [c, t] of [["daily_updates", "INTEGER NOT NULL DEFAULT 0"], ["next_note", "TEXT"], ["stand_summary", "TEXT"], ["stand_summary_ref", "INTEGER"]]) if (!pc.includes(c)) db.exec(`ALTER TABLE projects ADD COLUMN ${c} ${t}`); }
@@ -305,6 +322,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
         const r = db.prepare("INSERT INTO appointments(client_id, project_id, title, start, minutes, kind, summary, next_steps, booking_id) VALUES(?,?,?,?,?,?,?,?,?)")
           .run(c.id, projectId, title, start, Math.min(600, Math.max(0, +d.minutes || 0)) || null, clean(d.kind, 40), clean(d.summary, 6000), clean(d.next_steps, 3000), +d.booking_id || null);
         if (d.notes_intern) db.prepare("UPDATE appointments SET notes_intern = ? WHERE id = ?").run(clean(d.notes_intern, 12000), r.lastInsertRowid);
+        if (d.mitschrift) db.prepare("UPDATE appointments SET mitschrift = ? WHERE id = ?").run(clean(d.mitschrift, 20000), r.lastInsertRowid);
         logEvent(c.id, projectId, "termin", new Date(start) > new Date() ? "Termin vereinbart" : "Termin dokumentiert",
           `${title} · ${new Date(start).toLocaleString("de-DE", { timeZone: "Europe/Berlin", weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} Uhr`, d.notify !== false);
         return json(res, 201, apptOut(db.prepare("SELECT * FROM appointments WHERE id = ?").get(r.lastInsertRowid)));
@@ -438,14 +456,25 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
         return json(res, 200, { taeglich: !!pr.daily_updates, notiz: pr.next_note || "", letzter: st ? { version: st.version, at: st.created_at, zusammenfassung: text || "" } : null, verlauf });
       }
     }
+    // Mitschrift auswerten (speichert nichts – das Ergebnis landet erst mit „Speichern“ im Termin)
+    if (p === "/appointments/auswerten" && m === "POST") {
+      const d = await readJson(req);
+      const text = clean(d.mitschrift, 20000);
+      if (text.length < 5) return json(res, 400, { error: "Bitte zuerst etwas in die Mitschrift schreiben." });
+      const kunde = d.client_id ? db.prepare("SELECT name, company FROM clients WHERE id = ?").get(+d.client_id) : null;
+      const projekt = d.project_id ? db.prepare("SELECT id, title FROM projects WHERE id = ?").get(+d.project_id) : null;
+      try { return json(res, 200, await mitschriftAuswerten(text, { kunde: kunde ? [kunde.name, kunde.company].filter(Boolean).join(", ") : "", projekt: projekt?.title || "", projekt_id: projekt?.id || null })); }
+      catch (e) { return json(res, e.status || 502, { error: e.status ? e.message : "Die Auswertung hat nicht geklappt. Bitte gleich noch einmal versuchen." }); }
+    }
     mm = p.match(/^\/appointments\/(\d+)$/);
     if (mm) {
       const a = db.prepare("SELECT * FROM appointments WHERE id = ?").get(+mm[1]);
       if (!a) return json(res, 404, { error: "Termin nicht gefunden" });
-      if (m === "GET") return json(res, 200, { id: a.id, notes_intern: a.notes_intern || "", summary: a.summary || "", next_steps: a.next_steps || "", start: a.start, title: a.title });
+      if (m === "GET") return json(res, 200, { id: a.id, notes_intern: a.notes_intern || "", summary: a.summary || "", next_steps: a.next_steps || "", mitschrift: a.mitschrift || "", start: a.start, title: a.title, project_id: a.project_id });
       if (m === "PATCH") {
         const d = await readJson(req);
         if (d.notes_intern !== undefined) db.prepare("UPDATE appointments SET notes_intern = ? WHERE id = ?").run(clean(d.notes_intern, 12000), a.id);
+        if (d.mitschrift !== undefined) db.prepare("UPDATE appointments SET mitschrift = ? WHERE id = ?").run(clean(d.mitschrift, 20000), a.id);
         const projectId = d.project_id !== undefined ? (d.project_id ? db.prepare("SELECT id FROM projects WHERE id = ? AND client_id = ?").get(+d.project_id, a.client_id)?.id ?? null : null) : a.project_id;
         db.prepare("UPDATE appointments SET title=?, start=?, minutes=?, kind=?, summary=?, next_steps=?, project_id=? WHERE id=?")
           .run(clean(d.title, 160) || a.title, isoOrNull(d.start) || a.start, d.minutes !== undefined ? (Math.min(600, Math.max(0, +d.minutes || 0)) || null) : a.minutes,

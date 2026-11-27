@@ -17,7 +17,13 @@
   async function heute() {
     const box = $("#ckHeute"); if (!box) return;
     const tag0 = new Date(); tag0.setHours(0, 0, 0, 0); const jetzt = Date.now();
-    const [projekte, hw, clients, verein] = await Promise.all([api("/projects"), api("/hardware/projekte").catch(() => []), ME.owner ? api("/clients").catch(() => []) : [], ME.owner ? api("/vereinbarungen").catch(() => []) : []]);
+    const [projekte, hw, clients, verein, uhr] = await Promise.all([api("/projects"), api("/hardware/projekte").catch(() => []), ME.owner ? api("/clients").catch(() => []) : [], ME.owner ? api("/vereinbarungen").catch(() => []) : [], api("/timer").catch(() => ({}))]);
+    // Läuft meine Stoppuhr für ein Projekt, zeigt dessen Karte die laufende Zeit mit Stopp statt „Zeit starten“
+    const lauf = uhr?.timer || null, uhrText = tm => { const s = Math.max(0, Math.floor((Date.now() - Date.parse(tm.started_at)) / 1000)); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+    const zeitKnopf = p => lauf && +lauf.project_id === +p.id
+      ? `<button class="vneben vuhr" data-wp="stop" title="Stoppuhr stoppen und Zeit speichern"><i aria-hidden="true"></i><span class="vuhr__t" data-seit="${esc(lauf.started_at)}">${uhrText(lauf)}</span> · Stoppen</button>`
+      : `<button class="vneben" data-ptime-start data-pid="${p.id}" title="Stoppuhr für dieses Projekt starten">▶ Zeit starten</button>`;
+    clearInterval(heute.tick); heute.tick = setInterval(() => { const el = $("#ckHeute .vuhr__t"); if (!el) return; el.textContent = uhrText({ started_at: el.dataset.seit }); }, 1000);
     const hwNach = new Map((hw || []).map(h => [h.id, h]));
     const tagZeit = iso => { const d = new Date(iso), heuteTag = d.toDateString() === new Date().toDateString();
       return `${heuteTag ? "heute" : "am " + C.fmt(iso, { weekday: "short", day: "numeric", month: "short" })} um ${C.fmt(iso, { hour: "2-digit", minute: "2-digit" })}`; };
@@ -70,7 +76,7 @@
         <div class="vweg" title="${weg.map((w, i) => (i < schritt ? "✓ " : i === schritt ? "→ " : "") + w).join("  ·  ")}"><div class="vweg__b">${weg.map((w, i) => `<i class="${i < schritt ? "ok" : i === schritt ? "jetzt" : ""}"></i>`).join("")}</div>
           <span>Schritt ${Math.min(schritt, weg.length - 1) + 1} von ${weg.length} · <b>${weg[Math.min(schritt, weg.length - 1)]}</b>${schritt < weg.length - 1 ? ` · danach ${weg[schritt + 1]}` : ""}</span></div>
         ${zusatz ? `<div class="vzusatz">${zusatz}</div>` : ""}
-        <div class="vkarte__fuss"><p>${wer === "ich" ? "Nächster Schritt: " : ""}${naechstes}</p><div>${p && schritt >= 4 ? `<button class="vneben" data-ptime-start data-pid="${p.id}" title="Stoppuhr für dieses Projekt starten">▶ Zeit starten</button>` : ""}${neben.filter(Boolean).join("")}${p && !haupt.includes("Weiterarbeiten") && !neben.join("").includes("Vorarbeiten") ? `<a class="vneben" href="${href}">Projekt öffnen</a>` : ""}${haupt}</div></div></div>`;
+        <div class="vkarte__fuss"><p>${wer === "ich" ? "Nächster Schritt: " : ""}${naechstes}</p><div>${p && schritt >= 4 ? zeitKnopf(p) : ""}${neben.filter(Boolean).join("")}${p && !haupt.includes("Weiterarbeiten") && !neben.join("").includes("Vorarbeiten") ? `<a class="vneben" href="${href}">Projekt öffnen</a>` : ""}${haupt}</div></div></div>`;
       // Reihenfolge: erst Termine von heute, dann je näher am Geld, desto weiter oben
       const heuteT = v.termin && new Date(v.termin.start).toDateString() === new Date().toDateString();
       const mein = !p || p.status === "anfrage" || !(p.members || []).length || (p.members || []).some(u => u.id === ME.id);
@@ -392,10 +398,25 @@
         <span>${p.next ? `<b class="ptab__date">${C.fmt(p.next.start, { day: "numeric", month: "short" })}</b><small>${esc(p.next.title)}</small>` : `<small class="muted">–</small>`}</span>
         <span class="pflags">${p.unread ? `<em class="flag flag--chat" title="Ungelesene Nachrichten des Kunden">${ICO("chat")}${p.unread}</em>` : ""}${p.openNotes ? `<em class="flag flag--note" title="Offene Anmerkungen">${ICO("anmerkung")}${p.openNotes}</em>` : ""}${!p.unread && !p.openNotes ? `<small class="muted">–</small>` : ""}</span>
         ${ME.owner ? `<span class="num">${p.offer_net ? money(p.offer_net) : "–"}</span>` : ""}
-        <span><small>${ago(p.last_activity)}</small></span></div>`).join("")}</div>
+        <span><small>${ago(p.last_activity)}</small></span>
+        <span class="akt-zeile">${AKT.knopf("pZeile", { punkte: true, extra: `data-pid="${p.id}"`, titel: `Aktionen für ${p.title}` })}</span></div>`).join("")}</div>
       <p class="pcount">${list.length} von ${all.length} Projekten</p>`
       : `<div class="empty">${all.length ? "Keine Projekte für diese Filter." : ME.owner ? "Noch keine Projekte – legen Sie oben rechts das erste an." : "Ihnen ist noch kein Projekt zugewiesen."}</div>`;
   }
+  // ⋯ in der Projektliste – gilt auch für Hardware-Projekte (deren Seite ist die Hardware-App)
+  AKT.on("pZeile", btn => {
+    const p = pState.all.find(x => x.id === +btn.dataset.pid); if (!p) return [];
+    const offen = p.status !== "abgeschlossen";
+    return [
+      { t: "", items: [{ l: "Öffnen", fn: () => { location.hash = projektHref(p); } }] },
+      { t: "Verkaufen", items: ME.owner && offen ? [{ l: "Angebot erstellen", hint: p.bereich === "hardware" ? "zuerst das Entwicklungskonzept" : "", fn: () => window.angebotErstellen({ client_id: p.client.id, project_id: p.id, title: p.title, bereich: p.bereich }) }] : [] },
+      { t: "Kunde", items: [{ l: "Nachricht an Kunden", hint: p.client.company, fn: () => { location.hash = `#kunden/${p.client.id}/chat`; } }] },
+      { t: "Projekt", items: ME.owner && offen ? [{ l: "Abschließen", hint: "steht danach unter „Abgeschlossen“", fn: async () => {
+        if (!(await UI.confirm(`„${p.title}“ gilt dann als abgeschlossen. Der Kunde sieht es im Portal.`, { title: "Projekt abschließen?", ok: "Abschließen" }))) return;
+        await api(`/projects/${p.id}`, { method: "PATCH", body: { status: "abgeschlossen", notify: true } }); toast("Projekt abgeschlossen");
+        pState.all = await api("/projects"); renderProjects(); } }] : [] },
+    ];
+  });
   DD.on("pTeam", v => { pTeam = v; renderProjects(); });
   DD.on("pBereich", v => { pBereich = v; renderProjects(); });
   DD.on("pKind", v => { pKind = v; renderProjects(); });

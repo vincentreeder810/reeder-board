@@ -166,7 +166,7 @@
     const tag = iso => C.fmt(iso, { day: "numeric", month: "short" });
     // Lange Texte werden auf drei Zeilen gekürzt und lassen sich aufklappen
     const kurz = (t, leer) => !t ? `<p><i>${leer}</i></p>` : `<p class="pclamp">${absatz(t)}</p><button type="button" class="link" data-mehr>ganz anzeigen</button>`;
-    const frage = f => `<div class="ws__f"><input type="checkbox" value="${esc(f.id)}" aria-label="Zum Senden auswählen"><span>${absatz(f.text)}<small>${f.vonTeam ? "von dir" : "von Claude"}${f.gesendet ? ` · <em>an den Kunden geschickt am ${tag(f.gesendet)}</em>` : ""}</small></span>
+    const frage = f => `<div class="ws__f"><input type="checkbox" value="${esc(f.id)}" aria-label="Zum Senden auswählen"><span>${absatz(f.text)}<small>${f.vonTeam ? "von dir" : "von Claude"}${f.gesendet ? ` · <em>an den Kunden geschickt am ${tag(f.gesendet)} · noch nicht beantwortet</em>` : ""}</small></span>
       <span class="ws__fk"><button type="button" class="link" data-wsf="antwort" data-id="${esc(f.id)}">Antwort eintragen</button><button type="button" class="link link--leise" data-wsf="loeschen" data-id="${esc(f.id)}">Löschen</button></span></div>`;
     const ZEIG_N = 3, ZEIG_F = 4;
     const fragenBlock = `<div class="ws__b ws__fragen"><b>Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
@@ -175,7 +175,7 @@
           : `<p>Keine offenen Fragen.</p>`}
         <form class="ws__neu" data-wsf-neu><input name="text" maxlength="600" placeholder="Eigene Frage an den Kunden hinzufügen …" autocomplete="off"><button class="btn btn--ghost btn--sm">Hinzufügen</button></form>
         ${offen.length && S?.canEdit ? `<div class="acts" style="margin-top:10px;justify-content:flex-start"><button class="btn btn--grad btn--sm" data-ws="senden">Angekreuzte Fragen an den Kunden senden</button></div>` : ""}
-        ${weitere(klar.length, klar.map(f => `<p class="ws__klarf"><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}</p>`).join(""), ["geklärte Frage", "geklärte Fragen"])}</div>`;
+        ${weitere(klar.length, klar.map(f => `<p class="ws__klarf"><s>${esc(f.text)}</s>${f.antwort ? `<br>→ ${absatz(f.antwort)}` : ""}${f.vomKunden ? `<br><small><em>vom Kunden beantwortet am ${tag(f.vomKunden)}</em></small>` : ""}</p>`).join(""), ["geklärte Frage", "geklärte Fragen"])}</div>`;
     const kopf = sub => `<div class="chead" style="margin-bottom:12px"><div><h2 style="font-size:18px">Arbeitsbereich</h2><p>${sub}</p></div></div>`;
     if (W.leer) { box.innerHTML = kopf("Stand, Notizen und Fragen an den Kunden") + `<p class="ws__leer">Von Claude ist noch nichts da. Öffne das Projekt oben mit „Mit Claude arbeiten“ und sag Claude am Ende: <b>„Aktualisiere den Arbeitsstand.“</b> Fragen an den Kunden kannst du schon jetzt selbst anlegen.</p>` + fragenBlock; return; }
     box.innerHTML = kopf(`Aus dem Projektordner · aktualisiert ${ago(W.aktualisiert)} · der Kunde sieht das nicht`) + `
@@ -248,13 +248,13 @@
     if (!ids.length) return toast("Bitte mindestens eine Frage ankreuzen.");
     const fragen = W.fragen.filter(f => ids.includes(f.id));
     const d = modal(`<h2 class="span2">Fragen an den Kunden senden</h2>
-      <p class="hint span2" style="margin:0">Der Kunde bekommt die Fragen als Nachricht im Kundenportal und per E-Mail. Seine Antwort landet im Chat.</p>
-      <label class="span2">Einleitung<textarea name="einleitung" rows="2">für Ihr Projekt haben wir noch ${fragen.length === 1 ? "eine Frage" : "ein paar Fragen"}:</textarea></label>
+      <p class="hint span2" style="margin:0">Der Kunde sieht die Fragen im Kundenportal unter Rückfragen und kann sie dort direkt beantworten. Antworten werden hier automatisch eingetragen.</p>
       <div class="span2 ws__vorschau">${fragen.map((f, i) => `<p>${fragen.length > 1 ? `${i + 1}. ` : ""}${absatz(f.text)}</p>`).join("")}</div>
+      <label class="check span2"><input type="checkbox" name="mail" checked> Zusätzlich per E-Mail benachrichtigen</label>
       <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Senden</button></div>`);
     d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"); k.disabled = true;
-      try { const r = await api(`/projects/${pid}/workspace/fragen-senden`, { method: "POST", body: { ids, einleitung: d.f.einleitung.value } });
-        d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Chat des Kunden${r.mailed ? " und per E-Mail" : ""}.`); workspace({ id: pid }); }
+      try { const r = await api(`/projects/${pid}/workspace/fragen-senden`, { method: "POST", body: { ids, mail: d.f.mail.checked } });
+        d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Kundenportal unter Rückfragen${r.mailed ? ", mit E-Mail-Hinweis" : ""}.`); workspace({ id: pid }); }
       catch (err) { d.fail(err.message); k.disabled = false; } });
   });
   window.STAND = { projectCard, workspace, freigabe };

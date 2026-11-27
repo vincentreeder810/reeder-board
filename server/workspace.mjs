@@ -70,11 +70,23 @@ export function workspaceFuerBruecke(pid) {
   const d = reihe(r); return { daten: { ...d, fragen: d.fragen.map(({ vonTeam, ...f }) => f) }, stempel: stempelVon(d.fragen) };
 }
 export const workspaceStempel = pid => workspaceFuerBruecke(pid)?.stempel || "";
+/* Rückfragen, die an den Kunden gegangen sind: Je Projekt und Frage ein Eintrag. Der Kunde beantwortet sie im Kundenportal,
+   die Antwort wird wie „Antwort eintragen“ im Board gespeichert (tm.antworten) und landet so über die Brücke bei Claude. */
+db.exec(`CREATE TABLE IF NOT EXISTS kunden_fragen (
+  id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE, frage_id TEXT NOT NULL, text TEXT NOT NULL,
+  antwort TEXT, gesendet_at TEXT NOT NULL, beantwortet_at TEXT, message_id INTEGER,
+  UNIQUE(project_id, frage_id)
+)`);
+db.exec("CREATE INDEX IF NOT EXISTS kunden_fragen_client ON kunden_fragen(client_id)");
+const ANTWORT_MAX = 1000;   // wie „Antwort eintragen“ im Board und arbeitsstand.json
+
 export function workspaceLesen(pid) {
   const r = db.prepare("SELECT * FROM project_workspace WHERE project_id = ?").get(pid); if (!r) return null;
   let g = {}; try { g = JSON.parse(r.gesendet || "{}"); } catch {}
+  const kb = Object.fromEntries(db.prepare("SELECT frage_id, beantwortet_at FROM kunden_fragen WHERE project_id = ? AND beantwortet_at IS NOT NULL").all(pid).map(x => [x.frage_id, x.beantwortet_at]));
   const d = reihe(r);
-  return { ...d, fragen: d.fragen.map(f => ({ ...f, gesendet: g[f.id] || null })), aktualisiert: r.updated_at };
+  return { ...d, fragen: d.fragen.map(f => ({ ...f, gesendet: g[f.id] || null, vomKunden: kb[f.id] || null })), aktualisiert: r.updated_at };
 }
 /** Fragen im Board selbst anlegen, beantworten oder löschen */
 function teamAendern(pid, fn) {
@@ -84,8 +96,13 @@ function teamAendern(pid, fn) {
   db.prepare("UPDATE project_workspace SET team = ? WHERE project_id = ?").run(JSON.stringify(tm), pid);
   return null;
 }
+/** Antwort zu einer Frage eintragen – die Frage gilt dann als geklärt, die Brücke schreibt sie in arbeitsstand.json.
+ *  Gibt eine Fehlermeldung zurück oder null. Wird vom Board („Antwort eintragen“) und vom Kundenportal benutzt. */
+export function antwortEintragen(pid, fid, antwort) {
+  return teamAendern(pid, (tm, fragen) => { if (!fragen.some(x => x.id === fid)) return "Frage nicht gefunden"; tm.antworten[fid] = antwort; });
+}
 
-export function createWorkspace({ json, readJson, clean, SITE_URL }) {
+export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
   async function admin(req, res, p, m, user) {
     const mm = p.match(/^\/projects\/(\d+)\/workspace(\/fragen-senden|\/fragen(?:\/([\w-]{1,40}))?)?$/); if (!mm) return null;
     const pr = db.prepare("SELECT p.*, c.name client_name, c.email client_email, c.company FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.id = ?").get(+mm[1]);
@@ -101,8 +118,8 @@ export function createWorkspace({ json, readJson, clean, SITE_URL }) {
         return json(res, 201, { ok: true, id });
       }
       if (fid && m === "PATCH") {
-        const d = await readJson(req), antwort = clean(d.antwort, 1000) || "geklärt";
-        const f = teamAendern(pr.id, (tm, fragen) => { if (!fragen.some(x => x.id === fid)) return "Frage nicht gefunden"; tm.antworten[fid] = antwort; });
+        const d = await readJson(req), antwort = clean(d.antwort, ANTWORT_MAX) || "geklärt";
+        const f = antwortEintragen(pr.id, fid, antwort);
         return f ? json(res, 404, { error: f }) : json(res, 200, { ok: true });
       }
       if (fid && m === "DELETE") {
@@ -115,25 +132,76 @@ export function createWorkspace({ json, readJson, clean, SITE_URL }) {
     }
     if (!mm[2] && m === "GET") return json(res, 200,workspaceLesen(pr.id) || { leer: true });
     if (mm[2] === "/fragen-senden" && m === "POST") {
-      // Offene Fragen an den Kunden schicken: als Nachricht im Kundenportal und zusätzlich direkt per E-Mail
+      // Offene Fragen an den Kunden schicken: als Nachricht im Kundenportal, zum Beantworten unter „Rückfragen“ im Portal
+      // und – wenn der Inhaber das Häkchen lässt (Standard) – zusätzlich per E-Mail
       if (!isOwner(user)) return json(res, 403, { error: "Das entscheidet der Inhaber." });
       const w = workspaceLesen(pr.id), d = await readJson(req);
       const ids = Array.isArray(d.ids) ? d.ids.map(String) : null;
       const fragen = (w?.fragen || []).filter(f => f.status === "offen" && (!ids || ids.includes(f.id)));
       if (!fragen.length) return json(res, 400, { error: "Es gibt keine offenen Fragen zum Senden." });
-      const einleitung = clean(d.einleitung, 600) || `für Ihr Projekt „${pr.title}“ haben wir noch ${fragen.length === 1 ? "eine Frage" : "ein paar Fragen"}:`;
-      const liste = fragen.map((f, i) => `${fragen.length > 1 ? `${i + 1}. ` : ""}${f.text}`).join("\n");
-      const text = `Hallo ${pr.client_name},\n\n${einleitung}\n\n${liste}\n\nAntworten Sie gern direkt hier.`;
-      db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(pr.client_id, user.name, text);
-      const mailed = pr.client_email ? await sendMail({ to: pr.client_email, ...vorlage("rueckfragen", { name: pr.client_name, projekt: pr.title, einleitung, fragen: fragen.map(f => f.text),
-        link: `${SITE_URL}/portal/#chat`, firma: firmaVonProjekt(pr.id) }) }) : false;
+      // Die Chat-Nachricht ist nur ein Hinweis: Beantwortet wird jede Frage einzeln im Portal unter „Rückfragen“, damit jede Antwort genau ihrer Frage zugeordnet ist
+      const n = fragen.length;
+      const text = `Hallo ${pr.client_name},\n\nfür Ihr Projekt „${pr.title}“ haben wir ${n === 1 ? "eine Rückfrage" : `${n} Rückfragen`}. Sie finden sie im Kundenportal unter „Rückfragen“ – auf der Startseite ganz oben. Bitte beantworten Sie ${n === 1 ? "sie" : "jede Frage"} dort direkt im zugehörigen Antwortfeld.`;
+      const msgId = db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(pr.client_id, user.name, text).lastInsertRowid;
+      const jetzt = new Date().toISOString();
+      // Merken, welche Fragen an welchen Kunden gingen. Erneutes Senden aktualisiert den Eintrag (auch eine frühere Antwort wird zurückgesetzt,
+      // denn gesendet werden nur offene Fragen).
+      const merke = db.prepare(`INSERT INTO kunden_fragen(project_id, client_id, frage_id, text, gesendet_at, message_id) VALUES(?, ?, ?, ?, ?, ?)
+        ON CONFLICT(project_id, frage_id) DO UPDATE SET client_id = excluded.client_id, text = excluded.text, gesendet_at = excluded.gesendet_at,
+          message_id = excluded.message_id, antwort = NULL, beantwortet_at = NULL`);
+      for (const f of fragen) merke.run(pr.id, pr.client_id, f.id, f.text, jetzt, msgId);
+      const mitMail = d.mail !== false;
+      const mailed = mitMail && pr.client_email ? await sendMail({ to: pr.client_email, ...vorlage("rueckfragen", { name: pr.client_name, projekt: pr.title, anzahl: n,
+        link: `${SITE_URL}/portal/#rueckfragen`, firma: firmaVonProjekt(pr.id) }) }) : false;
       const r = db.prepare("SELECT gesendet FROM project_workspace WHERE project_id = ?").get(pr.id);
       let g = {}; try { g = JSON.parse(r?.gesendet || "{}"); } catch {}
-      const jetzt = new Date().toISOString(); for (const f of fragen) g[f.id] = jetzt;
+      for (const f of fragen) g[f.id] = jetzt;
       db.prepare("UPDATE project_workspace SET gesendet = ? WHERE project_id = ?").run(JSON.stringify(g), pr.id);
       return json(res, 200, { ok: true, anzahl: fragen.length, mailed: !!mailed });
     }
     return null;
   }
-  return { admin };
+
+  /* ---------- Kundenportal: Rückfragen beantworten (nur eigene Fragen des eingeloggten Kunden) ---------- */
+  // Offen ist eine Frage nur, solange sie im Arbeitsbereich noch offen ist – hat der Inhaber sie inzwischen selbst geklärt oder gelöscht, fällt sie weg.
+  function offenImBoard(row, cache) {
+    if (!cache.has(row.project_id)) cache.set(row.project_id, workspaceLesen(row.project_id));
+    return !!cache.get(row.project_id)?.fragen.some(f => f.id === row.frage_id && f.status === "offen");
+  }
+  async function portal(req, res, url, p, c) {
+    const m = req.method;
+    if (p === "/rueckfragen" && m === "GET") {
+      const rows = db.prepare("SELECT k.*, p.title projekt FROM kunden_fragen k JOIN projects p ON p.id = k.project_id WHERE k.client_id = ? ORDER BY k.gesendet_at, k.id").all(c.id);
+      const cache = new Map();
+      const offen = rows.filter(r => !r.beantwortet_at && offenImBoard(r, cache))
+        .map(r => ({ id: r.id, project_id: r.project_id, projekt: r.projekt, text: r.text, gesendet_at: r.gesendet_at }));
+      const grenze = new Date(Date.now() - 30 * 86400000).toISOString();
+      const beantwortet = rows.filter(r => r.beantwortet_at && r.beantwortet_at >= grenze).sort((a, b) => b.beantwortet_at.localeCompare(a.beantwortet_at)).slice(0, 10)
+        .map(r => ({ id: r.id, project_id: r.project_id, projekt: r.projekt, text: r.text, antwort: r.antwort, beantwortet_at: r.beantwortet_at }));
+      return json(res, 200, { offen, beantwortet });
+    }
+    const mm = p.match(/^\/rueckfragen\/(\d+)$/); if (!mm) return null;
+    if (m !== "POST") return json(res, 405, { error: "Nicht erlaubt" });
+    if (limited?.("prf:" + c.id, 30, 10 * 60000)) return json(res, 429, { error: "Bitte einen Moment warten." });
+    const r = db.prepare("SELECT k.*, p.title projekt FROM kunden_fragen k JOIN projects p ON p.id = k.project_id WHERE k.id = ? AND k.client_id = ?").get(+mm[1], c.id);
+    if (!r) return json(res, 404, { error: "Diese Rückfrage gibt es nicht (mehr)." });
+    if (r.beantwortet_at) return json(res, 409, { error: "Diese Frage haben Sie bereits beantwortet – vielen Dank." });
+    if (!offenImBoard(r, new Map())) return json(res, 409, { error: "Diese Frage hat sich inzwischen erledigt – vielen Dank." });
+    const roh = String((await readJson(req)).antwort ?? "").replace(/\r/g, "").trim();
+    if (!roh) return json(res, 400, { error: "Bitte schreiben Sie eine Antwort." });
+    if (roh.length > ANTWORT_MAX) return json(res, 400, { error: `Die Antwort ist zu lang (höchstens ${ANTWORT_MAX} Zeichen). Längeres schreiben Sie uns gern im Chat.` });
+    const antwort = clean(roh, ANTWORT_MAX);
+    // Im Arbeitsbereich als geklärt eintragen – derselbe Weg wie „Antwort eintragen“ im Board, die Brücke bringt es in Claudes Projektordner
+    const fehler = antwortEintragen(r.project_id, r.frage_id, antwort);
+    if (fehler) return json(res, 409, { error: "Diese Frage hat sich inzwischen erledigt – vielen Dank." });
+    const jetzt = new Date().toISOString();
+    db.prepare("UPDATE kunden_fragen SET antwort = ?, beantwortet_at = ? WHERE id = ?").run(antwort, jetzt, r.id);
+    db.prepare("UPDATE projects SET updated_at = datetime('now') WHERE id = ?").run(r.project_id);
+    // Im Chat festhalten, damit der Verlauf vollständig ist
+    db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'client', ?, ?)").run(c.id, c.name, `Antwort auf: ${r.text} → ${antwort}`);
+    sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, ...vorlage("rueckfrage_beantwortet_team", { name: c.name, unternehmen: c.company, projekt: r.projekt,
+      frage: r.text, antwort, link: `${SITE_URL}/admin/#projekte/${r.project_id}` }) }).catch(e => console.warn("Mail:", e.message));
+    return json(res, 200, { ok: true, id: r.id, antwort, beantwortet_at: jetzt });
+  }
+  return { admin, portal };
 }

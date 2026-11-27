@@ -7,6 +7,7 @@
 <title>Board · Reeder Software</title>
 <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/admin/admin.css">
+<link rel="stylesheet" href="/admin/aktionen.css">
 <link rel="stylesheet" href="/admin/hardware/hardware.css">
 <link rel="stylesheet" href="/portal/chat.css">
 <link rel="stylesheet" href="/portal/viewer.css">
@@ -299,8 +300,8 @@
         </form>
       </div>
 
-      <div data-set="email" hidden>
-        <div class="grid2">
+      <div data-set="email" class="mailset" hidden>
+        <div class="grid2" style="order:1">
           <form class="card form-grid" id="smtpForm">
             <h2>Ihr E-Mail-Postfach (SMTP)</h2>
             <p class="hint span2" style="margin:0" id="smtpInfo"></p>
@@ -310,17 +311,16 @@
             <label class="span2">Passwort<input name="pass" type="password" autocomplete="new-password" placeholder="leer lassen = unverändert"></label>
             <div class="span2" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn--grad" type="submit">Speichern</button><button class="btn btn--ghost" type="button" id="testMail">Testmail an mich senden</button></div>
           </form>
-          <div class="stack">
-            <form class="card" id="mailForm"><h2>Absender</h2>
-              <label>Absendername<input name="fromName"></label>
-              <label>Absenderadresse<input name="fromAddress" type="email"></label>
-              <label>Benachrichtigungen ans Team an<input name="notifyAddress" type="email"></label>
-              <button class="btn" type="submit">Speichern</button>
-            </form>
-            <div class="card"><h2>Postausgang</h2><p class="hint">Alle E-Mails, die das System verschickt hat oder verschicken wollte.</p><div id="outbox" class="list outbox"></div></div>
-          </div>
+          <form class="card" id="mailForm"><h2>Absender</h2>
+            <label>Absendername<input name="fromName"></label>
+            <label>Absenderadresse<input name="fromAddress" type="email"></label>
+            <label>Benachrichtigungen ans Team an<input name="notifyAddress" type="email"></label>
+            <button class="btn" type="submit">Speichern</button>
+          </form>
         </div>
-        <div class="card mv" id="mailVorschau">
+        <!-- Reihenfolge: oben Postfach und Absender nebeneinander, dann die Vorschau, unten der Postausgang über die ganze Breite -->
+        <div class="card" id="postausgangKarte" style="order:3"><h2>Postausgang</h2><p class="hint">Alle E-Mails, die das System verschickt hat oder verschicken wollte.</p><div id="outbox" class="list outbox"></div></div>
+        <div class="card mv" id="mailVorschau" style="order:2">
           <h2>So sehen unsere E-Mails aus</h2>
           <p class="hint">Jede automatische E-Mail mit Beispieldaten – so, wie sie beim Empfänger ankommt.</p>
           <div class="mv__grid">
@@ -389,6 +389,7 @@
 <script src="/portal/chat.js"></script>
 <script src="/portal/viewer.js"></script>
 <script src="/admin/admin.js"></script>
+<script src="/admin/aktionen.js"></script>
 <script src="/admin/mails.js"></script>
 <script src="/admin/kunden.js"></script>
 <script src="/admin/board.js"></script>
