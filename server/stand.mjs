@@ -5,6 +5,7 @@ import { readdir, readFile, writeFile, mkdir, stat, rm } from "node:fs/promises"
 import path from "node:path";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "./db.mjs";
+import { versandMerken, erinnerungVormerken } from "./versand.mjs";
 import { PROTO_MIME, safeRel } from "./portal.mjs";
 import { isOwner, canProject } from "./access.mjs";
 
@@ -109,7 +110,7 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
   }
 
   /** Kern: Dateien vergleichen und – wenn geändert – als neue Version veröffentlichen */
-  async function publish(p, files, { changes = "", announce = true, mail, dry = false, source = "ordner", author = "Team Reeder", job = null, kandidat = false } = {}) {
+  async function publish(p, files, { changes = "", announce = true, mail, erinnern = false, dry = false, source = "ordner", author = "Team Reeder", job = null, kandidat = false } = {}) {
     const htmls = files.map(f => f.path).filter(isPage).sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
     if (!htmls.length) throw err(400, "Keine HTML-Datei gefunden. Ein Stand braucht mindestens eine .html-Datei.");
     const groupId = targetGroup(p), prev = latestIn(groupId), next = manifestOf(files);
@@ -139,8 +140,9 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
     if (!groupId) db.prepare("UPDATE prototypes SET group_id = id WHERE id = ?").run(gid);
     db.prepare("UPDATE projects SET stand_group = ?, updated_at = datetime('now') WHERE id = ?").run(gid, p.id);
     logEvent(p.client_id, p.id, "prototyp", base.version > 1 ? `Neuer Stand: Version ${base.version}` : "Erster Stand veröffentlicht", `${base.title} – ${text}`, mail ?? announce);
-    if (announce) db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)")
-      .run(p.client_id, author, base.version > 1 ? `Neuer Stand von „${base.title}“ (Version ${base.version}) ist online.\n${text}` : `Der erste Stand von „${base.title}“ ist online. Klicken Sie sich gern durch und markieren Sie, was Ihnen auffällt.`, r.lastInsertRowid, p.id);
+    standVersand(p.client_id, p.id, r.lastInsertRowid, { announce, mail: mail ?? announce, author });
+    if (announce) standChat(db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)")
+      .run(p.client_id, author, base.version > 1 ? `Neuer Stand von „${base.title}“ (Version ${base.version}) ist online.\n${text}` : `Der erste Stand von „${base.title}“ ist online. Klicken Sie sich gern durch und markieren Sie, was Ihnen auffällt.`, r.lastInsertRowid, p.id).lastInsertRowid, erinnern);
     return { published: true, id: Number(r.lastInsertRowid), ...base, changes: text };
   }
 
@@ -149,13 +151,19 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
     await rm(path.join(PROTO_DIR, c.token), { recursive: true, force: true });
   }
   /** Kandidat freigeben: wird zur aktuellen Version, Kunde wird benachrichtigt */
-  function releaseCandidate(c, { text, announce = true, mail, author = "Team Reeder" }) {
+  function releaseCandidate(c, { text, announce = true, mail, erinnern = false, author = "Team Reeder" }) {
     db.prepare("UPDATE prototypes SET state = NULL, active = 1, changes = ?, created_at = datetime('now') WHERE id = ?").run(text || c.changes, c.id);
     db.prepare("UPDATE projects SET stand_group = ?, updated_at = datetime('now') WHERE id = ?").run(c.group_id, c.project_id);
     logEvent(c.client_id, c.project_id, "prototyp", `Neuer Stand: Version ${c.version}`, `${c.title} – ${text || c.changes}`, mail ?? announce);
-    if (announce) db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)")
-      .run(c.client_id, author, `Neuer Stand von „${c.title}“ (Version ${c.version}) ist online – geprüft und freigegeben.\n${text || c.changes}`, c.id, c.project_id ?? null);
+    standVersand(c.client_id, c.project_id, c.id, { announce, mail: mail ?? announce, author });
+    if (announce) standChat(db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)")
+      .run(c.client_id, author, `Neuer Stand von „${c.title}“ (Version ${c.version}) ist online – geprüft und freigegeben.\n${text || c.changes}`, c.id, c.project_id ?? null).lastInsertRowid, erinnern);
   }
+  const standChat = (msgId, erinnern) => { if (erinnern) erinnerungVormerken(msgId); };
+  const standVersand = (clientId, projectId, protoId, { announce, mail, author }) => {
+    if (announce) versandMerken({ clientId, projectId, art: "stand", refId: protoId, kanal: "chat", von: author });
+    if (mail) versandMerken({ clientId, projectId, art: "stand", refId: protoId, kanal: "mail", anlass: "neuigkeiten", von: author });
+  };
   const keyHash = k => sha(Buffer.from(String(k)));
   function info(p, user) {
     const g = targetGroup(p), last = latestIn(g);
@@ -199,7 +207,7 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
       const d = await readJson(req);
       const job = d.job ? db.prepare("SELECT id FROM build_jobs WHERE id = ? AND project_id = ? AND state IN ('offen','abgeholt','kandidat')").get(+d.job, pr.id)?.id : null;
       if (d.job && !job) return json(res, 400, { error: "Dieser Auftrag ist nicht mehr offen." });
-      const r = await publish(pr, await readFolder(await checkDir(pr.source_dir)), { changes: d.changes, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, dry: !!d.dry, source: "ordner", author: user.name, job });
+      const r = await publish(pr, await readFolder(await checkDir(pr.source_dir)), { changes: d.changes, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, erinnern: d.erinnern === true, dry: !!d.dry, source: "ordner", author: user.name, job });
       if (r.candidate) onCandidate?.(job, r.id);
       return json(res, r.published ? 201 : 200, r);
     }

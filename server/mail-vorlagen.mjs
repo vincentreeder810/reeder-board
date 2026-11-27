@@ -571,6 +571,22 @@ ${d.portalLink}`,
     }),
     beispiel: { name: B.name, link: `${BSP}/portal/` },
   },
+  portal_erinnerung: {
+    gruppe: "Projekt & Portal", titel: "Erinnerung: liegt im Kundenportal bereit", an: "kunde",
+    wann: "Wenn eine Chat-Karte (neuer Stand, Dokument, Zusammenfassung, Rückfragen) nach zwei Stunden noch ungelesen ist – oder wenn du etwas über „Erneut schicken“ per E-Mail nachschickst.",
+    baue: d => {
+      const liste = (d.punkte || []).filter(Boolean);
+      return {
+        subject: liste.length === 1 ? `Für Sie bereit: ${kurz(liste[0], 60)}` : `${liste.length || "Neue"} Neuigkeiten in Ihrem Kundenportal`,
+        text: absaetze(anrede(d),
+          liste.length === 1 ? `in Ihrem Kundenportal liegt für Sie bereit: ${fett(einzeilig(liste[0]))}.` : "in Ihrem Kundenportal liegt Folgendes für Sie bereit:",
+          liste.length > 1 ? liste.map(p => `- ${einzeilig(p)}`).join("\n") : "",
+          d.link, gruss(d.firma)),
+        knopf: { label: "Im Kundenportal ansehen", url: d.link },
+      };
+    },
+    beispiel: { name: B.name, punkte: ["Neuer Stand: Website Physiotherapie Am Park (Version 3)"], link: `${BSP}/portal/#chat/27` },
+  },
   chat_team: {
     gruppe: "Projekt & Portal", titel: "Neue Nachricht eines Kunden (an dich)", an: "team",
     wann: "Wenn ein Kunde im Kundenportal schreibt (höchstens eine Mail je 30 Minuten).",

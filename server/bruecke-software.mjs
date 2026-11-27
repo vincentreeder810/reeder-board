@@ -149,7 +149,7 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
       if (!c) return json(res, 404, { error: "Es wartet keine Version auf Freigabe." });
       if (fm[2] === "verwerfen") { await stand.discardCandidate(c); return json(res, 200, { ok: true }); }
       const d = await readJson(req, 64 * 1024);
-      stand.releaseCandidate(c, { text: clean(d.text, 3000) || c.changes, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, author: user?.name || "Team Reeder" });
+      stand.releaseCandidate(c, { text: clean(d.text, 3000) || c.changes, announce: d.announce !== false, mail: d.mail === undefined ? undefined : d.mail !== false, erinnern: d.erinnern === true, author: user?.name || "Team Reeder" });
       const erledigt = anmerkungenErledigen(x.id, idListe(c.erledigt_ids), c.version);
       phaseNachziehen(x.id);
       return json(res, 200, { ok: true, version: c.version, erledigt });

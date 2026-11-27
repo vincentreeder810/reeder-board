@@ -90,10 +90,10 @@
         <div class="upsum span2"><b>${p.files} Dateien</b><span>${C.size(p.bytes)}</span><span style="margin-left:auto;color:var(--ink2)">${t ? `nach „${esc(t.title)}“` : "neuer Prototyp für dieses Projekt"}</span></div>
         <p class="span2" style="margin:0"><b>Automatisch erkannt:</b> ${esc(p.summary)}</p>
         <label class="span2">Was hat sich geändert? (sieht der Kunde – leer lassen für die automatische Liste)<textarea name="changes" rows="3" placeholder="z. B. Überschriften ruhiger, Öffnungszeiten ergänzt, Speisekarte als eigene Seite"></textarea></label>
-        ${KANAL.html({ hinweis: "Ohne Haken sieht der Kunde die neue Version nur, wenn er selbst ins Portal schaut." })}
+        ${KANAL.html({ hinweis: "Bei „Nicht benachrichtigen“ sieht der Kunde die neue Version nur, wenn er selbst ins Portal schaut." })}
         <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Hochladen</button></div>`);
       d.f.addEventListener("submit", async e => { e.preventDefault(); const b = d.f.querySelector("button:not([data-close])"); b.disabled = true; b.textContent = "Wird hochgeladen …";
-        try { const r = await api(`/projects/${S.project_id}/stand`, { method: "POST", body: { changes: d.f.changes.value, announce: KANAL.werte(d.f).chat, mail: KANAL.werte(d.f).mail } });
+        try { const r = await api(`/projects/${S.project_id}/stand`, { method: "POST", body: { changes: d.f.changes.value, announce: KANAL.werte(d.f).chat, mail: KANAL.werte(d.f).mail, erinnern: KANAL.werte(d.f).erinnern } });
           d.close(); toast(r.unchanged ? r.summary : `Version ${r.version} ist online`); reloadPage(); }
         catch (err) { d.fail(err.message); b.disabled = false; b.textContent = "Hochladen"; } });
     },
@@ -132,10 +132,10 @@
         const d = modal(`<h2 class="span2">Neuen Stand hochladen</h2>
           <p class="hint span2" style="margin:0">Die Brücke lädt den Inhalt des Ordners <code>website</code> aus dem Projektordner auf deinem Rechner hoch. Das Board vergleicht mit der letzten Version; hat sich nichts geändert, entsteht keine neue.</p>
           <label class="span2">Was hat sich geändert? (sieht der Kunde – leer lassen für die automatische Liste)<textarea name="changes" rows="3" placeholder="z. B. Startseite überarbeitet, Leistungen ergänzt, Kontaktformular eingebaut"></textarea></label>
-          ${KANAL.html({ hinweis: "Ohne Haken sieht der Kunde die neue Version nur, wenn er selbst ins Portal schaut." })}
+          ${KANAL.html({ hinweis: "Bei „Nicht benachrichtigen“ sieht der Kunde die neue Version nur, wenn er selbst ins Portal schaut." })}
           <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Hochladen</button></div>`);
         d.f.addEventListener("submit", async ev => { ev.preventDefault();
-          try { await api(`/bruecke/projekt/${pid}/stand`, { method: "POST", body: { changes: d.f.changes.value, announce: KANAL.werte(d.f).chat, mail: KANAL.werte(d.f).mail } });
+          try { await api(`/bruecke/projekt/${pid}/stand`, { method: "POST", body: { changes: d.f.changes.value, announce: KANAL.werte(d.f).chat, mail: KANAL.werte(d.f).mail, erinnern: KANAL.werte(d.f).erinnern } });
             d.close(); toast("Die Brücke lädt den Stand hoch. Die Seite aktualisiert sich gleich …"); setTimeout(reloadPage, 9000); }
           catch (err) { d.fail(err.message); } });
         return;
@@ -233,10 +233,10 @@
       const d = modal(`<h2 class="span2">Version ${w.version} freigeben</h2>
         <p class="hint span2" style="margin:0">Mit der Freigabe sieht der Kunde diese Version im Kundenportal.</p>
         <label class="span2">Was ist neu? (sieht der Kunde)<textarea name="text" rows="3">${esc(w.changes || "")}</textarea></label>
-        ${KANAL.html({ hinweis: "Ohne Haken sieht der Kunde die neue Version nur, wenn er selbst ins Portal schaut." })}
+        ${KANAL.html({ hinweis: "Bei „Nicht benachrichtigen“ sieht der Kunde die neue Version nur, wenn er selbst ins Portal schaut." })}
         <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Freigeben</button></div>`);
       d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"); k.disabled = true;
-        try { const r = await api(`/bruecke/projekt/${pid}/freigeben`, { method: "POST", body: { text: d.f.text.value, announce: KANAL.werte(d.f).chat, mail: KANAL.werte(d.f).mail } });
+        try { const r = await api(`/bruecke/projekt/${pid}/freigeben`, { method: "POST", body: { text: d.f.text.value, announce: KANAL.werte(d.f).chat, mail: KANAL.werte(d.f).mail, erinnern: KANAL.werte(d.f).erinnern } });
           d.close(); toast(`Version ${r.version} ist jetzt beim Kunden${r.erledigt ? ` · ${r.erledigt} Anmerkung${r.erledigt === 1 ? "" : "en"} abgehakt` : ""}`); window.KUNDEN?.openProjectPage(pid, true); }
         catch (err) { d.fail(err.message); k.disabled = false; } });
     } catch (err) { toast(err.message); }
@@ -250,10 +250,10 @@
     const d = modal(`<h2 class="span2">Fragen an den Kunden senden</h2>
       <p class="hint span2" style="margin:0">So sieht der Kunde die Fragen – jede mit eigenem Antwortfeld. Sie erscheinen außerdem im Projekt-Chat.</p>
       <div class="span2 wsv" aria-label="Vorschau, wie der Kunde die Fragen sieht">${fragen.map(f => `<div class="wsv__k"><p class="wsv__q">${absatz(f.text)}</p><div class="wsv__feld" aria-hidden="true">Ihre Antwort …</div><span class="wsv__knopf" aria-hidden="true">Antwort senden</span></div>`).join("")}</div>
-      ${KANAL.html({ chatFest: "immer – dort beantwortet der Kunde jede Frage", hinweis: "Die E-Mail ist nur ein Hinweis, die Fragen selbst stehen nicht darin." })}
+      ${KANAL.html({ modus: "rueckfragen", titel: "Die Fragen kommen in den Chat – und per E-Mail?", hinweis: "Die E-Mail ist nur ein Hinweis, die Fragen selbst stehen nicht darin." })}
       <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Senden</button></div>`);
     d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"); k.disabled = true;
-      try { const r = await api(`/projects/${pid}/workspace/fragen-senden`, { method: "POST", body: { ids, mail: KANAL.werte(d.f).mail } });
+      try { const r = await api(`/projects/${pid}/workspace/fragen-senden`, { method: "POST", body: { ids, mail: KANAL.werte(d.f).mail, erinnern: KANAL.werte(d.f).erinnern } });
         d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Kundenportal unter Rückfragen und im Projekt-Chat${r.mailed ? ", mit E-Mail-Hinweis" : ""}.`);
         if (window.KUNDEN?.openProjectPage && $("#pChat")) window.KUNDEN.openProjectPage(pid, true); else workspace({ id: pid }); }   // neu zeichnen, damit die Karte „Nachrichten“ die Rückfragen gleich zeigt
       catch (err) { d.fail(err.message); k.disabled = false; } });

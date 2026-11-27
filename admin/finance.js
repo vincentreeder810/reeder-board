@@ -83,8 +83,10 @@
   $("[data-section=finanzen]").addEventListener("click", e => {
     const g = e.target.closest("[data-go]"); if (g) { e.preventDefault(); ftab = g.dataset.go; history.replaceState(null, "", "#finanzen/" + ftab); window.loadFinance(); return; }
     const n = e.target.closest("[data-new]"); if (n) return editor({ kind: n.dataset.new });
+    if (e.target.closest("[data-erneut]")) return;   // ↻ in der Zeile öffnet „Erneut schicken“, nicht die Rechnung
     const o = e.target.closest("[data-open]"); if (o) return openInvoice(+o.dataset.open);
   });
+  $("[data-section=finanzen]").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches?.(".ftable__r--akt")) e.target.click(); });
 
   /* ---------- Rechnungen / Angebote ---------- */
   async function list(kind) {
@@ -92,10 +94,10 @@
     const label = kind === "angebot" ? "Angebot" : "Rechnung";
     box.innerHTML = `<div class="seg fsub"><button data-go="rechnungen" class="${kind === "angebot" ? "" : "on"}">Rechnungen</button><button data-go="angebote" class="${kind === "angebot" ? "on" : ""}">Angebote</button></div><div class="fhead"><p class="hint" style="margin:0">${kind === "angebot" ? "Angebote mit eigenem Nummernkreis – angenommen, lassen sie sich mit einem Klick in eine Rechnung übernehmen." : "Entwürfe sind frei änderbar. Festgeschriebene Rechnungen sind unveränderlich (GoBD) – Korrekturen laufen über eine Stornorechnung."}</p>
       <button class="btn btn--grad" data-new="${kind}">Neue${kind === "angebot" ? "s Angebot" : " Rechnung"}</button></div>
-      ${rows.length ? `<div class="ftable"><div class="ftable__h"><span>Nummer</span><span>Kunde / Titel</span><span>Datum</span><span>${kind === "angebot" ? "Gültig bis" : "Fällig"}</span><span class="num">Brutto</span><span>Status</span></div>
-        ${rows.map(r => `<button class="ftable__r" data-open="${r.id}"><span class="mono">${r.number ? esc(r.number) : "<em>Entwurf</em>"}</span>
+      ${rows.length ? `<div class="ftable"><div class="ftable__h"><span>Nummer</span><span>Kunde / Titel</span><span>Datum</span><span>${kind === "angebot" ? "Gültig bis" : "Fällig"}</span><span class="num">Brutto</span><span>Status</span><span></span></div>
+        ${rows.map(r => `<div class="ftable__r ftable__r--akt" role="button" tabindex="0" data-open="${r.id}"><span class="mono">${r.number ? esc(r.number) : "<em>Entwurf</em>"}</span>
           <span><b>${esc(r.company)}${firmaTag(r)}</b><small>${esc(r.title || r.project || "")}</small></span><span>${de(r.issue_date)}</span><span>${de(kind === "angebot" ? r.valid_until : r.due_date)}</span>
-          <span class="num">${money(r.locked ? r.gross : r.draftTotals.gross)}</span><span>${pill(r)}</span></button>`).join("")}</div>`
+          <span class="num">${money(r.locked ? r.gross : r.draftTotals.gross)}</span><span>${pill(r)}${r.locked && r.kind !== "storno" ? `<small class="fversand ${r.versand ? "" : "fversand--nie"}">${esc(ERNEUT.kurz(r.versand))}</small>` : ""}</span>${r.locked && r.kind !== "storno" ? `<button type="button" class="btn btn--ghost btn--sm fresend" data-erneut data-art="${r.kind}" data-ref="${r.id}" data-url="/finance/invoices/${r.id}/send" data-mailtext="mit PDF im Anhang" data-titel="${esc((r.kind === "angebot" ? "Angebot " : "Rechnung ") + (r.number || ""))} erneut schicken" title="Erneut schicken – mit Versandprotokoll">↻</button>` : "<span></span>"}</div>`).join("")}</div>`
       : `<div class="empty">Noch keine ${label === "Angebot" ? "Angebote" : "Rechnungen"}. Legen Sie die erste an – Positionen, Steuer und PDF erledigt das Board.</div>`}`;
   }
 
@@ -282,7 +284,7 @@
       <h2 style="margin:0">${isQuote ? "Angebot" : "Rechnung"} festschreiben</h2>
       <p class="hint" style="margin:0">${isQuote ? "Das Angebot bekommt seine Nummer und wird als PDF im Kundenportal abgelegt." : "Die Rechnung bekommt ihre fortlaufende Nummer und ist danach <b>nicht mehr änderbar</b> (GoBD). Korrekturen nur über eine Stornorechnung. Das PDF liegt anschließend im Kundenportal."}</p>
       <div class="fsum"><span>${esc(inv.client_company)}</span><b>${money(inv.gross)}</b></div>
-      ${KANAL.html({ span: false, titel: "Dem Kunden schicken", hinweis: `E-Mail mit PDF an ${inv.client_email}. Im Portal liegt das PDF in jedem Fall.` })}
+      ${KANAL.html({ modus: "haken", mailText: "mit PDF im Anhang", span: false, titel: "Dem Kunden schicken", hinweis: `E-Mail mit PDF an ${inv.client_email}. Im Portal liegt das PDF in jedem Fall.` })}
       <label>Persönliche Nachricht (optional)<textarea name="message" rows="3" placeholder="Leer lassen für den Standardtext"></textarea></label>
       <p class="err" hidden></p>
       <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad" type="submit">Jetzt festschreiben</button></div></form>`;
@@ -305,7 +307,7 @@
     const m = document.createElement("div"); m.className = "modal fmodal";
     const acts = [];
     acts.push(`<a class="btn btn--ghost" href="/api/admin/finance/invoices/${id}/pdf" target="_blank" rel="noopener">PDF öffnen</a>`);
-    acts.push(`<button class="btn btn--ghost" data-a="send">Erneut senden</button>`);
+    acts.push(`<button class="btn btn--ghost" data-erneut data-art="${inv.kind}" data-ref="${id}" data-url="/finance/invoices/${id}/send" data-mailtext="mit PDF im Anhang" data-titel="${esc(inv.number)} erneut schicken">${inv.versand?.length ? "Erneut schicken …" : "Schicken …"}</button>`);
     if (inv.kind === "rechnung" && inv.status === "offen") {
       acts.push(`<button class="btn btn--grad" data-a="paid">Zahlung eingegangen</button>`);
       if (inv.dunning?.overdue > 0) acts.push(`<button class="btn btn--ghost" data-a="remind">${esc(inv.dunning.next)} senden</button>`);
@@ -319,7 +321,7 @@
         <div class="fdl"><div><small>Kunde</small><b>${esc(r.company)}</b><span>${esc([r.street, [r.zip, r.city].join(" ")].filter(Boolean).join(", "))}</span></div>
           <div><small>${isQuote ? "Angebotsdatum" : "Rechnungsdatum"}</small><b>${de(inv.issue_date)}</b><span>${isQuote ? "gültig bis " + de(inv.valid_until) : inv.kind === "rechnung" ? "fällig " + de(inv.due_date) : "zu " + esc(inv.cancels_number || "")}</span></div>
           <div><small>Betrag</small><b>${money(inv.gross)}</b><span>${money(inv.net)} netto + ${money(inv.vat)} USt.</span></div>
-          <div><small>Status</small><b>${inv.status === "bezahlt" ? "Bezahlt am " + de(inv.paid_at) : (STAT[inv.status] || [inv.status])[0]}</b><span>${inv.sent_at ? "versendet " + fmt(inv.sent_at.replace(" ", "T") + "Z", { dateStyle: "short", timeStyle: "short" }) : "noch nicht per Mail versendet"}${inv.dunning_level ? ` · ${inv.dunning_level}× gemahnt` : ""}</span></div></div>
+          <div><small>Status</small><b>${inv.status === "bezahlt" ? "Bezahlt am " + de(inv.paid_at) : (STAT[inv.status] || [inv.status])[0]}</b><span>${inv.versand?.length ? "zuletzt verschickt " + ERNEUT.zeit(inv.versand[0].at) + " · " + inv.versand[0].kanal_text : inv.sent_at ? "versendet " + fmt(inv.sent_at.replace(" ", "T") + "Z", { dateStyle: "short", timeStyle: "short" }) : "noch nicht verschickt"}${inv.dunning_level ? ` · ${inv.dunning_level}× gemahnt` : ""}</span></div></div>
         ${inv.title ? `<p style="margin:0"><b>${esc(inv.title)}</b>${inv.project_title ? ` · Projekt ${esc(inv.project_title)}` : ""}</p>` : ""}
         <div class="ftable ftable--items"><div class="ftable__h"><span>Pos.</span><span>Leistung</span><span>Menge</span><span class="num">Einzelpreis</span><span class="num">Gesamt</span></div>
           ${inv.items.map(it => `<div class="ftable__r"><span>${it.pos}</span><span><b>${esc(it.title)}</b>${it.description ? `<small>${esc(it.description)}</small>` : ""}</span><span>${String(it.qty).replace(".", ",")} ${esc(it.unit || "")}</span><span class="num">${money(it.unit_net)}</span><span class="num">${money(it.net)}</span></div>`).join("")}</div>

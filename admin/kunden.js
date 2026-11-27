@@ -439,7 +439,7 @@
           <div class="khead__acts">
             ${haupt ? `<button class="btn btn--grad btn--sm" data-act="pHaupt" title="${esc(haupt.hint || "")}">${esc(haupt.l)}</button>` : ""}
             ${AKT.knopf("pKopf")}</div></div>
-        <div class="pweb">${liveV ? `<button class="btn btn--grad btn--sm" data-web="0">Aktuelle Website ansehen</button><a class="btn btn--ghost btn--sm" href="${esc(liveV.url)}" target="_blank" rel="noopener" title="Die Website ohne Board in einem neuen Tab öffnen – so, wie der Kunde sie sieht">↗ Neuer Tab</a><button class="btn btn--ghost btn--sm" data-web="1">Mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="1">Website ansehen</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--ghost btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span>` : ""}</div>
+        <div class="pweb">${liveV ? `<button class="btn btn--grad btn--sm" data-web="0">Aktuelle Website ansehen</button><a class="btn btn--ghost btn--sm" href="${esc(liveV.url)}" target="_blank" rel="noopener" title="Die Website ohne Board in einem neuen Tab öffnen – so, wie der Kunde sie sieht">↗ Neuer Tab</a><button class="btn btn--ghost btn--sm" data-web="1">Mit Anmerkungen${openAnns.length ? ` (${openAnns.length})` : ""}</button>` : p.prototypes.length ? `<button class="btn btn--ghost btn--sm" data-web="1">Website ansehen</button>` : `<span class="pweb__leer">Noch keine Website hochgeladen</span>`}${ME.owner && p.bereich !== "hardware" ? `<button class="btn btn--ghost btn--sm" data-br="claude">Mit Claude arbeiten</button>` : ""}${liveV ? `<span class="pweb__st">Beim Kunden: <b>Version ${liveV.version}</b> · online ${ago(liveV.created_at)}</span><button class="btn btn--ghost btn--sm" data-erneut data-art="stand" data-ref="${liveV.id}" data-url="/projects/${p.id}/stand/erneut" data-titel="Aktuellen Stand erneut schicken (Version ${liveV.version})" title="Wenn der Kunde sagt, er hat nichts bekommen">↻ Erneut schicken</button>` : ""}</div>
         <div class="pphase" role="list">${PHASES.map((ph, k) => `<button type="button" data-act="setPhase" data-ph="${esc(ph)}" class="${k < p.phaseIndex ? "done" : k === p.phaseIndex ? "now" : ""}" title="Phase auf „${esc(ph)}“ setzen"><i></i><span>${esc(ph)}</span></button>`).join("")}</div>
       </div>
       <div class="pgrid">
@@ -572,7 +572,7 @@
       // Die Auftragsbestätigung steht direkt über ihrem Angebot
       if (d.acceptance?.decision === "angenommen" && d.acceptance.doc_id) rows.push(`<div class="pdoc"><span class="pdoc__k pdoc__k--ab">AB</span><span class="pdoc__m"><b>Auftragsbestätigung</b><small>zu ${esc(d.number || "")} · ${esc(C.fmt(d.acceptance.at.replace(" ", "T") + "Z", { day: "numeric", month: "short", year: "numeric" }))}</small></span>
         <span class="pdoc__r"><b>${money(d.gross)}</b><span class="pdoc__st pdoc__st--ok">angenommen</span></span>${AKT.knopf("pDoc", { punkte: true, extra: `data-ab="${d.acceptance.doc_id}"`, titel: "Aktionen zur Auftragsbestätigung" })}</div>`);
-      rows.push(`<div class="pdoc"><span class="pdoc__k pdoc__k--${art[1]}">${art[0]}</span><span class="pdoc__m"><b>${esc(d.number || "Entwurf")}</b><small>${esc(sub)}</small></span>
+      rows.push(`<div class="pdoc"><span class="pdoc__k pdoc__k--${art[1]}">${art[0]}</span><span class="pdoc__m"><b>${esc(d.number || "Entwurf")}</b><small>${esc(sub)}</small>${d.locked && d.kind !== "storno" ? `<small class="pdoc__v ${d.versand ? "" : "pdoc__v--nie"}">${esc(ERNEUT.kurz(d.versand))}</small>` : ""}</span>
         <span class="pdoc__r"><b>${money(d.gross)}</b><span class="pdoc__st pdoc__st--${ton}">${esc(st)}</span></span>${AKT.knopf("pDoc", { punkte: true, extra: `data-doc="${d.id}"`, titel: `Aktionen zu ${d.number || "diesem Entwurf"}` })}</div>`);
     }
     return `<div class="card" id="pDocs"><div class="chead" style="margin-bottom:8px"><h2 style="font-size:18px">Angebote und Rechnungen</h2></div>
@@ -587,8 +587,7 @@
     const id = d.id, offen = d.kind === "rechnung" && d.status === "offen", rechnung = d.kind === "rechnung" && ["offen", "bezahlt"].includes(d.status);
     return [
       { t: "", items: [{ l: "PDF ansehen", fn: () => window.open(`/api/admin/finance/invoices/${id}/pdf`, "_blank", "noopener") }, { l: "Details öffnen", fn: zuDraft(d) },
-        { l: "Im Chat schicken", hint: "als Karte im Projekt-Chat", fn: async () => { await api(`/finance/invoices/${id}/send`, { method: "POST", body: { chat: true, mail: false } }); toast("Im Chat geschickt"); } },
-        { l: "Per E-Mail senden", hint: d.sent_at ? "per E-Mail mit PDF" : "noch nicht per E-Mail verschickt", fn: async () => { const r = await api(`/finance/invoices/${id}/send`, { method: "POST", body: {} }); toast(r.mailed ? "Erneut verschickt" : "Mail liegt im Postausgang (E-Mail noch nicht eingerichtet)"); nachDoc(); } }] },
+        { l: d.versand ? "Erneut schicken …" : "Schicken …", hint: ERNEUT.kurz(d.versand), fn: () => ERNEUT.oeffnen({ titel: `${d.kind === "angebot" ? "Angebot" : "Rechnung"} ${d.number} erneut schicken`, art: d.kind, ref: id, url: `/finance/invoices/${id}/send`, mailText: "mit PDF im Anhang", danach: nachDoc }) }] },
       { t: "Zahlung", items: [
         offen && d.dunning?.overdue > 0 ? { l: `${d.dunning.next} senden`, hint: `${d.dunning.overdue} Tage über dem Zahlungsziel`, fn: async () => { if (!(await UI.confirm(`Mit Rechnung als PDF an ${current.email}.`, { title: `${d.dunning.next} senden?`, ok: "Senden" }))) return; const r = await api(`/finance/invoices/${id}/remind`, { method: "POST", body: {} }); toast(`${r.label} ${r.mailed ? "verschickt" : "im Postausgang"}`); nachDoc(); } } : null,
         offen ? { l: "Als bezahlt markieren", fn: async () => { const dt = await UI.prompt("Zahlung eingegangen", { label: "Eingang am", type: "date", value: new Date().toISOString().slice(0, 10), ok: "Als bezahlt markieren" }); if (!dt) return; await api(`/finance/invoices/${id}/paid`, { method: "POST", body: { date: dt } }); toast("Als bezahlt markiert – Zahlungsplan und Kunde sind aktualisiert."); nachDoc(); } } : null] },
@@ -804,10 +803,10 @@
       </div>
       <div class="span2 mschr__haken">
         ${kuenftig ? `<label class="check"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}><span>Gespräch hat stattgefunden<small>${aid ? "Der Termin wird auf jetzt gesetzt und gilt als geführt." : "Wird mit dem heutigen Datum eingetragen."}</small></span></label>` : ""}
-        <div data-notify-zeile ${schonAusgewertet ? "" : "hidden"}>${KANAL.html({ span: false, titel: "Zusammenfassung an den Kunden schicken", hinweis: "Ohne Haken steht sie nur im Kundenportal beim Termin." })}</div>
+        <div data-notify-zeile ${schonAusgewertet ? "" : "hidden"}>${KANAL.html({ span: false, titel: "Zusammenfassung an den Kunden schicken", hinweis: "Bei „Nicht benachrichtigen“ steht sie trotzdem im Kundenportal beim Termin." })}</div>
       </div>`,
       async f => {
-        const held = !!f.held?.checked, body = { mitschrift: f.mitschrift.value, notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: KANAL.werte(f).mail, chat: KANAL.werte(f).chat };
+        const held = !!f.held?.checked, body = { mitschrift: f.mitschrift.value, notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: KANAL.werte(f).mail, chat: KANAL.werte(f).chat, erinnern: KANAL.werte(f).erinnern };
         if (held) body.start = new Date(Date.now() - 60000).toISOString();
         if (aid) await api(`/appointments/${aid}`, { method: "PATCH", body });
         else if (held) await api(`/clients/${cid}/appointments`, { method: "POST", body: { title: "Gespräch", minutes: 30, kind: "Erstgespräch", project_id: pid || undefined, ...body } });
@@ -848,7 +847,7 @@
         if (file.size > 20 * 1048576) throw new Error("Höchstens 20 MB.");
         await api(`/clients/${current.id}/documents`, { method: "POST", body: { file_name: file.name, data: b64(new Uint8Array(await file.arrayBuffer())), kind: f.kind.value, title: f.title.value || file.name.replace(/\.[^.]+$/, ""),
           amount_gross: f.amount_gross.value.trim(), doc_date: f.doc_date.value, project_id: f.project_id.value ? +f.project_id.value : null,
-          payment_id: f.payment_id.value ? +f.payment_id.value : null, notify: KANAL.werte(f).mail, chat: KANAL.werte(f).chat } });
+          payment_id: f.payment_id.value ? +f.payment_id.value : null, notify: KANAL.werte(f).mail, chat: KANAL.werte(f).chat, erinnern: KANAL.werte(f).erinnern } });
         toast("Dokument hochgeladen – der Kunde sieht es im Portal."); refreshCurrent();
       });
     // Zahlungsauswahl nur bei Rechnungen mit Projekt; Positionen des gewählten Projekts laden
@@ -883,7 +882,7 @@
       async f => {
         if (!pending?.files.length) throw new Error("Bitte zuerst Dateien auswählen.");
         f.querySelector("[type=submit]").textContent = "Wird hochgeladen …";
-        const r = await api(`/clients/${current.id}/prototypes`, { method: "POST", body: { title: f.title.value, message: f.message.value, announce: KANAL.werte(f).chat, mail: KANAL.werte(f).mail, entry: pending.entry,
+        const r = await api(`/clients/${current.id}/prototypes`, { method: "POST", body: { title: f.title.value, message: f.message.value, announce: KANAL.werte(f).chat, mail: KANAL.werte(f).mail, erinnern: KANAL.werte(f).erinnern, entry: pending.entry,
           project_id: project?.id, replaces: v ? v.group_id : undefined, changes: f.changes?.value || "", files: pending.files.map(x => ({ path: x.path, data: b64(x.data) })) } });
         toast(r.skipped?.length ? `Hochgeladen · ${r.skipped.length} Datei(en) übersprungen` : v ? `Version ${r.prototype.version} ist online` : "Prototyp hochgeladen");
         refreshCurrent(); loadClients();

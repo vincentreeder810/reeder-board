@@ -49,17 +49,63 @@ const UI = (() => {
 })();
 window.UI = UI;
 
-/* Benachrichtigung des Kunden: zwei getrennte Haken „Im Chat“ und „Per E-Mail“ (beide vorausgewählt).
-   KANAL.html({ titel, chat, mail, chatFest, hinweis }) liefert das Feld, KANAL.werte(form) → { chat, mail } */
+/* Benachrichtigung des Kunden – damit nichts doppelt ankommt:
+   Standard (modus "weg"): eine Auswahl – „Im Chat“ (E-Mail nur, wenn er es nach 2 Std. nicht gelesen hat) · „Nur per E-Mail“ · „Nicht benachrichtigen“.
+   Angebote/Rechnungen (modus "haken"): zwei Haken „Im Chat“ und „Per E-Mail mit PDF“ – die PDF-Mail ist ein eigener, förmlicher Weg.
+   Rückfragen (modus "rueckfragen"): immer im Chat, die E-Mail ist wählbar.
+   KANAL.werte(form) → { chat, mail, erinnern } */
 window.KANAL = {
-  html({ titel = "Kunden benachrichtigen", chat = true, mail = true, chatFest = "", hinweis = "", span = true } = {}) {
-    return `<fieldset class="kanal ${span ? "span2" : ""}"><legend>${esc(titel)}</legend>
-      <label class="kanal__k ${chatFest ? "kanal__k--fest" : ""}"><input type="checkbox" name="k_chat" ${chat || chatFest ? "checked" : ""} ${chatFest ? "disabled" : ""}><span><b>Im Chat</b><small>${esc(chatFest || "als Nachricht im Projekt-Chat")}</small></span></label>
-      <label class="kanal__k"><input type="checkbox" name="k_mail" ${mail ? "checked" : ""}><span><b>Per E-Mail</b><small>an die hinterlegte Adresse</small></span></label>
-      ${hinweis ? `<p class="kanal__h">${esc(hinweis)}</p>` : ""}</fieldset>`;
+  html({ modus = "weg", titel = "Kunden benachrichtigen", hinweis = "", span = true, mailText = "an die hinterlegte Adresse" } = {}) {
+    const k = (name, wert, an, kopf, unter, typ = "radio") => `<label class="kanal__k"><input type="${typ}" name="${name}" value="${wert}" ${an ? "checked" : ""}><span><b>${kopf}</b><small>${unter}</small></span></label>`;
+    const inhalt = modus === "haken"
+      ? k("k_chat", "1", true, "Im Chat", "als Karte im Projekt-Chat", "checkbox") + k("k_mail", "1", true, "Per E-Mail", esc(mailText), "checkbox")
+      : modus === "rueckfragen"
+        ? k("k_rq", "ungelesen", true, "E-Mail nur, wenn ungelesen", "nach 2 Std. ein kurzer Hinweis") + k("k_rq", "sofort", false, "Sofort per E-Mail", "Hinweis-Mail gleich mit") + k("k_rq", "keine", false, "Keine E-Mail", "nur im Chat")
+        : k("k_weg", "chat", true, "Im Chat", "E-Mail nur, wenn er es nach 2 Std. nicht gelesen hat") + k("k_weg", "mail", false, "Nur per E-Mail", "ohne Chat-Nachricht") + k("k_weg", "keine", false, "Nicht benachrichtigen", "liegt still im Portal");
+    return `<fieldset class="kanal kanal--${modus} ${span ? "span2" : ""}"><legend>${esc(titel)}</legend>${inhalt}${hinweis ? `<p class="kanal__h">${esc(hinweis)}</p>` : ""}</fieldset>`;
   },
-  werte(f) { return { chat: !!f.querySelector("[name=k_chat]")?.checked, mail: !!f.querySelector("[name=k_mail]")?.checked }; },
+  werte(f) {
+    const wahl = n => f.querySelector(`[name=${n}]:checked`)?.value;
+    if (f.querySelector("[name=k_rq]")) { const v = wahl("k_rq"); return { chat: true, mail: v === "sofort", erinnern: v === "ungelesen" }; }
+    if (f.querySelector("[name=k_weg]")) { const v = wahl("k_weg"); return { chat: v === "chat", mail: v === "mail", erinnern: v === "chat" }; }
+    return { chat: !!f.querySelector("[name=k_chat]")?.checked, mail: !!f.querySelector("[name=k_mail]")?.checked, erinnern: false };
+  },
 };
+
+/* „Erneut schicken“ mit Versandprotokoll – für aktuellen Stand, Dokumente, Angebote und Rechnungen.
+   ERNEUT.oeffnen({ titel, art, ref, url, mailText, danach }) – oder per Knopf: data-erneut data-art data-ref data-url data-titel */
+window.ERNEUT = {
+  zeit: s => new Date(String(s).replace(" ", "T") + (String(s).includes("Z") ? "" : "Z")).toLocaleString("de-DE", { timeZone: "Europe/Berlin", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+  kurz(v) { return v ? `Zuletzt ${ERNEUT.zeit(v.at)} · ${v.wege.join(" + ")}${v.anzahl > 1 ? ` · ${v.anzahl}× geschickt` : ""}` : "Noch nicht verschickt"; },
+  async oeffnen({ titel, art, ref, url, mailText = "an die hinterlegte Adresse", danach }) {
+    const liste = await api(`/versand?art=${encodeURIComponent(art)}&ref=${ref}`).catch(() => []);
+    const ANLASS = { versand: "", erneut: "erneut", erinnerung: "automatische Erinnerung", neuigkeiten: "in der Neuigkeiten-Mail" };
+    const m = document.createElement("div"); m.className = "modal";
+    m.innerHTML = `<form class="card bmodal" style="width:min(540px,100%);max-height:90vh;overflow:auto;display:grid;gap:14px">
+      <h2 style="margin:0">${esc(titel)}</h2>
+      <div class="vlog"><b>Bisher verschickt</b>${liste.length ? `<ul>${liste.map(v => `<li><span class="vlog__k vlog__k--${esc(v.kanal)}">${esc(v.kanal_text)}</span><span>${ERNEUT.zeit(v.at)}${ANLASS[v.anlass] ?? (v.anlass ? " · " + esc(v.anlass) : "") ? ` · ${esc(ANLASS[v.anlass] ?? v.anlass)}` : ""}${v.an ? ` · an ${esc(v.an)}` : ""}${v.von ? ` · von ${esc(v.von)}` : ""}</span></li>`).join("")}</ul>`
+        : `<p class="hint" style="margin:4px 0 0">Noch kein Versand aufgezeichnet${art === "stand" ? " (Stände vor dem 27.11.2026 sind nicht protokolliert)" : ""}.</p>`}</div>
+      ${KANAL.html({ modus: "haken", titel: "Jetzt erneut schicken", span: false, mailText })}
+      <p class="err" hidden></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad" type="submit">Erneut schicken</button></div></form>`;
+    document.body.appendChild(m);
+    const f = m.querySelector("form");
+    m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-close]")) m.remove(); });
+    f.addEventListener("submit", async e => {
+      e.preventDefault(); const k = KANAL.werte(f), b = f.querySelector("[type=submit]");
+      if (!k.chat && !k.mail) { const p = f.querySelector(".err"); p.textContent = "Bitte Chat oder E-Mail wählen."; p.hidden = false; return; }
+      b.disabled = true;
+      try { const r = await api(url, { method: "POST", body: { chat: k.chat, mail: k.mail } });
+        m.remove(); toast(`Erneut geschickt${k.chat ? " · im Chat" : ""}${k.mail ? (r.mailed === false ? " · Mail liegt im Postausgang" : " · per E-Mail") : ""}`); danach?.(); }
+      catch (err) { const p = f.querySelector(".err"); p.textContent = err.message; p.hidden = false; b.disabled = false; }
+    });
+  },
+};
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-erneut]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  ERNEUT.oeffnen({ titel: b.dataset.titel || "Erneut schicken", art: b.dataset.art, ref: +b.dataset.ref, url: b.dataset.url, mailText: b.dataset.mailtext || undefined }).catch(err => toast(err.message));
+});
 
 /* ---------- Linien-Icons (statt Emojis – sitzen exakt mittig in Kreisen und Kacheln) ---------- */
 const ICO = (() => {

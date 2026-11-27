@@ -3,6 +3,7 @@
 // Notizen und offene Fragen an den Kunden. Die Brücke lädt sie hierher (bruecke-software.mjs), die Projektseite zeigt sie
 // dem Team. Der Kunde sieht nichts davon – außer den Fragen, die der Inhaber ausdrücklich an ihn schickt.
 import { db, getSetting, DEFAULT_MAIL } from "./db.mjs";
+import { versandMerken, erinnerungVormerken } from "./versand.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
 import { firmaVonProjekt } from "./firmen.mjs";
@@ -155,7 +156,10 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
       const ids2 = db.prepare("SELECT id, frage_id FROM kunden_fragen WHERE project_id = ? AND message_id = ?").all(pr.id, msgId);
       const meta = { fragen: fragen.map(f => ({ id: ids2.find(x => x.frage_id === f.id)?.id ?? null, text: f.text })).filter(f => f.id) };
       db.prepare("UPDATE messages SET meta = ? WHERE id = ?").run(JSON.stringify(meta), msgId);
+      if (d.erinnern === true) erinnerungVormerken(msgId);
+      versandMerken({ clientId: pr.client_id, projectId: pr.id, art: "rueckfragen", refId: Number(msgId), kanal: "chat", von: user.name });
       const mitMail = d.mail !== false;
+      if (mitMail) versandMerken({ clientId: pr.client_id, projectId: pr.id, art: "rueckfragen", refId: Number(msgId), kanal: "mail", von: user.name, an: pr.client_email });
       const mailed = mitMail && pr.client_email ? await sendMail({ to: pr.client_email, ...vorlage("rueckfragen", { name: pr.client_name, projekt: pr.title, anzahl: n,
         link: `${SITE_URL}/portal/#chat/${pr.id}`, firma: firmaVonProjekt(pr.id) }) }) : false;
       const r = db.prepare("SELECT gesendet FROM project_workspace WHERE project_id = ?").get(pr.id);

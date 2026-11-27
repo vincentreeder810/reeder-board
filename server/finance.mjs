@@ -6,6 +6,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
 import { db, getSetting, setSetting, DEFAULT_COMPANY, chatPosten } from "./db.mjs";
+import { versandMerken, versandListe, letzterVersand } from "./versand.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
 import { vereinbarungLesen, vereinbarungSpeichern, vereinbarungAusAngebot } from "./vereinbarungen.mjs";
@@ -104,6 +105,7 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
     out.vereinbarung = vereinbarungLesen(inv.vereinbarung);
     if (inv.cancels_id) { const o = db.prepare("SELECT number, issue_date FROM invoices WHERE id = ?").get(inv.cancels_id); out.cancels_number = o?.number; out.cancels_date = o?.issue_date; }
     if (inv.kind === "rechnung" && inv.status === "offen") out.dunning = dunningOf(inv);
+    out.versand = versandListe(inv.kind, inv.id);
     return out;
   }
   function dunningOf(inv) {
@@ -182,9 +184,10 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
     audit(user.name, "festgeschrieben", inv.kind, id, `${number} · ${euro(inv.gross)} · ${inv.recipient.company}`);
     logEvent(inv.client_id, inv.project_id, "dokument", inv.kind === "angebot" ? "Angebot übersendet" : inv.kind === "storno" ? "Rechnung storniert" : "Rechnung gestellt",
       `${number}${inv.title ? " – " + inv.title : ""} · ${euro(Math.abs(inv.gross))} brutto`, false);   // Mail entscheidet allein der Haken „Per E-Mail“ (dann mit PDF)
-    if (chat) docImChat(invoiceFull(id), user);
+    if (chat) { docImChat(invoiceFull(id), user); versandMerken({ clientId: inv.client_id, projectId: inv.project_id, art: inv.kind, refId: id, kanal: "chat", von: user.name }); }
     let mailed = null;
-    if (doSend) { mailed = await mailInvoice(invoiceFull(id), buf, inv.kind, clean(message, 3000)); db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id); }
+    if (doSend) { mailed = await mailInvoice(invoiceFull(id), buf, inv.kind, clean(message, 3000)); db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id);
+      versandMerken({ clientId: inv.client_id, projectId: inv.project_id, art: inv.kind, refId: id, kanal: "mail", von: user.name, an: c.email }); }
     return { invoice: invoiceFull(id), mailed };
   }
 
@@ -354,7 +357,7 @@ Regeln:
       const kind = url.searchParams.get("kind") === "angebot" ? ["angebot"] : ["rechnung", "storno"];
       const rows = db.prepare(`SELECT i.*, c.company, p.title project_title FROM invoices i JOIN clients c ON c.id = i.client_id LEFT JOIN projects p ON p.id = i.project_id WHERE i.kind IN (${kind.map(() => "?").join(",")})${firmaWahl(url) ? ` AND ${firmaSql("i")} = '${firmaWahl(url)}'` : ""} ORDER BY i.locked, COALESCE(i.issue_date, i.created_at) DESC, i.id DESC LIMIT 500`).all(...kind);
       return json(res, 200, rows.map(r => ({ firma: r.locked ? r.firma : firmaVonProjekt(r.project_id), id: r.id, kind: r.kind, number: r.number, status: r.status, title: r.title, company: r.company, client_id: r.client_id, project: r.project_title, issue_date: r.issue_date, due_date: r.due_date, valid_until: r.valid_until,
-        net: r.net, gross: r.gross, locked: !!r.locked, sent_at: r.sent_at, paid_at: r.paid_at, dunning: r.kind === "rechnung" && r.status === "offen" ? dunningOf(r) : null,
+        net: r.net, gross: r.gross, locked: !!r.locked, sent_at: r.sent_at, paid_at: r.paid_at, versand: r.locked ? letzterVersand(r.kind, r.id) : null, dunning: r.kind === "rechnung" && r.status === "offen" ? dunningOf(r) : null,
         draftTotals: r.locked ? null : totals(db.prepare("SELECT * FROM invoice_items WHERE invoice_id = ?").all(r.id)) })));
     }
     if (q === "/invoices" && m === "POST") {
@@ -383,7 +386,7 @@ Regeln:
         return { id: r.id, kind: r.kind, number: r.number, status: r.status, title: r.title, locked: !!r.locked, issue_date: r.issue_date, due_date: r.due_date, valid_until: r.valid_until,
           gross: r.locked ? r.gross : totals(db.prepare("SELECT * FROM invoice_items WHERE invoice_id = ?").all(r.id)).gross, payment_id: r.payment_id, sent_at: r.sent_at, paid_at: r.paid_at,
           dunning: r.kind === "rechnung" && r.status === "offen" ? dunningOf(r) : null, cancels_number: storniert,
-          acceptance: acc ? { decision: acc.decision, at: acc.created_at, doc_id: acc.doc_id } : null };
+          acceptance: acc ? { decision: acc.decision, at: acc.created_at, doc_id: acc.doc_id } : null, versand: r.locked ? letzterVersand(r.kind, r.id) : null };
       }));
     }
     let mm = q.match(/^\/invoices\/(\d+)(\/(pdf|issue|send|paid|cancel|remind|convert|status))?$/);
@@ -420,10 +423,11 @@ Regeln:
       if (act === "send" && m === "POST") {
         if (!inv.locked) return json(res, 409, { error: "Bitte zuerst festschreiben." });
         const d = await readJson(req), buf = await pdfOf(inv).catch(e => { console.warn(`${inv.number}: PDF nicht verfügbar (${e.message})`); return null; });
-        if (d.chat) docImChat(inv, user);
+        if (d.chat) { docImChat(inv, user); versandMerken({ clientId: inv.client_id, projectId: inv.project_id, art: inv.kind, refId: id, kanal: "chat", anlass: "erneut", von: user.name }); }
         const mailed = d.mail === false ? null : await mailInvoice(inv, buf, inv.kind, clean(d.message, 3000));
-        db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id); audit(user.name, "versendet", inv.kind, id, inv.number);
-        return json(res, 200, { mailed });
+        if (d.mail !== false) { db.prepare("UPDATE invoices SET sent_at = datetime('now') WHERE id = ?").run(id); audit(user.name, "versendet", inv.kind, id, inv.number);
+          versandMerken({ clientId: inv.client_id, projectId: inv.project_id, art: inv.kind, refId: id, kanal: "mail", anlass: inv.sent_at ? "erneut" : "versand", von: user.name, an: inv.client_email }); }
+        return json(res, 200, { mailed, versand: versandListe(inv.kind, id) });
       }
       if (act === "paid" && m === "POST") {
         if (inv.kind !== "rechnung" || !inv.locked) return json(res, 409, { error: "Nur festgeschriebene Rechnungen können bezahlt werden." });
@@ -459,6 +463,7 @@ Regeln:
         const mailed = await sendMail({ to: c.email, ...mail, attachments: buf ? [{ filename: `${inv.number}.pdf`, content: buf, contentType: "application/pdf" }] : [] });
         db.prepare("UPDATE invoices SET dunning_level = dunning_level + 1, last_dunning_at = datetime('now') WHERE id = ?").run(id);
         audit(user.name, label, "rechnung", id, inv.number);
+        versandMerken({ clientId: inv.client_id, projectId: inv.project_id, art: "rechnung", refId: id, kanal: "mail", anlass: label, von: user.name, an: c.email });
         return json(res, 200, { mailed, label });
       }
       if (act === "status" && m === "POST") {   // Angebot angenommen/abgelehnt

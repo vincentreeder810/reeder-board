@@ -34,6 +34,7 @@ import { projekteFuerBuchung, themenDerBuchung, anfragenNachziehen } from "./anf
 import { createBruecke } from "./bruecke.mjs";
 import { createBrueckeSoftware } from "./bruecke-software.mjs";
 import { createWorkspace } from "./workspace.mjs";
+import { createVersand, erinnerungenStarten } from "./versand.mjs";
 import { createMailVorschau } from "./mail-vorschau.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const ADMIN_CK = `${process.env.COOKIE_PREFIX || "rs"}_admin`;
@@ -119,6 +120,8 @@ const bruecke = createBruecke({ json, send, readJson });
 const brueckeSw = createBrueckeSoftware({ json, send, readJson, clean, publish: (...a) => stand.publish(...a), stand: { discardCandidate: (...a) => stand.discardCandidate(...a), releaseCandidate: (...a) => stand.releaseCandidate(...a) } });
 const workspace = createWorkspace({ json, readJson, clean, limited, SITE_URL });
 portal.extend(workspace.portal);   // Rückfragen im Kundenportal beantworten
+const versand = createVersand({ json, readJson, SITE_URL });   // Versandprotokoll, erneut schicken
+erinnerungenStarten(SITE_URL);                                  // E-Mail nur, wenn eine Chat-Karte ungelesen bleibt
 const mailVorschau = createMailVorschau({ json, send });
 const hardware = createHardware({ json, send, readJson, clean, logEvent: (...a) => portal.logEvent(...a), SITE_URL });
 const onboarding = createOnboarding({ json, readJson, clean, limited, ipOf, SITE_URL, hashPw, checkPw, currentClient: (...a) => portal.currentClient(...a), clientLogin: (...a) => portal.clientLogin(...a) });
@@ -467,6 +470,7 @@ async function adminApi(req, res, url) {
     const from = d(url.searchParams.get("from")) || new Date(Date.now() - 31 * 864e5).toISOString(), to = d(url.searchParams.get("to")) || new Date(Date.now() + 62 * 864e5).toISOString();
     return json(res, 200, kalender(user, from, to)); }
   if (p === "/inbox") return json(res, 200, inbox(user));
+  if (p === "/versand" || /^\/projects\/\d+\/stand\/erneut$|^\/documents\/\d+\/erneut$/.test(p)) { const r = await versand.admin(req, res, url, p, m, user); if (r !== null) return; }
   if (p === "/chats" || p.startsWith("/chats/")) { const r = await portal.chatAdmin(req, res, url, p, m, user); if (r !== null) return; }   // Ansicht „Chats“: Fäden, Teilnehmer, neuer Chat
   if (p.startsWith("/team")) { const r = await teamApi(req, res, p, m, user); if (r !== null) return; }
   if (p.startsWith("/finance")) { const r = await finance.api(req, res, url, p, user); if (r !== null) return; }

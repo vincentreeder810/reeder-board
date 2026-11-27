@@ -12,6 +12,7 @@ import { createProjects } from "./projects.mjs";
 import { createRequests } from "./requests.mjs";
 import { clientIdsFor, memberProjectIds } from "./access.mjs";
 import { workspaceLesen } from "./workspace.mjs";
+import { versandMerken, erinnerungVormerken } from "./versand.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const PORTAL_CK = `${process.env.COOKIE_PREFIX || "rs"}_portal`;
 
@@ -514,7 +515,9 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
         const text = clean(d.message, 3000) || (version > 1
           ? `Neue Version ${version} von „${title}“ ist online.${changes ? " Das hat sich geändert:\n" + changes : ""}`
           : `Wir haben einen neuen Prototyp für Sie hochgeladen: „${title}“. Klicken Sie sich gern durch und schreiben Sie uns, was Ihnen auffällt.`);
-        db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id, user_id) VALUES(?, 'team', ?, ?, ?, ?, ?)").run(c.id, user.name, text, r.lastInsertRowid, projectId, user.id);
+        const mid = db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id, user_id) VALUES(?, 'team', ?, ?, ?, ?, ?)").run(c.id, user.name, text, r.lastInsertRowid, projectId, user.id).lastInsertRowid;
+        if (d.erinnern === true) erinnerungVormerken(mid);
+        versandMerken({ clientId: c.id, projectId, art: "stand", refId: Number(r.lastInsertRowid), kanal: "chat", von: user.name });
         /* Mail kommt gebündelt über den Meilenstein */
       }
       return json(res, 201, { prototype: protoOut(db.prepare("SELECT * FROM prototypes WHERE id = ?").get(r.lastInsertRowid)), skipped });
