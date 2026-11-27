@@ -807,9 +807,11 @@
         <label>Interne Notizen ${klein("sieht der Kunde nicht. Grundlage für das Angebot.")}<textarea name="notes_intern" rows="5">${esc(a.notes_intern || "")}</textarea></label>
         <label>Zusammenfassung für den Kunden ${klein("steht nach dem Speichern im Kundenportal beim Termin")}<textarea name="summary" rows="5">${esc(a.summary || "")}</textarea></label>
         <label>Nächste Schritte ${klein("sieht der Kunde ebenfalls")}<textarea name="next_steps" rows="3">${esc(a.next_steps || "")}</textarea></label>
-        <label class="check"><input type="checkbox" name="notify"> Kunden per E-Mail über die Zusammenfassung informieren</label>
       </div>
-      ${kuenftig ? `<label class="check span2"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}> Gespräch hat stattgefunden <small>(${aid ? "der Termin wird auf jetzt gesetzt und gilt als geführt" : "wird mit dem heutigen Datum eingetragen"})</small></label>` : ""}`,
+      <div class="span2 mschr__haken">
+        ${kuenftig ? `<label class="check"><input type="checkbox" name="held" ${gefuehrt ? "checked" : ""}><span>Gespräch hat stattgefunden<small>${aid ? "Der Termin wird auf jetzt gesetzt und gilt als geführt." : "Wird mit dem heutigen Datum eingetragen."}</small></span></label>` : ""}
+        <label class="check" data-notify-zeile ${schonAusgewertet ? "" : "hidden"}><input type="checkbox" name="notify"><span>Kunden per E-Mail über die Zusammenfassung informieren<small>Ohne Haken steht sie nur im Kundenportal beim Termin.</small></span></label>
+      </div>`,
       async f => {
         const held = !!f.held?.checked, body = { mitschrift: f.mitschrift.value, notes_intern: f.notes_intern.value, summary: f.summary.value, next_steps: f.next_steps.value, notify: f.notify.checked };
         if (held) body.start = new Date(Date.now() - 60000).toISOString();
@@ -829,7 +831,7 @@
       try {
         const r = await api("/appointments/auswerten", { method: "POST", body: { mitschrift: text, client_id: cid || undefined, project_id: pid || a.project_id || undefined } });
         form.notes_intern.value = r.intern || ""; form.summary.value = r.zusammenfassung || ""; form.next_steps.value = r.naechste_schritte || "";
-        erg.hidden = false; hinweis.textContent = "Ausgewertet – bitte kurz prüfen und dann speichern.";
+        erg.hidden = false; form.querySelector("[data-notify-zeile]").hidden = false; hinweis.textContent = "Ausgewertet – bitte kurz prüfen und dann speichern.";
         erg.scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) { toast(e.message || "Die Auswertung hat nicht geklappt."); }
       finally { knopf.disabled = false; knopf.textContent = alt; }

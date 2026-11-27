@@ -1625,3 +1625,12 @@ label.auf__item{cursor:pointer}
 .mschr__leiste small{flex:1 1 220px;line-height:1.4}
 .mschr__erg:not([hidden]){display:grid;gap:14px;padding:16px;border-radius:16px;background:var(--soft,#f6f6f8);box-shadow:inset 0 0 0 1px var(--line)}
 .mschr__erg label{display:grid;gap:6px}
+
+/* Gespräch: die beiden Haken untereinander, Text neben dem Kästchen, Erklärung klein darunter */
+.mschr__haken{display:grid;gap:10px}
+.mschr__haken .check{display:flex!important;align-items:flex-start;gap:12px;margin:0;padding:12px 14px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);font-weight:600;line-height:1.35;cursor:pointer}
+.mschr__haken .check[hidden]{display:none!important}
+.mschr__haken .check input{flex:0 0 auto;width:18px;height:18px;margin:1px 0 0}
+.mschr__haken .check span{display:grid;gap:3px;min-width:0}
+.mschr__haken .check small{font-weight:400;color:var(--muted,#6b6b76);font-size:12.5px}
+.mschr__haken .check:has(input:checked){box-shadow:inset 0 0 0 1.5px #8b5cf6;background:rgba(139,92,246,.05)}
