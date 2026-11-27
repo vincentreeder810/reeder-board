@@ -84,7 +84,9 @@
 <div class="app" id="app" hidden>
   <aside class="side">
     <a class="brand" href="#cockpit" style="text-decoration:none"><svg><use href="#sail"/></svg><span>Reeder <em>Board</em></span></a>
-    <nav>
+    <!-- Schmale Fenster: statt einer Symbolreihe ein Menü-Knopf, der das Menü aufklappt -->
+    <button type="button" class="side__toggle" id="navToggle" aria-expanded="false" aria-controls="sideNav"><span id="navAktuell">Menü</span><i aria-hidden="true"></i></button>
+    <nav id="sideNav">
       <a href="#cockpit" data-view="cockpit"><svg><use href="#i-cockpit"/></svg><span>Cockpit</span><b class="badge" id="badgeCockpit" hidden></b></a>
       <a href="#kennzahlen" data-view="kennzahlen" data-owner><svg><use href="#i-kpi"/></svg><span>Kennzahlen</span></a>
       <a href="#arbeitsplatz" data-view="arbeitsplatz"><svg><use href="#i-desk"/></svg><span>Mein Arbeitsplatz</span><b class="badge badge--timer" id="badgeTimer" hidden>●</b></a>

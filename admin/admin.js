@@ -154,6 +154,8 @@ function route() {
   if (!views[v] || (!ME.owner && OWNER_VIEWS.includes(v))) v = "cockpit";
   $$("[data-section]").forEach(s => s.hidden = s.dataset.section !== v);
   $$(".side nav a").forEach(a => a.classList.toggle("on", a.dataset.view === v || (v === "hardware" && a.dataset.view === "projekte")));
+  // Schmale Fenster: Menü-Knopf zeigt den aktuellen Bereich, nach dem Wechsel klappt das Menü zu
+  { const t = $("#navAktuell"), on = $(".side nav a.on span"); if (t) t.textContent = on?.textContent || "Menü"; menuZu(); }
   window.onViewChange?.(v);
   views[v]().catch(e => toast(e.message));
 }
@@ -443,3 +445,10 @@ $("#autoWeekly").addEventListener("click", async () => {
     });
   } catch (err) { toast(err.message); }
 });
+
+/* ---------- Menü in schmalen Fenstern (Handy, Tablet, schmales Fenster) ---------- */
+function menuZu() { const s = $(".side"); if (!s?.classList.contains("menu-auf")) return; s.classList.remove("menu-auf"); $("#navToggle")?.setAttribute("aria-expanded", "false"); }
+$("#navToggle")?.addEventListener("click", e => { e.stopPropagation(); const s = $(".side"), auf = !s.classList.contains("menu-auf"); s.classList.toggle("menu-auf", auf); e.currentTarget.setAttribute("aria-expanded", String(auf)); });
+document.addEventListener("click", e => { if (!e.target.closest(".side")) menuZu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") menuZu(); });
+$$(".side nav a").forEach(a => a.addEventListener("click", () => menuZu()));

@@ -1535,3 +1535,32 @@ label.auf__item{cursor:pointer}
 .lproj{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:4px}
 .lproj>span{display:inline-flex;align-items:center;gap:5px;min-width:0}
 .lproj small{display:inline!important;font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* ---------- Schmale Fenster: schlanker Balken mit Menü-Knopf statt mehrzeiliger Symbolreihe ---------- */
+.side__toggle{display:none}
+@media (max-width:980px){
+  .side{position:sticky;top:0;z-index:60;height:auto;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:10px;padding:10px 14px;overflow:visible}
+  .side::before{display:none}
+  .side .brand{padding:0 4px;flex:none}
+  .side .brand span{font-size:16px}
+  .side__toggle{display:inline-flex;align-items:center;gap:10px;margin-left:auto;min-height:40px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer;max-width:55vw}
+  .side__toggle span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .side__toggle i{flex:none;width:18px;height:12px;background:linear-gradient(#fff,#fff) 0 0/100% 2px no-repeat,linear-gradient(#fff,#fff) 0 50%/100% 2px no-repeat,linear-gradient(#fff,#fff) 0 100%/100% 2px no-repeat}
+  .side.menu-auf .side__toggle i{background:linear-gradient(45deg,transparent 45%,#fff 45% 55%,transparent 55%),linear-gradient(-45deg,transparent 45%,#fff 45% 55%,transparent 55%);height:16px;width:16px}
+  .side>nav{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;gap:2px;padding:8px 10px 14px;background:#000;max-height:calc(100vh - 64px);overflow:auto;box-shadow:0 24px 40px -20px rgba(0,0,0,.6);border-top:1px solid rgba(255,255,255,.08)}
+  .side.menu-auf>nav{display:grid}
+  .side nav a span{display:inline}
+  .side.menu-auf .side__label{display:block}
+  .side nav a{padding:12px 12px}
+  .side__me{flex:none;margin:0;padding:0;border:0}
+  .side__me div{display:none}
+}
+@media (max-width:520px){.side .brand span{display:none}}
+
+/* Kopf von Kunde und Projekt auf dem Handy: Name über die ganze Breite, Knöpfe darunter; breite Tabellen scrollen in sich statt die Seite zu verbreitern */
+@media (max-width:620px){.khead__id{flex-basis:100%}.khead__acts{width:100%}table.table{display:block;max-width:100%;overflow-x:auto}}
+
+/* Balken bleibt in einer Zeile: Menü-Knopf darf schrumpfen (Text wird gekürzt), Profil und Abmelden bleiben immer sichtbar */
+@media (max-width:980px){.side__toggle{flex:0 1 auto;min-width:0;max-width:none}.side__me{flex:none}.app{grid-template-rows:auto 1fr;align-content:start}}
+/* Phasenleiste auf dem Handy: nur die aktuelle Phase beschriftet, sonst ragt sie rechts hinaus */
+@media (max-width:620px){.pphase button span{visibility:hidden;white-space:nowrap}.pphase button.now span{visibility:visible}.pphase{overflow:visible;grid-template-columns:repeat(6,minmax(0,1fr))}.pphase button{min-width:0}}
