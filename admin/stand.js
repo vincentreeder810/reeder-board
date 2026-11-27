@@ -223,7 +223,8 @@
     box.dataset.pid = p.id;
     box.innerHTML = `<div class="pfrei__k"><span class="pfrei__ic">${ICON}</span><div><b>Version ${w.version} wartet auf deine Freigabe</b>
         <p>Von Claude hochgeladen ${ago(w.created_at)}. ${F.live ? `Der Kunde sieht noch Version ${F.live.version}.` : "Der Kunde sieht noch nichts."}${w.erledigt ? ` Mit der Freigabe ${w.erledigt === 1 ? "wird 1 Anmerkung" : `werden ${w.erledigt} Anmerkungen`} abgehakt.` : ""}</p>
-        ${w.changes ? `<p class="pfrei__t pclamp">„${esc(w.changes)}“</p><button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}</div></div>
+        ${w.changes ? `<p class="pfrei__t pclamp">„${esc(w.changes)}“</p><button type="button" class="link" data-mehr>ganz anzeigen</button>` : ""}
+        ${pbKurz(w.pruefbericht)}</div></div>
       <div class="acts"><button class="btn btn--ghost btn--sm" data-fr="verwerfen">Verwerfen</button><button class="btn btn--ghost btn--sm" data-fr="ansehen">Ansehen</button><button class="btn btn--grad btn--sm" data-fr="freigeben">Freigeben</button></div>`;
     window.kuerzungPruefen?.();
   }
@@ -269,5 +270,32 @@
       catch (err) { d.fail(err.message); k.disabled = false; } });
   }
   const ICON_PFEIL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
-  window.STAND = { projectCard, workspace, freigabe };
+  /* ---------- Prüfbericht von Claude (pruefbericht.json über die Brücke) ---------- */
+  const SCHW = { kritisch: "Kritisch", hoch: "Hoch", mittel: "Mittel", hinweis: "Hinweis" };
+  const ZAHLEN = [["zeilenGeaendert", "Zeilen geändert"], ["dateienGeaendert", "Dateien"], ["aenderungen", "Änderungen"], ["testlaeufe", "Testläufe"], ["pruefungen", "Prüfungen"], ["behoben", "Behoben"], ["offen", "Offen"]];
+  const n = v => Number(v || 0).toLocaleString("de-DE");
+  function pbKurz(b) {
+    if (!b) return `<p class="pb__kurz pb__kurz--nix">Kein Prüfbericht von Claude zu dieser Version.</p>`;
+    const offen = (b.funde || []).filter(f => f.status === "offen"), krit = offen.filter(f => ["kritisch", "hoch"].includes(f.schwere)).length;
+    return `<p class="pb__kurz ${krit ? "pb__kurz--warn" : "pb__kurz--ok"}">${krit ? "⚠" : "✓"} Von Claude geprüft${b.zahlen?.pruefungen ? ` · ${n(b.zahlen.pruefungen)} Prüfungen` : ""}${b.geprueft?.length ? ` · ${b.geprueft.length} Größen` : ""} · ${offen.length ? `${offen.length} offen${krit ? ` (${krit} wichtig)` : ""}` : "nichts offen"}</p>`;
+  }
+  async function pruefbericht(p) {
+    const box = $("#pPruef"); if (!box || !p || !ME.owner || p.bereich === "hardware") return;
+    const r = await api(`/bruecke/projekt/${p.id}/pruefbericht`).catch(() => null), b = r?.aktuell;
+    box.hidden = false;
+    if (!b) { box.innerHTML = `<div class="chead" style="margin-bottom:6px"><div><h2 style="font-size:18px">Prüfbericht</h2><p>Von Claude, vor jedem neuen Stand</p></div></div>
+        <p class="hint" style="margin:0">Noch kein Bericht. Claude prüft die Website selbst in allen Größen und legt den Bericht vor dem Hochladen in den Projektordner – die Brücke bringt ihn hierher. Du kannst Claude auch direkt sagen: <b>„Prüfe die Website in allen Größen und schreib den Prüfbericht.“</b></p>`; return; }
+    const offen = (b.funde || []).filter(f => f.status === "offen"), behoben = (b.funde || []).filter(f => f.status === "behoben");
+    const fund = f => `<li class="pb__f pb__f--${f.schwere}"><span class="pb__s">${SCHW[f.schwere] || f.schwere}</span><span><b>${esc(f.titel)}</b><small>${[f.seite, f.geraet].filter(Boolean).map(esc).join(" · ")}</small></span></li>`;
+    const kacheln = ZAHLEN.filter(([k]) => b.zahlen?.[k] != null).map(([k, l]) => `<div class="pb__z ${k === "offen" && b.zahlen[k] ? "pb__z--offen" : ""}"><b>${n(b.zahlen[k])}</b><small>${l}</small></div>`).join("");
+    box.innerHTML = `<div class="chead" style="margin-bottom:10px"><div><h2 style="font-size:18px">Prüfbericht von Claude</h2>
+        <p>${b.version ? `Version ${b.version} · ` : ""}${ago(b.created_at)}${r.frueher?.length ? ` · ${r.frueher.length} frühere` : ""}</p></div>
+        ${pbKurz(b).replace("pb__kurz", "pb__kurz pb__kurz--kopf")}</div>
+      ${kacheln ? `<div class="pb__zahlen">${kacheln}</div>` : ""}
+      ${b.zusammenfassung ? `<p class="pb__text">${esc(b.zusammenfassung)}</p>` : ""}
+      ${b.geprueft?.length ? `<div class="pb__chips">${b.geprueft.map(g => `<span>${esc(g)}</span>`).join("")}</div>` : ""}
+      ${offen.length ? `<p class="pb__h">Offen <em>${offen.length}</em></p><ul class="pb__l">${offen.map(fund).join("")}</ul>` : ""}
+      ${behoben.length ? weitere(behoben.length, `<ul class="pb__l pb__l--ok">${behoben.map(fund).join("")}</ul>`, ["behobener Fund", "behobene Funde"]) : ""}`;
+  }
+  window.STAND = { projectCard, workspace, freigabe, pruefbericht };
 })();

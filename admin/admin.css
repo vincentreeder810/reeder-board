@@ -1809,3 +1809,30 @@ label.auf__item{cursor:pointer}
 @media (max-width:420px){.ws__fk{gap:4px 12px;font-size:13px}}
 /* Chat-Kopf: bei wenig Platz umbrechen statt Knöpfe abzuschneiden */
 @media (max-width:1200px){.wa__head{flex-wrap:wrap;row-gap:8px}.wa__head .wa__hm{flex:1 1 220px;min-width:0}}
+
+/* Prüfbericht von Claude */
+.pb .chead{flex-wrap:wrap;gap:8px}
+.pb__kurz{margin:8px 0 0;font-size:13px;font-weight:600;padding:6px 10px;border-radius:10px;display:inline-block}
+.pb__kurz--kopf{margin:0}
+.pb__kurz--ok{background:#e8f8ef;color:#16774f}
+.pb__kurz--warn{background:#fff4e5;color:#b45309}
+.pb__kurz--nix{background:var(--paper,#f4f4f6);color:var(--muted);font-weight:500}
+.pb__zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-bottom:12px}
+.pb__z{padding:10px 12px;border-radius:14px;background:var(--paper,#f6f6f8);display:grid;gap:2px}
+.pb__z b{font-size:20px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pb__z small{font-size:12px;color:var(--muted)}
+.pb__z--offen{background:#fff4e5}.pb__z--offen b{color:#b45309}
+.pb__text{margin:0 0 10px;font-size:14px;line-height:1.5}
+.pb__chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pb__chips span{font-size:12px;padding:3px 10px;border-radius:999px;background:#f3edff;color:#6d28d9;font-weight:600}
+.pb__h{margin:6px 0 6px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.pb__h em{font-style:normal;margin-left:4px;padding:1px 7px;border-radius:999px;background:#fff4e5;color:#b45309}
+.pb__l{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.pb__f{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:12px;background:var(--paper,#f6f6f8)}
+.pb__f>span:last-child{display:grid;min-width:0}.pb__f b{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}.pb__f small{font-size:12px;color:var(--muted)}
+.pb__s{flex:none;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);margin-top:1px}
+.pb__f--kritisch .pb__s{background:#fde8ec;color:#be123c;box-shadow:none}
+.pb__f--hoch .pb__s{background:#fff1e6;color:#c2410c;box-shadow:none}
+.pb__f--mittel .pb__s{background:#fff8db;color:#a16207;box-shadow:none}
+.pb__l--ok .pb__f{opacity:.75}.pb__l--ok b{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3)}
+@media (max-width:560px){.pb__zahlen{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pb__z{padding:8px 10px}.pb__z b{font-size:16px}.pb__z small{font-size:11px}}

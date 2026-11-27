@@ -475,6 +475,7 @@
                 <div id="pStand"></div>
                 <div id="pAuftrag"></div></div></details>
           </details>
+          <div class="card pb" id="pPruef" hidden></div>
           <div class="card" id="pTests"></div>
         </div>
         <div class="stack p-side">
@@ -501,7 +502,7 @@
     window.WORK?.projectCards(p);
     window.CHATS?.projektKarte(p, current).catch(() => {});   // Karte „Nachrichten“: Chat dieses Projekts
     window.kuerzungPruefen?.();
-    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
+    window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); window.STAND.pruefbericht?.(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
     // Prüfstrecke nur zeigen, wo sie laufen kann (auf dem Online-Server gibt es keinen Browser dafür)
     Promise.resolve(window.PRUEF?.load(p)).then(() => { const k = $("#pTests"); if (k && /Kein Browser gefunden/.test(k.textContent)) k.hidden = true; }).catch(() => {});
     window.BOARD?.arbeitsstand?.(p);

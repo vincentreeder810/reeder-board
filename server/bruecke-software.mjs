@@ -125,6 +125,28 @@ Sagt der Inhaber ausdrücklich, dass du den Stand hochladen sollst („lade den 
 Wichtig: Was du hochlädst, sieht der Kunde noch nicht. Die Version wartet im Board auf die Freigabe des Inhabers: Auf der Projektseite steht oben „Version … wartet auf deine Freigabe“ – dort sieht er sie an und gibt sie frei oder verwirft sie. Erst mit der Freigabe sieht der Kunde die Version, und erst dann werden die gemeldeten Anmerkungen abgehakt. Sag ihm das nach dem Hochladen in einem Satz. Nie von dir aus hochladen.
 
 Eine Anmerkung, die du bewusst nicht umgesetzt hast, meldest du nicht als erledigt. Sag dem Inhaber im Gespräch kurz, welche das ist und warum.
+
+## Prüfbericht für das Board (pruefbericht.json)
+
+Das Board hat keinen eigenen Browser zum Testen – die Prüfung machst du. Immer wenn du an der Website etwas geändert hast und **bevor** du einen Stand hochlädst:
+
+1. Prüfe die Seite in einem echten Browser in diesen Größen: Desktop 1440 px, Tablet 820 px, Handy 390 px und kleines Handy 320 px. Achte auf abgeschnittene oder überlappende Inhalte, waagerechtes Scrollen, kaputte Links und Bilder, Fehler in der Konsole, Lesbarkeit und Kontrast, Tippfehler und widersprüchliche Angaben (z. B. Öffnungszeiten), Impressum und Datenschutz erreichbar.
+2. Behebe, was du findest, und prüfe erneut.
+3. Schreibe das Ergebnis in \`pruefbericht.json\` im Projektordner (Datei jedes Mal ganz neu schreiben, nur echte Zahlen – nichts schätzen oder erfinden; was du nicht gezählt hast, lässt du weg):
+
+\`\`\`json
+{
+  "zusammenfassung": "Ein bis zwei Sätze für den Inhaber: Was wurde gemacht und geprüft, wie ist der Zustand?",
+  "zahlen": { "zeilenGeaendert": 0, "dateienGeaendert": 0, "aenderungen": 0, "testlaeufe": 0, "pruefungen": 0, "behoben": 0, "offen": 0 },
+  "geprueft": ["Desktop 1440", "Tablet 820", "Handy 390", "Handy 320"],
+  "seiten": ["Startseite", "Leistungen"],
+  "funde": [ { "schwere": "kritisch | hoch | mittel | hinweis", "titel": "Kurz, was nicht stimmt", "seite": "Startseite", "geraet": "Handy 390", "status": "offen | behoben" } ]
+}
+\`\`\`
+
+- \`zeilenGeaendert\` und \`dateienGeaendert\` z. B. aus \`git diff --stat\` seit dem letzten Stand, \`testlaeufe\` = wie oft du die Seiten insgesamt durchgeprüft hast, \`pruefungen\` = Anzahl Einzelprüfungen (Seite × Größe × Prüfpunkt).
+- In \`funde\` gehören alle in dieser Sitzung gefundenen Punkte – behobene mit \`"behoben"\`, nicht behobene mit \`"offen"\` und einem Satz im Gespräch, warum.
+- Die Brücke überträgt die Datei wenige Sekunden nach dem Speichern. Der Inhaber sieht den Bericht auf der Projektseite und bei der Freigabe der Version. Der Kunde sieht ihn nicht.
 `;
 
 // Anmerkungen, die mit einer wartenden Version als erledigt gemeldet wurden – abgehakt wird erst bei der Freigabe
@@ -132,18 +154,34 @@ if (!db.prepare("PRAGMA table_info(prototypes)").all().some(c => c.name === "erl
 /** Version dieses Projekts, die auf die Freigabe des Inhabers wartet (von Claude über die Brücke hochgeladen) */
 const wartend = pid => db.prepare("SELECT * FROM prototypes WHERE project_id = ? AND state = 'kandidat' AND job_id IS NULL AND COALESCE(source, '') = 'bruecke' ORDER BY id DESC LIMIT 1").get(pid) || null;
 const idListe = t => { try { return JSON.parse(t || "[]"); } catch { return []; } };
+/* Prüfberichte von Claude (pruefbericht.json über die Brücke) */
+db.exec(`CREATE TABLE IF NOT EXISTS pruefberichte (id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  prototype_id INTEGER, version INTEGER, daten TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
+const txt = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+const zahl = v => Number.isFinite(+v) && +v >= 0 ? Math.min(Math.round(+v), 1e7) : null;
+const SCHWERE = ["kritisch", "hoch", "mittel", "hinweis"];
+function berichtSaeubern(d) {
+  const z = d?.zahlen || {}, zahlen = {};
+  for (const k of ["zeilenGeaendert", "dateienGeaendert", "aenderungen", "testlaeufe", "pruefungen", "behoben", "offen"]) { const n = zahl(z[k]); if (n !== null) zahlen[k] = n; }
+  const funde = (Array.isArray(d?.funde) ? d.funde : []).slice(0, 80).map(f => ({ schwere: SCHWERE.includes(f?.schwere) ? f.schwere : "hinweis", titel: txt(f?.titel, 200), seite: txt(f?.seite, 80), geraet: txt(f?.geraet, 40), status: f?.status === "behoben" ? "behoben" : "offen" })).filter(f => f.titel);
+  return { zusammenfassung: txt(d?.zusammenfassung, 600), zahlen, geprueft: (Array.isArray(d?.geprueft) ? d.geprueft : []).slice(0, 10).map(x => txt(x, 30)).filter(Boolean),
+    seiten: (Array.isArray(d?.seiten) ? d.seiten : []).slice(0, 40).map(x => txt(x, 60)).filter(Boolean), funde };
+}
+const berichtOut = r => { if (!r) return null; let d = {}; try { d = JSON.parse(r.daten); } catch {} return { id: r.id, version: r.version, prototype_id: r.prototype_id, created_at: r.created_at, ...d }; };
 
 export function createBrueckeSoftware({ json, send, readJson, clean, publish, stand }) {
   /** Board (nur Inhaber): Aufträge für die Brücke anstoßen – /bruecke/projekt/<id>/(claude|ordner|stand) */
   async function admin(req, res, p, m, user) {
     // Freigabe einer wartenden Version – braucht die Brücke nicht
-    const fm = p.match(/^\/bruecke\/projekt\/(\d+)\/(wartend|freigeben|verwerfen)$/);
+    const fm = p.match(/^\/bruecke\/projekt\/(\d+)\/(wartend|freigeben|verwerfen|pruefbericht)$/);
     if (fm) {
       const x = projekt(+fm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
       const c = wartend(x.id);
+      if (fm[2] === "pruefbericht" && m === "GET") return json(res, 200, { aktuell: berichtOut(db.prepare("SELECT * FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 1").get(x.id)),
+        frueher: db.prepare("SELECT * FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 6 OFFSET 1").all(x.id).map(berichtOut) });
       if (fm[2] === "wartend" && m === "GET") {
         const live = db.prepare("SELECT version, created_at FROM prototypes WHERE project_id = ? AND state IS NULL AND active = 1 ORDER BY id DESC LIMIT 1").get(x.id) || null;
-        return json(res, 200, { wartend: c ? { id: c.id, version: c.version, changes: c.changes, created_at: c.created_at, url: `/p/${c.token}/${c.entry}`, base: `/p/${c.token}/`, entry: c.entry, title: c.title, erledigt: idListe(c.erledigt_ids).length } : null, live });
+        return json(res, 200, { wartend: c ? { id: c.id, version: c.version, changes: c.changes, created_at: c.created_at, url: `/p/${c.token}/${c.entry}`, base: `/p/${c.token}/`, entry: c.entry, title: c.title, erledigt: idListe(c.erledigt_ids).length, pruefbericht: berichtOut(db.prepare("SELECT * FROM pruefberichte WHERE project_id = ? ORDER BY id DESC LIMIT 1").get(x.id)) } : null, live });
       }
       if (m !== "POST") return null;
       if (!c) return json(res, 404, { error: "Es wartet keine Version auf Freigabe." });
@@ -208,6 +246,15 @@ export function createBrueckeSoftware({ json, send, readJson, clean, publish, st
     if (mm && m === "GET") {
       const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
       return json(res, 200, { stempel: anmerkungenStempel(x.id), text: anmerkungenText(x.id), anleitung: anleitung(x) });
+    }
+    // Prüfbericht aus pruefbericht.json (Claude prüft die Website selbst in allen Größen)
+    mm = p.match(/^\/(\d+)\/pruefbericht$/);
+    if (mm && m === "POST") {
+      const x = projekt(+mm[1]); if (!x) return json(res, 404, { error: "Projekt nicht gefunden" });
+      const daten = berichtSaeubern(await readJson(req, 256 * 1024));
+      const bezug = wartend(x.id) || letzterStand(x.id);
+      const r = db.prepare("INSERT INTO pruefberichte(project_id, prototype_id, version, daten) VALUES(?, ?, ?, ?)").run(x.id, bezug?.id ?? null, bezug?.version ?? null, JSON.stringify(daten));
+      return json(res, 200, { ok: true, id: Number(r.lastInsertRowid), offen: daten.funde.filter(f => f.status === "offen").length });
     }
     // Arbeitsstand aus arbeitsstand.json: Stand, letzte Sitzung, Notizen, Fragen an den Kunden
     mm = p.match(/^\/(\d+)\/arbeitsstand$/);
