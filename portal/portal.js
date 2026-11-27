@@ -98,10 +98,23 @@ function route() {
   // Schmale Fenster: Der Menüknopf zeigt, wo man gerade ist; nach der Auswahl klappt das Menü wieder zu
   { const an = $(".nav nav a.on span"), jetzt = $("#navNow"); if (an && jetzt) jetzt.textContent = an.textContent; menuZu(); }
   if (v !== "chat") { stopChat?.(); stopChat = null; }
+  document.body.classList.toggle("im-chat", v === "chat"); fensterMasse();
   scrollTo(0, 0);
   VIEWS[v](arg).catch(err => toast(err.message));
 }
 addEventListener("hashchange", route);
+/* Chat-Höhe: sichtbare Fensterhöhe (auf dem Handy ohne Adressleiste und Tastatur) und Höhe der Menüleiste als CSS-Variablen,
+   damit die Eingabeleiste immer unten am sichtbaren Rand klebt */
+function fensterMasse() {
+  const vv = window.visualViewport, h = vv ? vv.height : innerHeight, nav = document.querySelector(".nav");
+  document.documentElement.style.setProperty("--vvh", h + "px");
+  if (nav) document.documentElement.style.setProperty("--navh", (innerWidth <= 860 ? nav.offsetHeight : 0) + "px");
+  if (document.body.classList.contains("im-chat") && vv && vv.offsetTop) scrollTo(0, 0);
+}
+window.visualViewport?.addEventListener("resize", fensterMasse);
+window.visualViewport?.addEventListener("scroll", fensterMasse);
+addEventListener("resize", fensterMasse);
+fensterMasse();
 function menuZu() { $(".nav")?.classList.remove("is-open"); $("#navToggle")?.setAttribute("aria-expanded", "false"); }
 $("#navToggle")?.addEventListener("click", e => { e.stopPropagation(); const auf = $(".nav").classList.toggle("is-open"); $("#navToggle").setAttribute("aria-expanded", String(auf)); });
 document.addEventListener("click", e => { if (!e.target.closest(".nav nav") || e.target.closest(".nav nav a")) menuZu(); });
@@ -558,10 +571,10 @@ $("#log").addEventListener("submit", async e => {
    im selben Takt nach unten rollt und die Karte weich zusammenschrumpft – exakt auf die Position der echten Blase.
    Dann wird die echte Blase sichtbar und die Kopie verschwindet. */
 const EASE = t => 1 - Math.pow(1 - t, 3.2);
-async function antwortFliegt({ log, ta, kid }) {
+async function antwortFliegt({ log, ta, kid, von: startRect }) {
   const DAUER = 640;
-  const roll = log.scrollHeight > log.clientHeight + 2 ? log : document.scrollingElement;   // wer scrollt: der Verlauf oder die Seite
-  const von = ta.getBoundingClientRect(), vorher = roll.scrollTop;
+  const roll = log.scrollHeight > log.clientHeight + 2 || document.body.classList.contains("im-chat") ? log : document.scrollingElement;   // wer scrollt: der Verlauf oder die Seite
+  const von = startRect || ta.getBoundingClientRect(), vorher = roll.scrollTop;
   const alteKarte = log.querySelector(`[data-rqk="${CSS.escape(kid || "")}"]`), altH = alteKarte?.offsetHeight || 0;
   render(log, msgs, "client", EMPTY);
   roll.scrollTop = vorher;
@@ -602,7 +615,12 @@ async function antwortFliegt({ log, ta, kid }) {
 composer($("#composer"), async text => {
   const m = await api("/messages", { method: "POST", body: { body: text, project_id: thread && thread !== "allgemein" ? +thread : null } }).catch(err => { toast(err.message); throw err; });
   if (!msgs.some(x => x.id === m.id)) msgs.push(m);
-  $("#log").dataset.scrolled = ""; render($("#log"), msgs, "client", EMPTY);
+  const log = $("#log"), ta = $("#composer textarea");
+  if (ruhig()) { log.dataset.scrolled = ""; render(log, msgs, "client", EMPTY); return; }
+  // Auch eine normale Nachricht gleitet vom Eingabefeld direkt an ihren Platz im Verlauf
+  const von = ta.getBoundingClientRect();
+  ta.value = ""; ta.dispatchEvent(new Event("input"));
+  imFlug = true; try { await antwortFliegt({ log, ta, von }); } finally { imFlug = false; }
 });
 
 /* ---------- Termine & Dokumente ---------- */
