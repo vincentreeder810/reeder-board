@@ -187,6 +187,25 @@ CREATE TABLE IF NOT EXISTS events (
   const pay = db.prepare("PRAGMA table_info(payments)").all().map(c => c.name);
   if (!pay.includes("invoice_doc_id")) db.exec("ALTER TABLE payments ADD COLUMN invoice_doc_id INTEGER REFERENCES documents(id) ON DELETE SET NULL");
 }
+{ // Chats je Projekt: Jede Nachricht gehört zu einem Projekt-Faden (project_id) oder zum Faden „Allgemein“ (NULL).
+  // art/meta: Sonderkarten im Chat, z. B. art = 'rueckfragen' mit meta {fragen:[{id,text}]} oder art = 'antwort' mit meta {frage, antwort}.
+  const mc = db.prepare("PRAGMA table_info(messages)").all().map(c => c.name);
+  if (!mc.includes("project_id")) {
+    db.exec("ALTER TABLE messages ADD COLUMN project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL");
+    // Bestehende Nachrichten einmalig zuordnen: Hat ein Kunde genau ein Projekt, gehören seine alten Nachrichten dorthin – sonst bleiben sie unter „Allgemein“.
+    db.exec(`UPDATE messages SET project_id = (SELECT MIN(p.id) FROM projects p WHERE p.client_id = messages.client_id)
+      WHERE project_id IS NULL AND (SELECT COUNT(*) FROM projects p WHERE p.client_id = messages.client_id) = 1`);
+  }
+  if (!mc.includes("art")) db.exec("ALTER TABLE messages ADD COLUMN art TEXT");
+  if (!mc.includes("meta")) db.exec("ALTER TABLE messages ADD COLUMN meta TEXT");
+  db.exec("CREATE INDEX IF NOT EXISTS messages_thread ON messages(client_id, project_id, id)");
+}
+/** Chat-Faden für eine neue Nachricht: das genannte Projekt – oder, wenn keins bekannt ist und der Kunde genau ein Projekt hat, dieses. Sonst NULL („Allgemein“). */
+export function chatProjekt(clientId, projectId = null) {
+  if (projectId) return projectId;
+  const r = db.prepare("SELECT COUNT(*) n, MIN(id) id FROM projects WHERE client_id = ?").get(clientId);
+  return r.n === 1 ? r.id : null;
+}
 
 /* ---------- Terminanfragen von Bestandskunden ---------- */
 db.exec(`

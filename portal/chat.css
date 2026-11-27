@@ -36,4 +36,40 @@
 .composer svg{width:20px;height:20px}
 
 @media (max-width:640px){.msg{max-width:88%}}
+/* Rückfragen als Karte im Chat (Board und Kundenportal) */
+.msg--karte{max-width:min(92%,520px)}
+.rqk{background:var(--white);border-radius:20px;padding:16px 16px 14px;box-shadow:0 0 0 1px rgba(139,92,246,.22),0 18px 40px -28px rgba(139,92,246,.7);text-align:left;width:100%;min-width:0}
+.rqk__h{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.rqk__ic{flex:none;width:36px;height:36px;border-radius:12px;background:var(--grad);color:#fff;display:grid;place-items:center}
+.rqk__ic svg{width:20px;height:20px}
+.rqk__h b{display:block;font-size:15px;letter-spacing:-.01em;color:var(--ink)}
+.rqk__h small{display:block;font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+.rqk__l{list-style:none;margin:0;padding:0;display:grid;gap:8px;counter-reset:rqk}
+.rqk__f{counter-increment:rqk;position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:start;padding:10px 12px 10px 38px;border-radius:14px;background:var(--paper)}
+.rqk__f::before{content:counter(rqk);position:absolute;left:10px;top:10px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:11.5px;font-weight:700;display:grid;place-items:center;color:var(--ink2)}
+.rqk__f p{margin:0;font-size:14px;line-height:1.45;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.rqk__st{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--ink2)}
+.rqk__f--offen .rqk__st{background:#f3edff;box-shadow:none;color:#6d28d9}
+.rqk__f--beantwortet .rqk__st{background:#e8f8ef;box-shadow:none;color:#16774f}
+.rqk__f--beantwortet::before{content:"✓";background:#16a36a;color:#fff;box-shadow:none}
+.rqk__f--erledigt{opacity:.7}
+.rqk__a{grid-column:1/-1;font-weight:400!important;color:var(--ink2)!important;padding-left:10px;border-left:2px solid rgba(22,163,106,.5)}
+.rqk__btn{display:flex;align-items:center;justify-content:center;margin-top:12px;height:40px;border-radius:999px;background:var(--grad);color:#fff;font-weight:600;font-size:14px;text-decoration:none}
+.ank{background:var(--white);border-radius:18px;padding:11px 14px;box-shadow:0 0 0 1px var(--line);text-align:left;min-width:0;width:100%}
+.ank small{display:block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.ank__q{margin:0;font-size:13.5px;color:var(--muted);line-height:1.45;overflow-wrap:anywhere}
+.ank__a{margin:4px 0 0;font-size:14.5px;color:var(--ink);line-height:1.45;overflow-wrap:anywhere}
+.ank__a span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
+@media (max-width:420px){.rqk__f{grid-template-columns:minmax(0,1fr)}.rqk__st{justify-self:start}}
+/* Auswahl des Chat-Fadens (je Projekt + Allgemein) */
+.thchips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.thchips::-webkit-scrollbar{display:none}
+.thchip{flex:none;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;background:var(--white);box-shadow:inset 0 0 0 1px var(--line);font:inherit;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer;max-width:70vw}
+.thchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thchip.on{background:var(--ink);color:#fff;box-shadow:none}
+.thchip em{font-style:normal;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--grad);color:#fff;font-size:11.5px;display:grid;place-items:center}
+.thchip--zu{opacity:.6}
+.chat__threads{flex:none;padding:10px 14px 0;border-bottom:1px solid var(--line)}
+.chat__threads .thchip{height:34px;background:var(--paper);box-shadow:none}
+.chat__threads .thchip.on{background:var(--ink)}
 .vtag{font-style:normal;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--grad);color:#fff;vertical-align:2px;margin-left:4px}

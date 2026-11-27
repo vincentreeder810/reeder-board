@@ -83,7 +83,7 @@ async function start() {
 }
 async function refreshBadge() {
   const o = await api("/overview"); const b = $("#bChat");
-  b.hidden = !o.unread || location.hash === "#chat"; b.textContent = o.unread;
+  b.hidden = !o.unread || location.hash === "#chat" || location.hash.startsWith("#chat/"); b.textContent = o.unread;
   api("/support").then(s => { const n = s.list.filter(t => t.unread).length, bs = $("#bSupport"); bs.hidden = !n; bs.textContent = n; }).catch(() => {});
   return o;
 }
@@ -462,23 +462,59 @@ $("#projDetail").addEventListener("click", e => {
   }
 });
 
-/* ---------- Chat ---------- */
-let msgs = [];
+/* ---------- Chat: je Projekt ein eigener Chat ----------
+   Hat der Kunde mehrere Projekte (oder dazu allgemeine Nachrichten), wählt er oben den Chat; sonst sieht er wie bisher einen Verlauf.
+   Adresse: #chat oder #chat/<Projekt-Nummer> bzw. #chat/allgemein */
+let msgs = [], threads = [], thread = null;
+const thKey = t => t.project_id == null ? "allgemein" : String(t.project_id);
 const EMPTY = `<b>Ihr direkter Draht zu uns.</b>Stellen Sie hier Fragen, geben Sie Feedback oder schicken Sie uns einfach Ihre Gedanken. Unser Team antwortet in der Regel am selben Werktag.`;
-async function viewChat() {
-  msgs = []; $("#log").dataset.scrolled = "";
-  await loadMessages(); $("#bChat").hidden = true;
-  stopChat?.(); stopChat = poll(loadMessages);
+async function viewChat(arg) {
+  threads = await api("/threads").catch(() => []);
+  const gibt = k => k && threads.some(t => thKey(t) === k);
+  const wahl = gibt(arg) ? arg : gibt(thread) ? thread : thKey(threads.find(t => t.unread) || threads[0] || { project_id: null });
+  await openThread(wahl);
+  $("#bChat").hidden = true;
+  stopChat?.(); stopChat = poll(chatTick);
   $("#composer textarea").focus();
 }
-async function loadMessages() {
-  const after = msgs.length ? msgs[msgs.length - 1].id : 0;
-  const fresh = await api("/messages?after=" + after);
-  if (fresh.length || !msgs.length) { msgs = msgs.concat(fresh); render($("#log"), msgs, "client", EMPTY); }
-  else if (msgs.some(m => m.sender === "client" && !m.read)) { msgs = await api("/messages?after=0"); render($("#log"), msgs, "client", EMPTY); }
+function renderThreads() {
+  const box = $("#chatThreads"), cur = threads.find(t => thKey(t) === thread);
+  box.hidden = threads.length < 2;
+  box.innerHTML = threads.map(t => { const on = thKey(t) === thread;
+    return `<button type="button" role="tab" class="thchip ${on ? "on" : ""} ${t.status === "abgeschlossen" ? "thchip--zu" : ""}" data-th="${thKey(t)}" aria-selected="${on}"><span>${esc(t.title)}</span>${t.unread && !on ? `<em>${t.unread}</em>` : ""}</button>`; }).join("");
+  $("#chatSub").textContent = threads.length > 1 && cur ? (cur.project_id ? `Zum Projekt „${cur.title}“ · wir antworten in der Regel am selben Werktag.` : "Allgemeine Fragen · wir antworten in der Regel am selben Werktag.") : "Wir antworten in der Regel am selben Werktag.";
+  $("#composer textarea").placeholder = threads.length > 1 && cur?.project_id ? `Nachricht zu „${cur.title}“ …` : "Nachricht an unser Team …";
 }
+async function openThread(k) {
+  thread = k; msgs = []; $("#log").dataset.scrolled = "";
+  if (location.hash.startsWith("#chat")) history.replaceState(null, "", threads.length > 1 ? `#chat/${k}` : "#chat");
+  await loadMessages();
+  const t = threads.find(x => thKey(x) === k); if (t) t.unread = 0;
+  renderThreads();
+  refreshBadge().catch(() => {});
+}
+async function loadMessages() {
+  const k = thread, q = `/messages?thread=${encodeURIComponent(k)}&after=`;
+  const after = msgs.length ? msgs[msgs.length - 1].id : 0;
+  const fresh = await api(q + after); if (k !== thread) return;
+  if (fresh.length || !msgs.length) {
+    msgs = msgs.concat(fresh);
+    if (after && fresh.some(m => m.art === "antwort")) msgs = await api(q + 0);   // neue Antwort: Stand der Rückfragen-Karten auffrischen
+    render($("#log"), msgs, "client", EMPTY);
+  }
+  else if (msgs.some(m => m.sender === "client" && !m.read)) { msgs = await api(q + 0); render($("#log"), msgs, "client", EMPTY); }
+}
+async function chatTick() {
+  await loadMessages();
+  const neu = await api("/threads").catch(() => null);
+  if (neu) { threads = neu; const t = threads.find(x => thKey(x) === thread); if (t) t.unread = 0; renderThreads(); }
+}
+$("#chatThreads").addEventListener("click", e => {
+  const b = e.target.closest("[data-th]"); if (!b || b.dataset.th === thread) return;
+  openThread(b.dataset.th).then(() => $("#composer textarea").focus()).catch(err => toast(err.message));
+});
 composer($("#composer"), async text => {
-  const m = await api("/messages", { method: "POST", body: { body: text } }).catch(err => { toast(err.message); throw err; });
+  const m = await api("/messages", { method: "POST", body: { body: text, project_id: thread && thread !== "allgemein" ? +thread : null } }).catch(err => { toast(err.message); throw err; });
   if (!msgs.some(x => x.id === m.id)) msgs.push(m);
   $("#log").dataset.scrolled = ""; render($("#log"), msgs, "client", EMPTY);
 });

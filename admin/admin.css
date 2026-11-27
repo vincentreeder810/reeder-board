@@ -1634,3 +1634,76 @@ label.auf__item{cursor:pointer}
 .mschr__haken .check span{display:grid;gap:3px;min-width:0}
 .mschr__haken .check small{font-weight:400;color:var(--muted,#6b6b76);font-size:12.5px}
 .mschr__haken .check:has(input:checked){box-shadow:inset 0 0 0 1.5px #8b5cf6;background:rgba(139,92,246,.05)}
+/* ---------- Chats (aufgebaut wie ein Messenger): links Kunden, rechts der Chat – admin/chats.js ---------- */
+.wa{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:16px;height:calc(100vh - 94px);min-height:520px}
+.wa__side{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--white);border-radius:24px;box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.wa__top{padding:18px 18px 10px}
+.wa__top h1{margin:0;font-size:24px;letter-spacing:-.03em}
+.wa__such{margin:0 14px 10px;width:auto;height:40px;border-radius:999px;padding:0 16px;font-size:14px}
+.wa__list{flex:1;min-height:0;overflow-y:auto;padding:0 8px 10px}
+.wa__c,.wa__t{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:10px;border-radius:16px;background:none;border:0;font:inherit;color:inherit;cursor:pointer;transition:background .2s}
+.wa__c:hover,.wa__t:hover{background:var(--paper)}
+.wa__c.on,.wa__t.on{background:#f3edff;box-shadow:inset 3px 0 0 var(--violet)}
+.wa__c .avatar{flex:none;width:44px;height:44px}
+.wa__m{flex:1;min-width:0;display:grid;gap:2px}
+.wa__r1{display:flex;align-items:baseline;gap:6px;min-width:0}
+.wa__r1 b{font-size:14.5px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.wa__wer{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 0}
+.wa__r1 time{margin-left:auto;flex:none;font-size:11.5px;color:var(--muted)}
+.wa__c--neu .wa__r1 time{color:#6d28d9;font-weight:600}
+.wa__r2{display:flex;align-items:center;gap:8px;min-width:0}
+.wa__r2 small{flex:1;min-width:0;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa__r2 small i{font-style:normal;opacity:.8}
+.wa__c--neu .wa__r2 small{color:var(--ink2)}
+.wa__n{flex:none;font-style:normal;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--grad);color:#fff;font-size:11.5px;font-weight:600;display:grid;place-items:center}
+.wa__chev{flex:none;width:12px;height:12px;color:var(--muted);transition:transform .25s var(--ease)}
+.wa__g.is-auf .wa__chev{transform:rotate(180deg)}
+.wa__c--zu{opacity:.6}
+.wa__subs{margin:0 0 6px 32px;padding-left:10px;border-left:2px solid rgba(139,92,246,.18);display:grid;gap:2px}
+.wa__t{display:grid;gap:2px;padding:8px 10px}
+.wa__t .wa__r1{align-items:center}
+.wa__t .wa__r1 b{font-size:13.5px}
+.wa__t .bereich{flex:none}
+.wa__t--zu{opacity:.55}
+.wa__fertig{font-size:11px;color:var(--muted);flex:none}
+.wa__leer{padding:24px 14px;text-align:center;color:var(--muted);font-size:14px}
+.wa__main{min-width:0;min-height:0;display:flex;flex-direction:column}
+.wa__main>.chat{flex:1;min-height:0}
+.wa__nichts{flex:1;display:grid;place-content:center;justify-items:center;gap:6px;text-align:center;background:var(--white);border-radius:24px;box-shadow:0 0 0 1px var(--line);color:var(--muted);padding:30px;font-size:14px}
+.wa__nichts svg{width:44px;height:44px;color:var(--violet);opacity:.6;margin-bottom:6px}
+.wa__nichts b{color:var(--ink);font-size:18px;letter-spacing:-.02em}
+.wa__head{gap:12px}
+.wa__head .avatar{flex:none;width:40px;height:40px}
+.wa__hm{flex:1;min-width:0}
+.wa__hm h2,.wa__hm p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wa__link{flex:none}
+.wa__back{display:none;flex:none;height:36px;padding:0 12px 0 10px;border-radius:999px;background:var(--paper);font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;border:0}
+@media (max-width:980px){.wa{height:calc(100dvh - 150px)}}
+@media (max-width:760px){
+  .wa{grid-template-columns:minmax(0,1fr);height:calc(100dvh - 130px);min-height:420px}
+  .wa.is-open .wa__side{display:none}
+  .wa:not(.is-open) .wa__main{display:none}
+  .wa__back{display:inline-flex;align-items:center}
+  .wa__head{padding:10px 12px;gap:8px}
+  .wa__head .avatar{display:none}
+  .wa__link{height:34px;padding:0 12px;font-size:13px}
+}
+@media (max-width:420px){.wa__head{flex-wrap:wrap}.wa__hm{flex:1 1 calc(100% - 100px)}.wa__link{margin-left:auto}.wa__subs{margin-left:16px}}
+/* Kundenakte, Reiter „Nachrichten“: Auswahl des Chats */
+.kchat__bar{display:flex;align-items:center;gap:10px;margin-bottom:6px;min-width:0}
+.kchat__bar .thchips{flex:1;min-width:0}
+.kchat__bar .btn{flex:none}
+#clientDetail .kchat .chat{height:calc(100vh - 410px);min-height:440px}
+@media (max-width:560px){.kchat__bar{flex-wrap:wrap}.kchat__bar .thchips{flex-basis:100%}}
+/* Projektseite: Karte „Nachrichten“ mit den letzten Nachrichten dieses Projekts */
+.chat--mini{height:auto;border-radius:18px;background:var(--paper);box-shadow:none}
+.chat--mini .chat__log{max-height:380px;min-height:110px;padding:12px 12px 8px}
+.chat--mini .composer{padding:10px}
+.chat--mini .composer textarea{background:#fff}
+.chat--mini .chat__day,.chat--mini .msg__bubble{background:#fff}
+/* Sende-Dialog für Rückfragen: Vorschau wie im Kundenportal */
+.wsv{display:grid;gap:10px;max-height:min(50vh,420px);overflow-y:auto;padding:12px;border-radius:18px;background:var(--soft)}
+.wsv__k{padding:14px;border-radius:16px;background:#fff;box-shadow:0 0 0 1px var(--line);min-width:0}
+.wsv__q{margin:0 0 8px;font-weight:600;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere}
+.wsv__feld{height:58px;border-radius:12px;background:var(--paper);border:1.5px dashed rgba(139,92,246,.28);padding:9px 12px;font-size:13.5px;color:var(--muted)}
+.wsv__knopf{display:inline-flex;margin-top:8px;height:30px;align-items:center;padding:0 14px;border-radius:999px;background:var(--grad);color:#fff;font-size:12.5px;font-weight:600;opacity:.5}

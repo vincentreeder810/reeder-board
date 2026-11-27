@@ -363,7 +363,7 @@ export function createProjects({ json, send, readJson, clean, protoOut, SITE_URL
           stand: st ? { version: st.version, at: st.created_at, text: x.stand_summary_ref === st.id ? (x.stand_summary || "") : (st.changes || "") } : null, title: x.title, bereich: x.bereich || "software", kind: x.kind, phase: x.phase, phaseIndex: PHASES.indexOf(x.phase), status: x.status, model: x.model,
           client: { id: x.client_id, company: x.company, name: x.client_name }, members: members(x.id), next, last_activity: last || x.updated_at, prototype: latest?.version || null,
           openNotes: db.prepare("SELECT COUNT(*) n FROM annotations a JOIN prototypes pr ON pr.id = a.prototype_id WHERE pr.project_id = ? AND a.status = 'offen'").get(x.id).n,
-          unread: db.prepare("SELECT COUNT(*) n FROM messages WHERE client_id = ? AND sender = 'client' AND read_at IS NULL").get(x.client_id).n,
+          unread: db.prepare("SELECT COUNT(*) n FROM messages WHERE client_id = ? AND sender = 'client' AND read_at IS NULL AND (project_id = ? OR project_id IS NULL)").get(x.client_id, x.id).n,   // Chat dieses Projekts + „Allgemein“
           open_gross: Math.round(open * (1 + x.vat_rate / 100)), offer_net: x.offer_net });
       }));
     }

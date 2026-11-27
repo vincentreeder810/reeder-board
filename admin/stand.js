@@ -248,13 +248,14 @@
     if (!ids.length) return toast("Bitte mindestens eine Frage ankreuzen.");
     const fragen = W.fragen.filter(f => ids.includes(f.id));
     const d = modal(`<h2 class="span2">Fragen an den Kunden senden</h2>
-      <p class="hint span2" style="margin:0">Der Kunde sieht die Fragen im Kundenportal unter Rückfragen und kann sie dort direkt beantworten. Antworten werden hier automatisch eingetragen.</p>
-      <div class="span2 ws__vorschau">${fragen.map((f, i) => `<p>${fragen.length > 1 ? `${i + 1}. ` : ""}${absatz(f.text)}</p>`).join("")}</div>
+      <p class="hint span2" style="margin:0">So sieht der Kunde die Fragen – jede mit eigenem Antwortfeld. Sie erscheinen außerdem im Projekt-Chat.</p>
+      <div class="span2 wsv" aria-label="Vorschau, wie der Kunde die Fragen sieht">${fragen.map(f => `<div class="wsv__k"><p class="wsv__q">${absatz(f.text)}</p><div class="wsv__feld" aria-hidden="true">Ihre Antwort …</div><span class="wsv__knopf" aria-hidden="true">Antwort senden</span></div>`).join("")}</div>
       <label class="check span2"><input type="checkbox" name="mail" checked> Zusätzlich per E-Mail benachrichtigen</label>
       <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Senden</button></div>`);
     d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"); k.disabled = true;
       try { const r = await api(`/projects/${pid}/workspace/fragen-senden`, { method: "POST", body: { ids, mail: d.f.mail.checked } });
-        d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Kundenportal unter Rückfragen${r.mailed ? ", mit E-Mail-Hinweis" : ""}.`); workspace({ id: pid }); }
+        d.close(); toast(`${r.anzahl === 1 ? "Frage" : r.anzahl + " Fragen"} gesendet – im Kundenportal unter Rückfragen und im Projekt-Chat${r.mailed ? ", mit E-Mail-Hinweis" : ""}.`);
+        if (window.KUNDEN?.openProjectPage && $("#pChat")) window.KUNDEN.openProjectPage(pid, true); else workspace({ id: pid }); }   // neu zeichnen, damit die Karte „Nachrichten“ die Rückfragen gleich zeigt
       catch (err) { d.fail(err.message); k.disabled = false; } });
   });
   window.STAND = { projectCard, workspace, freigabe };

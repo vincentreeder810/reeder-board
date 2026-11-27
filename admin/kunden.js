@@ -105,7 +105,7 @@
     ];
   });
   // Nachricht: Kunden mit Portal bekommen sie im Chat, alle anderen per E-Mail
-  const nachrichtItem = c => c.stage === "mandant" ? { l: "Nachricht schreiben", hint: "im Kundenportal-Chat", fn: () => { location.hash = `#kunden/${c.id}/chat`; } }
+  const nachrichtItem = c => c.stage === "mandant" ? { l: "Nachricht schreiben", hint: "im Kundenportal-Chat", fn: () => { location.hash = `#chats/${c.id}`; } }
     : c.email ? { l: "Nachricht schreiben", hint: `per E-Mail an ${c.email}`, fn: () => { location.href = `mailto:${c.email}`; } } : null;
   DD.on("kMode", v => { listMode = v; renderList(); });
   DD.on("kSort", v => { sortBy = v; renderList(); });
@@ -377,21 +377,12 @@
   $("#clientDetail").addEventListener("click", delegate);
   $("#projectPage").addEventListener("click", delegate);
 
-  /* ---------- Chat ---------- */
+  /* ---------- Chat ----------
+     Je Projekt ein eigener Chat: oben die Auswahl (Projekte + „Allgemein“), darunter derselbe Verlauf wie in „Chats“ (admin/chats.js).
+     Die frühere Fassung mit einem einzigen Verlauf liegt in _sicherung-2026-11-27/chats/admin/kunden.js. */
   async function showChat() {
-    $("#cpane").innerHTML = `
-      <section class="chat">
-        <div class="chat__head"><span class="chat__dot"></span><div><h2>Chat mit ${esc(current.name)}</h2><p>${current.status === "aktiv" ? "Der Kunde sieht Ihre Antwort sofort im Portal." : "Der Kunde hat seinen Zugang noch nicht aktiviert – Nachrichten sieht er nach dem ersten Login."}</p></div></div>
-        <div class="chat__log" id="clog"></div>
-        <form class="composer" id="ccomposer"><textarea rows="1" placeholder="Antwort an ${esc(current.name)} …" aria-label="Nachricht"></textarea>
-          <button type="submit" aria-label="Senden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></form>
-      </section>`;
-    C.composer($("#ccomposer"), async text => {
-      const m = await api(`/clients/${current.id}/messages`, { method: "POST", body: { body: text } }).catch(err => { toast(err.message); throw err; });
-      if (!msgs.some(x => x.id === m.id)) msgs.push(m);
-      $("#clog").dataset.scrolled = ""; C.render($("#clog"), msgs, "team", EMPTY);
-    });
-    msgs = []; await loadMessages(); loadClients();
+    await window.CHATS.kundenTab($("#cpane"), current);
+    loadClients();
   }
   async function loadMessages() {
     if (!current || !$("#clog")) return;
@@ -467,6 +458,7 @@
                 <div class="acts"><button class="btn btn--sm" data-act="jump" data-id="${a.id}">Zur Stelle</button><button class="btn btn--ghost btn--sm" data-act="toggleAnn" data-id="${a.id}" data-s="erledigt">Wieder öffnen</button></div></div>`).join("")}</div>`, "erledigte")}
           </div>
           <div class="card ws" id="pWs" hidden></div>
+          <div class="card pchat" id="pChat" hidden></div>
           <div class="card" id="pTasks"></div>
           <details class="card pklapp" ${p.appointments.some(a => new Date(a.start) > new Date()) ? "open" : ""}><summary><h2>Termine</h2><span>${p.appointments.length || "keine"}</span></summary>
             <div class="acts" style="justify-content:flex-start;margin:12px 0 10px"><button class="btn btn--ghost btn--sm" data-act="newAppt">Termin eintragen</button></div>
@@ -507,6 +499,7 @@
         </div>
       </div>`;
     window.WORK?.projectCards(p);
+    window.CHATS?.projektKarte(p, current).catch(() => {});   // Karte „Nachrichten“: Chat dieses Projekts
     window.kuerzungPruefen?.();
     window.STAND?.projectCard(p).then(async () => { window.STAND.workspace(p); window.STAND.freigabe(p); await window.AUFTRAG?.load(p); if ($("#pAuftrag .auf--kand, #pAuftrag .auf__ic--wait")) { $("#pVers").open = true; $("#pWege").open = true; } });
     // Prüfstrecke nur zeigen, wo sie laufen kann (auf dem Online-Server gibt es keinen Browser dafür)
@@ -527,7 +520,7 @@
   const rechnungZuZahlung = pay => () => actions.invoicePay({ dataset: { id: String(pay.id) }, closest: () => null });
   const freieRechnung = () => { try { sessionStorage.setItem("rs-new-invoice", JSON.stringify({ client_id: project.client_id, project_id: project.id, title: project.title })); } catch {} location.hash = "#finanzen/rechnungen"; };
   const angebotFuerProjekt = () => window.angebotErstellen({ client_id: project.client_id, project_id: project.id, title: project.title, bereich: project.bereich });
-  const nachrichtProjekt = () => current.stage === "mandant" ? { l: "Nachricht an Kunden", hint: "im Kundenportal-Chat", fn: () => { location.hash = `#kunden/${current.id}/chat`; } }
+  const nachrichtProjekt = () => current.stage === "mandant" ? { l: "Nachricht an Kunden", hint: "im Chat zu diesem Projekt", fn: () => { location.hash = project ? `#chats/${current.id}/${project.id}` : `#chats/${current.id}`; } }
     : current.email ? { l: "Nachricht an Kunden", hint: `per E-Mail an ${current.email}`, fn: () => { location.href = `mailto:${current.email}`; } } : null;
   // Der nächste sinnvolle Schritt: erst das Angebot, nach der Annahme die nächste Rechnung, sonst eine Nachricht
   function hauptSchritt(p) {

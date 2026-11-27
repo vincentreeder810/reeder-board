@@ -324,9 +324,11 @@ function cockpit(user) {
 }
 function inbox(user) {
   const owner = isOwner(user), cids = clientIdsFor(user), pids = memberProjectIds(user), items = [];
-  for (const r of db.prepare(`SELECT c.id, c.company, c.name, COUNT(*) n, MAX(m.id) last FROM messages m JOIN clients c ON c.id = m.client_id WHERE m.sender = 'client' AND m.read_at IS NULL AND ${inList(cids, "c.id")} GROUP BY c.id`).all()) {
+  // Ungelesene Kundennachrichten je Chat-Faden (Projekt oder „Allgemein“) – der Link öffnet genau diesen Chat
+  for (const r of db.prepare(`SELECT c.id, c.company, c.name, m.project_id, p.title project, COUNT(*) n, MAX(m.id) last FROM messages m JOIN clients c ON c.id = m.client_id LEFT JOIN projects p ON p.id = m.project_id
+      WHERE m.sender = 'client' AND m.read_at IS NULL AND ${inList(cids, "c.id")} ${pids ? `AND (m.project_id IS NULL OR ${inList(pids, "m.project_id")})` : ""} GROUP BY c.id, m.project_id`).all()) {
     const last = db.prepare("SELECT body, created_at FROM messages WHERE id = ?").get(r.last);
-    items.push({ kind: "chat", at: last.created_at, title: `${r.name} · ${r.company}`, text: last.body.slice(0, 400), count: r.n, href: `#kunden/${r.id}/chat`, client_id: r.id });
+    items.push({ kind: "chat", at: last.created_at, title: `${r.name} · ${r.company}${r.project ? " · " + r.project : ""}`, text: last.body.slice(0, 400), count: r.n, href: `#chats/${r.id}/${r.project_id ?? "allgemein"}`, client_id: r.id, project_id: r.project_id ?? null });
   }
   for (const r of db.prepare(`SELECT r.*, c.company, c.name FROM appointment_requests r JOIN clients c ON c.id = r.client_id WHERE r.status = 'offen' AND ${inList(cids, "r.client_id")}`).all())
     items.push({ kind: "termin", at: r.created_at, title: `Terminanfrage · ${r.company}`, text: `${typeLabel(r.type)} (${r.minutes} Min.)${r.message ? " · " + r.message.slice(0, 160) : ""}`, href: `#kunden/${r.client_id}/termine`,
@@ -463,6 +465,7 @@ async function adminApi(req, res, url) {
     const from = d(url.searchParams.get("from")) || new Date(Date.now() - 31 * 864e5).toISOString(), to = d(url.searchParams.get("to")) || new Date(Date.now() + 62 * 864e5).toISOString();
     return json(res, 200, kalender(user, from, to)); }
   if (p === "/inbox") return json(res, 200, inbox(user));
+  if (p === "/chats" && m === "GET") return json(res, 200, portal.chatList(user));   // Ansicht „Chats“: Kunden mit ihren Projekt-Fäden
   if (p.startsWith("/team")) { const r = await teamApi(req, res, p, m, user); if (r !== null) return; }
   if (p.startsWith("/finance")) { const r = await finance.api(req, res, url, p, user); if (r !== null) return; }
   if (p.startsWith("/automation")) { const r = await automation.api(req, res, p, m, user); if (r !== null) return; }

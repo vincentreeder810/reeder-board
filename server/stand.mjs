@@ -139,8 +139,8 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
     if (!groupId) db.prepare("UPDATE prototypes SET group_id = id WHERE id = ?").run(gid);
     db.prepare("UPDATE projects SET stand_group = ?, updated_at = datetime('now') WHERE id = ?").run(gid, p.id);
     logEvent(p.client_id, p.id, "prototyp", base.version > 1 ? `Neuer Stand: Version ${base.version}` : "Erster Stand veröffentlicht", `${base.title} – ${text}`, announce);
-    if (announce) db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id) VALUES(?, 'team', ?, ?, ?)")
-      .run(p.client_id, author, base.version > 1 ? `Neuer Stand von „${base.title}“ (Version ${base.version}) ist online.\n${text}` : `Der erste Stand von „${base.title}“ ist online. Klicken Sie sich gern durch und markieren Sie, was Ihnen auffällt.`, r.lastInsertRowid);
+    if (announce) db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)")
+      .run(p.client_id, author, base.version > 1 ? `Neuer Stand von „${base.title}“ (Version ${base.version}) ist online.\n${text}` : `Der erste Stand von „${base.title}“ ist online. Klicken Sie sich gern durch und markieren Sie, was Ihnen auffällt.`, r.lastInsertRowid, p.id);
     return { published: true, id: Number(r.lastInsertRowid), ...base, changes: text };
   }
 
@@ -153,8 +153,8 @@ export function createStand({ json, readJson, clean, limited, ipOf, logEvent }) 
     db.prepare("UPDATE prototypes SET state = NULL, active = 1, changes = ?, created_at = datetime('now') WHERE id = ?").run(text || c.changes, c.id);
     db.prepare("UPDATE projects SET stand_group = ?, updated_at = datetime('now') WHERE id = ?").run(c.group_id, c.project_id);
     logEvent(c.client_id, c.project_id, "prototyp", `Neuer Stand: Version ${c.version}`, `${c.title} – ${text || c.changes}`, announce);
-    if (announce) db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id) VALUES(?, 'team', ?, ?, ?)")
-      .run(c.client_id, author, `Neuer Stand von „${c.title}“ (Version ${c.version}) ist online – geprüft und freigegeben.\n${text || c.changes}`, c.id);
+    if (announce) db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)")
+      .run(c.client_id, author, `Neuer Stand von „${c.title}“ (Version ${c.version}) ist online – geprüft und freigegeben.\n${text || c.changes}`, c.id, c.project_id ?? null);
   }
   const keyHash = k => sha(Buffer.from(String(k)));
   function info(p, user) {

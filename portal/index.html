@@ -128,7 +128,9 @@
     <!-- Chat -->
     <section data-view="chat" hidden>
       <section class="chat chat--full" aria-label="Chat mit Reeder Software">
-        <div class="chat__head"><span class="chat__dot"></span><div><h2>Ihr Team bei Reeder Software</h2><p>Wir antworten in der Regel am selben Werktag.</p></div></div>
+        <div class="chat__head"><span class="chat__dot"></span><div><h2>Ihr Team bei Reeder Software</h2><p id="chatSub">Wir antworten in der Regel am selben Werktag.</p></div></div>
+        <!-- Mehrere Projekte: je Projekt ein eigener Chat, hier umschaltbar -->
+        <div class="thchips chat__threads" id="chatThreads" role="tablist" aria-label="Chat auswählen" hidden></div>
         <div class="chat__log" id="log" aria-live="polite"></div>
         <form class="composer" id="composer">
           <textarea rows="1" placeholder="Nachricht an unser Team …" aria-label="Nachricht"></textarea>

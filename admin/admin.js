@@ -125,10 +125,10 @@ $("#loginForm").addEventListener("submit", async e => {
 $("#logout").addEventListener("click", async () => { await api("/logout", { method: "POST", body: {} }).catch(() => {}); ME = null; showLogin(); });
 
 /* ---------- Navigation ---------- */
-// Ansichten: board.js stellt Cockpit, Posteingang, Projekt-Board und Team bereit
+// Ansichten: board.js stellt Cockpit, Projekt-Board und Team bereit, chats.js die Chats (früher „Posteingang“)
 let ME = null;
 const views = {
-  cockpit: () => window.BOARD.cockpit(), posteingang: () => window.BOARD.inbox(),
+  cockpit: () => window.BOARD.cockpit(), chats: () => window.CHATS.load(),
   kunden: () => window.loadKunden ? window.loadKunden() : Promise.resolve(),
   projekte: () => window.BOARD.projects(), termine: loadTermine, anfragen: () => Promise.all([window.loadVertrieb(), loadRequests()]),
   team: () => window.BOARD.team(), einstellungen: loadSettings, finanzen: () => window.loadFinance(), software: () => window.loadSoftware(), arbeitsplatz: () => window.WORK.load(), kennzahlen: () => window.loadKpi(), support: () => window.SUPPORT.load(),
@@ -150,6 +150,7 @@ function route() {
   if (!ME) return;
   let v = location.hash.slice(1).split("/")[0] || (ME.owner ? "cockpit" : "arbeitsplatz");
   if (v === "uebersicht") v = "cockpit";
+  if (v === "posteingang") { location.replace("#chats"); return; }   // alter Menüpunkt „Posteingang“ heißt jetzt „Chats“
   if (v === "verfuegbarkeit") { v = "termine"; termTab = "verfuegbarkeit"; } else if (v === "termine") termTab = "kalender";
   if (!views[v] || (!ME.owner && OWNER_VIEWS.includes(v))) v = "cockpit";
   $$("[data-section]").forEach(s => s.hidden = s.dataset.section !== v);
@@ -178,7 +179,7 @@ window.addEventListener("hashchange", () => { if (/^#(anfragen|termine)/.test(lo
 async function refreshBadges() {
   const o = await api("/cockpit");
   const set = (el, n) => { if (!el) return; el.hidden = !n; el.textContent = n; };
-  set($("#badgeInbox"), o.unread + o.openRequests);
+  set($("#badgeChats"), o.unread);   // ungelesene Nachrichten von Kunden (Terminanfragen stehen im Cockpit und bei den Terminen)
   const bt = $("#badgeTimer"); if (bt) bt.hidden = !o.timer;
   set($("#badgeSupport"), o.support || 0);
   // Zähler wie bei einem Messenger: alles, was seit dem letzten Öffnen des Bereichs dazugekommen ist

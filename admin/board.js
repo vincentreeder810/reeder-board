@@ -204,9 +204,9 @@
     const warten = (await api("/projects").catch(() => [])).filter(p => p.vorgang?.wer === "ich").length;
     const tiles = [
       { href: "#arbeitsplatz", k: "Vorgänge warten auf dich", v: warten, s: "weiter in „Mein Arbeitsplatz“", grad: true },
-      { href: "#posteingang", k: "Wartet auf Antwort", v: o.unread + o.openRequests, nograd: true, s: `${o.unread} Nachricht${o.unread === 1 ? "" : "en"} · ${o.openRequests} Terminanfrage${o.openRequests === 1 ? "" : "n"}`, grad: true },
+      { href: "#chats", k: "Wartet auf Antwort", v: o.unread + o.openRequests, nograd: true, s: `${o.unread} Nachricht${o.unread === 1 ? "" : "en"} · ${o.openRequests} Terminanfrage${o.openRequests === 1 ? "" : "n"}`, grad: true },
       { href: "#kunden", k: "Termine heute", v: o.today.length, s: o.today[0] ? `als Nächstes ${C.fmt(o.today[0].start, { hour: "2-digit", minute: "2-digit" })} Uhr` : `${o.week.length} in den nächsten 7 Tagen` },
-      { href: "#posteingang", k: "Offene Anmerkungen", v: o.openNotes, s: "an Prototypen" },
+      { href: "#projekte", k: "Offene Anmerkungen", v: o.openNotes, s: "an Prototypen" },
     ];
     if (o.owner) tiles.push(
       { href: "#projekte", k: "Noch offen aus Aufträgen", v: money(o.receivables), s: `laut Zahlungsplan, brutto · ${money(o.invoiced)} davon schon berechnet${o.overdue.length ? ` · <b style="color:#ffb4c0">${o.overdue.length} überfällig</b>` : ""}`, dark: true },
@@ -280,51 +280,9 @@
     } catch (err) { toast(err.message); b.disabled = false; }
   });
 
-  /* ---------- Posteingang ---------- */
-  const KIND = { chat: "Nachricht", termin: "Terminanfrage", anmerkung: "Anmerkungen", buchung: "Website-Buchung", lead: "Projektanfrage" };
-  async function inbox() {
-    const all = await api("/inbox"), items = all.filter(i => i.kind !== "buchung" && i.kind !== "lead"), leads = all.length - items.length;
-    const when = iso => C.fmt(iso, { weekday: "short", day: "numeric", month: "short" }) + ", " + C.fmt(iso, { hour: "2-digit", minute: "2-digit" }) + " Uhr";
-    // Jede Zeile hat ihre Aktionen direkt dabei – bestätigen, antworten, einplanen, ohne erst irgendwohin zu springen
-    const actionsFor = i => {
-      if (i.kind === "termin") return `<div class="ibx__acts">${i.slots.map(s => `<button class="ibtn ${s.free ? "ibtn--ok" : "ibtn--taken"}" data-ia="acceptReq" data-rid="${i.request_id}" data-start="${s.start}" ${s.free ? "" : 'title="Inzwischen belegt"'}>✓ ${when(s.start)}</button>`).join("")}
-        <button class="ibtn" data-ia="schedule" data-cid="${i.client_id}">Andere Zeit …</button><button class="ibtn ibtn--no" data-ia="declineReq" data-rid="${i.request_id}">Ablehnen</button></div>`;
-      if (i.kind === "buchung") return `<div class="ibx__acts"><button class="ibtn ibtn--ok" data-ia="confirmBooking" data-bid="${i.booking_id}">✓ Bestätigen &amp; Einladung senden</button><button class="ibtn ibtn--no" data-ia="cancelBooking" data-bid="${i.booking_id}">Absagen</button>${i.client_id ? `<a class="ibtn" href="#kunden/${i.client_id}">Kontakt ansehen</a>` : ""}</div>`;
-      if (i.kind === "lead") return `<div class="ibx__acts"><button class="ibtn ibtn--ok" data-ia="schedule" data-cid="${i.client_id}">Erstgespräch vereinbaren</button><a class="ibtn" href="#kunden/${i.client_id}">Kontakt ansehen</a><button class="ibtn" data-ia="leadDone" data-lid="${i.lead_id}">Erledigt</button></div>`;
-      if (i.kind === "chat") return `<form class="ibx__reply" data-cid="${i.client_id}"><input placeholder="Schnell antworten …" aria-label="Antwort"><button class="ibtn ibtn--ok">Senden</button><a class="ibtn" href="${i.href}">Chat öffnen</a></form>`;
-      if (i.kind === "anmerkung") return `<div class="ibx__acts"><a class="ibtn ibtn--ok" href="${i.href}">Anmerkungen abarbeiten →</a></div>`;
-      return "";
-    };
-    const hint = leads ? `<a class="ibx-hint" href="#anfragen"><b>${leads} neue Anfrage${leads === 1 ? "" : "n"} von Interessenten</b><span>Website-Buchungen und Projektanfragen bearbeiten Sie im Vertrieb →</span></a>` : "";
-    $("#inboxList").innerHTML = hint + (items.length ? items.map(i => `
-      <div class="ibx ibx--${i.kind}">
-        <span class="ibx__ico">${ICON[i.kind]}</span>
-        <div class="ibx__body"><div class="ibx__top"><span class="ibx__kind">${KIND[i.kind]}</span>${i.count > 1 ? `<span class="badge">${i.count}</span>` : ""}<span class="ibx__at">${ago(i.at)}</span></div>
-          <b>${esc(i.title)}</b><p>${esc(i.text)}</p>${actionsFor(i)}</div>
-      </div>`).join("") : `<div class="allclear allclear--big"><b>Posteingang leer.</b><span>Alle Kunden haben eine Antwort – genießen Sie den Moment. ☕</span></div>`);
-  }
-  const after = async msg => { if (msg) toast(msg); await inbox(); window.updateBadges?.(); };
-  $("#inboxList").addEventListener("click", async e => {
-    const b = e.target.closest("[data-ia]"); if (!b) return;
-    const a = b.dataset.ia;
-    try {
-      if (a === "acceptReq") {
-        if (b.classList.contains("ibtn--taken") && !(await UI.confirm("Dieser Zeitpunkt ist inzwischen anderweitig belegt.", { title: "Trotzdem bestätigen?" }))) return;
-        b.disabled = true; const r = await api(`/requests/${b.dataset.rid}/accept`, { method: "POST", body: { start: b.dataset.start, force: b.classList.contains("ibtn--taken") } });
-        return after(r.mailed ? "Termin bestätigt – Einladung mit Video-Link ist raus." : "Termin bestätigt – Einladung liegt im Postausgang.");
-      }
-      if (a === "declineReq") { const ans = await UI.prompt("Terminanfrage ablehnen", { label: "Antwort an den Kunden (erscheint im Chat)", value: "Leider passt keiner der Wunschtermine. Wie wäre es stattdessen mit ", multiline: true, ok: "Ablehnen & antworten" }); if (ans === null) return; await api(`/requests/${b.dataset.rid}/decline`, { method: "POST", body: { answer: ans } }); return after("Abgelehnt – Ihre Antwort steht im Chat."); }
-      if (a === "schedule") return window.KUNDEN.schedule(+b.dataset.cid);
-      if (a === "confirmBooking") { b.disabled = true; const r = await api(`/bookings/${b.dataset.bid}`, { method: "PATCH", body: { status: "bestaetigt", notify: true } }); return after(r.mailed ? "Bestätigt – Einladung mit Video-Link ist raus." : "Bestätigt – Mail liegt im Postausgang (E-Mail noch nicht eingerichtet)."); }
-      if (a === "cancelBooking") { if (!(await UI.confirm("Der Kunde wird per E-Mail informiert und kann einen neuen Termin wählen.", { title: "Termin absagen?", ok: "Absagen", danger: true }))) return; await api(`/bookings/${b.dataset.bid}`, { method: "PATCH", body: { status: "abgesagt", notify: true } }); return after("Abgesagt"); }
-      if (a === "leadDone") { await api(`/requests/${b.dataset.lid}`, { method: "PATCH", body: { status: "in Bearbeitung" } }); return after("Als bearbeitet markiert – der Kontakt bleibt unter Kunden → Anfragen."); }
-    } catch (err) { toast(err.message); b.disabled = false; }
-  });
-  $("#inboxList").addEventListener("submit", async e => {
-    const f = e.target.closest(".ibx__reply"); if (!f) return; e.preventDefault();
-    const inp = $("input", f); if (!inp.value.trim()) return;
-    try { await api(`/clients/${f.dataset.cid}/messages`, { method: "POST", body: { body: inp.value.trim() } }); await api(`/clients/${f.dataset.cid}/messages?after=999999999`); after("Antwort gesendet"); } catch (err) { toast(err.message); }
-  });
+  /* ---------- Posteingang ----------
+     Der frühere Posteingang ist jetzt die Ansicht „Chats“ (admin/chats.js). Terminanfragen und Anmerkungen stehen weiter im Cockpit
+     unter „Hinweise und Nachrichten“ (Terminanfragen führen in die Kundenakte → Termine, dort mit Annehmen/Ablehnen). Alte Fassung: _sicherung-2026-11-27/chats/admin/board.js */
 
   /* ---------- Projekte: Team-Auslastung, Filter, kompakte Liste ---------- */
   const PH = ["Erstgespräch", "Konzept", "Prototyp", "Umsetzung", "Launch", "Betreuung"];
@@ -410,7 +368,7 @@
     return [
       { t: "", items: [{ l: "Öffnen", fn: () => { location.hash = projektHref(p); } }] },
       { t: "Verkaufen", items: ME.owner && offen ? [{ l: "Angebot erstellen", hint: p.bereich === "hardware" ? "zuerst das Entwicklungskonzept" : "", fn: () => window.angebotErstellen({ client_id: p.client.id, project_id: p.id, title: p.title, bereich: p.bereich }) }] : [] },
-      { t: "Kunde", items: [{ l: "Nachricht an Kunden", hint: p.client.company, fn: () => { location.hash = `#kunden/${p.client.id}/chat`; } }] },
+      { t: "Kunde", items: [{ l: "Nachricht an Kunden", hint: p.client.company, fn: () => { location.hash = `#chats/${p.client.id}/${p.id}`; } }] },
       { t: "Projekt", items: ME.owner && offen ? [{ l: "Abschließen", hint: "steht danach unter „Abgeschlossen“", fn: async () => {
         if (!(await UI.confirm(`„${p.title}“ gilt dann als abgeschlossen. Der Kunde sieht es im Portal.`, { title: "Projekt abschließen?", ok: "Abschließen" }))) return;
         await api(`/projects/${p.id}`, { method: "PATCH", body: { status: "abgeschlossen", notify: true } }); toast("Projekt abgeschlossen");
@@ -556,6 +514,6 @@
     $("input:not([type=hidden]):not([type=checkbox]),select", f)?.focus();
   }
 
-  window.BOARD = { cockpit, inbox, projects, team, assign, newProject, startOrder, arbeitsstand, vorgaenge, vereinbarungen, refresh: async () => {
-    if (ME.owner) await api("/automation/run", { method: "POST", body: {} }).catch(() => {}); if (location.hash.startsWith("#posteingang")) inbox(); if (location.hash.startsWith("#cockpit") || location.hash === "") cockpit(); window.updateBadges?.(); } };
+  window.BOARD = { cockpit, projects, team, assign, newProject, startOrder, arbeitsstand, vorgaenge, vereinbarungen, refresh: async () => {
+    if (ME.owner) await api("/automation/run", { method: "POST", body: {} }).catch(() => {}); if (location.hash.startsWith("#cockpit") || location.hash === "") cockpit(); window.updateBadges?.(); } };
 })();

@@ -11,6 +11,7 @@ import { fragebogenStand } from "./onboarding.mjs";
 import { createProjects } from "./projects.mjs";
 import { createRequests } from "./requests.mjs";
 import { clientIdsFor, memberProjectIds } from "./access.mjs";
+import { workspaceLesen } from "./workspace.mjs";
 // Cookie-Name je Instanz (Demo-Board läuft parallel auf demselben localhost)
 const PORTAL_CK = `${process.env.COOKIE_PREFIX || "rs"}_portal`;
 
@@ -46,7 +47,64 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
   const protoOut = p => p && ({ id: p.id, title: p.title, note: p.note, url: `/p/${p.token}/${p.entry}`, base: `/p/${p.token}/`, entry: p.entry, files: p.files, bytes: p.bytes, active: !!p.active,
     version: p.version || 1, project_id: p.project_id || null, group_id: p.group_id || p.id, changes: p.changes || "", state: p.state || null, created_at: p.created_at });
   const msgOut = m => ({ id: m.id, has_prototype: !!m.prototype_id, sender: m.sender, author: m.author, body: m.body, created_at: m.created_at, read: !!m.read_at,
+    project_id: m.project_id ?? null, art: m.art || null, meta: metaOut(m),
     prototype: m.prototype_id ? protoOut(db.prepare("SELECT * FROM prototypes WHERE id = ? AND active = 1").get(m.prototype_id)) || null : null });
+  /* Sonderkarten im Chat. Rückfragen bekommen ihren Stand je Frage live aus kunden_fragen:
+     offen (wartet auf den Kunden) · beantwortet (mit Antwort) · erledigt (inzwischen im Board geklärt oder gelöscht) */
+  function metaOut(m) {
+    if (!m.meta) return null;
+    let meta; try { meta = JSON.parse(m.meta); } catch { return null; }
+    if (m.art === "rueckfragen" && Array.isArray(meta?.fragen)) {
+      let ws; const board = () => ws === undefined ? (ws = m.project_id ? workspaceLesen(m.project_id) : null) : ws;
+      meta.fragen = meta.fragen.map(f => {
+        const k = db.prepare("SELECT frage_id, antwort, beantwortet_at FROM kunden_fragen WHERE id = ?").get(+f.id);
+        if (k?.beantwortet_at) return { id: f.id, text: f.text, status: "beantwortet", antwort: k.antwort || "" };
+        const offen = k && board()?.fragen.some(x => x.id === k.frage_id && x.status === "offen");
+        return { id: f.id, text: f.text, status: offen ? "offen" : "erledigt" };
+      });
+    }
+    return meta;
+  }
+
+  /* ---------- Chats je Projekt ----------
+     Jede Nachricht gehört zu einem Faden: einem Projekt des Kunden oder „Allgemein“ (project_id NULL).
+     Faden-Angabe in Anfragen: ?thread=<Projekt-ID> | allgemein | (leer = alle Nachrichten, wie früher) */
+  function threadOf(v, clientId) {
+    if (v === undefined || v === null || v === "" || v === "alle") return undefined;
+    if (v === "allgemein" || v === "0" || v === 0) return null;
+    return db.prepare("SELECT id FROM projects WHERE id = ? AND client_id = ?").get(+v, clientId)?.id ?? false;   // false = gibt es nicht
+  }
+  const threadSql = t => t === undefined ? "" : t === null ? " AND project_id IS NULL" : ` AND project_id = ${Number(t)}`;
+  /** Fäden eines Kunden mit Zählern. side = wer liest: "team" zählt ungelesene Kundennachrichten, "client" ungelesene Team-Nachrichten */
+  function threadsFor(clientId, allowedPids = null, side = "team") {
+    const fremd = side === "team" ? "client" : "team";
+    const projs = db.prepare("SELECT id, title, status, bereich, kind, anfrage_art, updated_at FROM projects WHERE client_id = ? ORDER BY id").all(clientId)
+      .filter(p => allowedPids === null || allowedPids.includes(p.id));
+    const stats = new Map(db.prepare("SELECT project_id, COUNT(*) n, SUM(sender = ? AND read_at IS NULL) unread, MAX(id) last_id FROM messages WHERE client_id = ? GROUP BY project_id")
+      .all(fremd, clientId).map(s => [s.project_id ?? 0, s]));
+    const letzte = id => id ? db.prepare("SELECT body, created_at, sender FROM messages WHERE id = ?").get(id) : null;
+    const zeile = (p, s) => { const l = letzte(s?.last_id);
+      return { project_id: p ? p.id : null, title: p ? p.title : "Allgemein", status: p ? p.status : "aktiv", bereich: p ? p.bereich || "software" : null, kind: p?.kind || null, anfrage_art: p?.anfrage_art || null,
+        count: s?.n || 0, unread: s?.unread || 0, last_at: l?.created_at || null, last_body: l ? String(l.body).replace(/\s+/g, " ").slice(0, 160) : "", last_sender: l?.sender || null, sort_at: l?.created_at || p?.updated_at || "" }; };
+    const out = projs.map(p => zeile(p, stats.get(p.id)));
+    // Faden „Allgemein“ nur, wenn es dort Nachrichten gibt – oder wenn der Kunde (noch) kein Projekt hat
+    if (stats.has(0) || !out.length) out.push(zeile(null, stats.get(0)));
+    const zu = t => t.status === "abgeschlossen" ? 1 : 0;   // abgeschlossene Projekte stehen unten
+    return out.sort((a, b) => zu(a) - zu(b) || String(b.sort_at).localeCompare(String(a.sort_at)));
+  }
+  /** Liste für die Ansicht „Chats“ im Board: Kunden mit Kundenportal – dazu jeder Kontakt, mit dem es schon Nachrichten gibt.
+      Interessenten ohne Zugang haben keinen Chat und stehen nicht drin. Sortiert nach letzter Aktivität, Archiv unten. */
+  function chatList(user) {
+    const visible = clientIdsFor(user), pids = memberProjectIds(user);
+    return db.prepare("SELECT * FROM clients c WHERE (c.stage = 'mandant' AND c.active = 1) OR EXISTS (SELECT 1 FROM messages m WHERE m.client_id = c.id)").all()
+      .filter(c => visible === null || visible.includes(c.id))
+      .map(c => {
+        const threads = threadsFor(c.id, pids, "team"), last = threads.reduce((x, t) => t.last_at && (!x || t.last_at > x.last_at) ? t : x, null);
+        return { id: c.id, company: c.company, name: c.name, stage: c.stage, status: publicClient(c).status, active: !!c.active,
+          unread: threads.reduce((s, t) => s + t.unread, 0), last_at: last?.last_at || null, last_body: last?.last_body || "", last_sender: last?.last_sender || null, threads };
+      })
+      .sort((a, b) => (a.stage === "archiv") - (b.stage === "archiv") || String(b.last_at || "").localeCompare(String(a.last_at || "")) || a.company.localeCompare(b.company, "de"));
+  }
 
   const projects = createProjects({ json, send, readJson, clean, protoOut, SITE_URL });
   const requests = createRequests({ json, readJson, clean, logEvent: projects.logEvent, SITE_URL });
@@ -70,13 +128,15 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
     db.prepare("UPDATE clients SET notified_client_at = ? WHERE id = ?").run(Date.now(), c.id);
     sendMail({ to: c.email, ...vorlage("portal_nachricht", { name: c.name, link: portalUrl }) }).catch(e => console.warn("Mail:", e.message));
   }
-  function notifyTeam(c, body) {
+  function notifyTeam(c, body, projectId = null) {
     if (c.notified_team_at && Date.now() - c.notified_team_at < NOTIFY_PAUSE) return;
     db.prepare("UPDATE clients SET notified_team_at = ? WHERE id = ?").run(Date.now(), c.id);
-    sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, ...vorlage("chat_team", { name: c.name, unternehmen: c.company, nachricht: body, link: `${SITE_URL}/admin/#kunden/${c.id}/chat` }) }).catch(e => console.warn("Mail:", e.message));
+    sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, ...vorlage("chat_team", { name: c.name, unternehmen: c.company, nachricht: body, link: `${SITE_URL}/admin/#chats/${c.id}/${projectId ?? "allgemein"}` }) }).catch(e => console.warn("Mail:", e.message));
   }
-  const listMessages = (clientId, after) =>
-    db.prepare("SELECT * FROM messages WHERE client_id = ? AND id > ? ORDER BY id LIMIT 500").all(clientId, after).map(msgOut);
+  const listMessages = (clientId, after, thread) =>
+    db.prepare(`SELECT * FROM messages WHERE client_id = ? AND id > ?${threadSql(thread)} ORDER BY id LIMIT 500`).all(clientId, after).map(msgOut);
+  // Projekt für eine neue Nachricht: nur ein Projekt dieses Kunden, sonst „Allgemein“
+  const projectFor = (v, clientId) => { const t = threadOf(v, clientId); return t === undefined || t === false ? null : t; };
 
   /* ---------- Portal-API (Kunden) ---------- */
   const ext = [];   // weitere Portal-Bereiche (z. B. Angebote annehmen)
@@ -133,18 +193,22 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
       const n = db.prepare("DELETE FROM client_sessions WHERE client_id = ? AND token != ?").run(c.id, cookies(req)[PORTAL_CK]).changes;
       return json(res, 200, { ok: true, removed: n });
     }
+    if (p === "/threads" && m === "GET")   // Fäden des Kunden: je Projekt einer, dazu „Allgemein“, wenn es dort Nachrichten gibt
+      return json(res, 200, threadsFor(c.id, null, "client").map(({ sort_at, ...t }) => t));
     if (p === "/messages" && m === "GET") {
-      const after = Math.max(0, +url.searchParams.get("after") || 0);
-      const rows = listMessages(c.id, after);
-      db.prepare("UPDATE messages SET read_at = datetime('now') WHERE client_id = ? AND sender = 'team' AND read_at IS NULL").run(c.id);
+      const after = Math.max(0, +url.searchParams.get("after") || 0), thread = threadOf(url.searchParams.get("thread"), c.id);
+      if (thread === false) return json(res, 404, { error: "Diesen Chat gibt es nicht." });
+      const rows = listMessages(c.id, after, thread);
+      db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE client_id = ? AND sender = 'team' AND read_at IS NULL${threadSql(thread)}`).run(c.id);
       return json(res, 200, rows);
     }
     if (p === "/messages" && m === "POST") {
       if (limited("pmsg:" + c.id, 40, 10 * 60000)) return json(res, 429, { error: "Bitte einen Moment warten." });
-      const body = clean((await readJson(req)).body, 5000).replace(/\r/g, "");
+      const d = await readJson(req), body = clean(d.body, 5000).replace(/\r/g, "");
       if (!body) return json(res, 400, { error: "Die Nachricht ist leer." });
-      const r = db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'client', ?, ?)").run(c.id, c.name, body);
-      notifyTeam(c, body);
+      const pid = projectFor(d.project_id, c.id);
+      const r = db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id) VALUES(?, 'client', ?, ?, ?)").run(c.id, c.name, body, pid);
+      notifyTeam(c, body, pid);
       return json(res, 201, msgOut(db.prepare("SELECT * FROM messages WHERE id = ?").get(r.lastInsertRowid)));
     }
     if (p === "/prototypes" && m === "GET")
@@ -282,16 +346,21 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
       const mailed = d.send ? await inviteMail(c, link) : null;
       return json(res, 200, { inviteLink: link, mailed });
     }
+    if (sub === "/threads" && m === "GET") return json(res, 200, threadsFor(c.id, memberProjectIds(user), "team"));
     if (sub === "/messages" && m === "GET") {
-      const after = Math.max(0, +url.searchParams.get("after") || 0);
-      const rows = listMessages(c.id, after);
-      db.prepare("UPDATE messages SET read_at = datetime('now') WHERE client_id = ? AND sender = 'client' AND read_at IS NULL").run(c.id);
+      const after = Math.max(0, +url.searchParams.get("after") || 0), thread = threadOf(url.searchParams.get("thread"), c.id);
+      const allowed = memberProjectIds(user);
+      if (thread === false || (allowed && thread && !allowed.includes(thread))) return json(res, 404, { error: "Diesen Chat gibt es nicht." });
+      const rows = listMessages(c.id, after, thread);
+      db.prepare(`UPDATE messages SET read_at = datetime('now') WHERE client_id = ? AND sender = 'client' AND read_at IS NULL${threadSql(thread)}`).run(c.id);
       return json(res, 200, rows);
     }
     if (sub === "/messages" && m === "POST") {
-      const body = clean((await readJson(req)).body, 5000).replace(/\r/g, "");
+      const d = await readJson(req), body = clean(d.body, 5000).replace(/\r/g, "");
       if (!body) return json(res, 400, { error: "Die Nachricht ist leer." });
-      const r = db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(c.id, user.name, body);
+      const pid = projectFor(d.project_id, c.id), allowed = memberProjectIds(user);
+      if (allowed && pid && !allowed.includes(pid)) return json(res, 403, { error: "Dieses Projekt ist Ihnen nicht zugewiesen." });
+      const r = db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id) VALUES(?, 'team', ?, ?, ?)").run(c.id, user.name, body, pid);
       notifyClient(c);
       return json(res, 201, msgOut(db.prepare("SELECT * FROM messages WHERE id = ?").get(r.lastInsertRowid)));
     }
@@ -335,7 +404,7 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
         const text = clean(d.message, 3000) || (version > 1
           ? `Neue Version ${version} von „${title}“ ist online.${changes ? " Das hat sich geändert:\n" + changes : ""}`
           : `Wir haben einen neuen Prototyp für Sie hochgeladen: „${title}“. Klicken Sie sich gern durch und schreiben Sie uns, was Ihnen auffällt.`);
-        db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id) VALUES(?, 'team', ?, ?, ?)").run(c.id, user.name, text, r.lastInsertRowid);
+        db.prepare("INSERT INTO messages(client_id, sender, author, body, prototype_id, project_id) VALUES(?, 'team', ?, ?, ?, ?)").run(c.id, user.name, text, r.lastInsertRowid, projectId);
         /* Mail kommt gebündelt über den Meilenstein */
       }
       return json(res, 201, { prototype: protoOut(db.prepare("SELECT * FROM prototypes WHERE id = ?").get(r.lastInsertRowid)), skipped });
@@ -389,7 +458,7 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
     });
   }
 
-  return { extend: fn => ext.push(fn), portalApi, adminClientsApi, servePrototype, projectsAdmin: projects.admin, requestsAdmin: requests.admin, clientLogin: login, currentClient, newInvite, logEvent: projects.logEvent };
+  return { extend: fn => ext.push(fn), portalApi, adminClientsApi, chatList, servePrototype, projectsAdmin: projects.admin, requestsAdmin: requests.admin, clientLogin: login, currentClient, newInvite, logEvent: projects.logEvent };
 }
 
 // Relativer, sauberer Pfad innerhalb eines Prototyps – oder "" bei allem Verdächtigen.

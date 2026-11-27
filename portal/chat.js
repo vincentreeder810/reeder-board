@@ -23,6 +23,29 @@
       <div class="proto__thumb">${ICON}</div><div><b>${esc(p.title)}${p.version > 1 ? ` <em class="vtag">V${p.version}</em>` : ""}</b><span>Prototyp öffnen · zum Durchklicken</span></div></button>`;
   }
 
+  /* ---------- Sonderkarten: Rückfragen und Antworten ----------
+     Rückfragen (art = 'rueckfragen'): jede Frage als eigene Zeile mit Stand; im Kundenportal mit „Jetzt beantworten“.
+     Antwort (art = 'antwort'): kleine Karte „Frage → Antwort“. */
+  const absatz = t => esc(t).replace(/\n/g, "<br>");
+  const FRAGE_IC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.8 9.4a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.3"/><path d="M12 16.6h.01"/></svg>`;
+  const ST = { offen: ["offen", "wartet auf Antwort"], beantwortet: ["beantwortet", "beantwortet"], erledigt: ["geklärt", "inzwischen geklärt"] };
+  function rueckfragenCard(m, me) {
+    const fr = m.meta.fragen, offen = fr.filter(f => f.status === "offen").length, kunde = me === "client";
+    const unter = offen ? (kunde ? `${offen === 1 ? "Eine Frage wartet" : `${offen} Fragen warten`} auf Ihre Antwort – jede hat ein eigenes Antwortfeld.` : `${offen} von ${fr.length} offen · der Kunde beantwortet jede Frage einzeln`)
+      : (kunde ? "Vielen Dank – alles beantwortet." : "Alle Fragen sind beantwortet oder geklärt.");
+    return `<div class="rqk">
+      <div class="rqk__h"><span class="rqk__ic">${FRAGE_IC}</span><div><b>Rückfragen zu Ihrem Projekt</b><small>${unter}</small></div></div>
+      <ol class="rqk__l">${fr.map(f => `<li class="rqk__f rqk__f--${f.status}"><p>${absatz(f.text)}</p><span class="rqk__st">${(ST[f.status] || ST.offen)[kunde ? 0 : 1]}</span>${f.status === "beantwortet" && f.antwort ? `<p class="rqk__a">${absatz(f.antwort)}</p>` : ""}</li>`).join("")}</ol>
+      ${kunde && offen ? `<a class="rqk__btn" href="#rueckfragen">Jetzt beantworten</a>` : ""}</div>`;
+  }
+  const antwortCard = (m, me) => `<div class="ank"><small>${me === "client" ? "Ihre Antwort auf unsere Rückfrage" : "Antwort auf eine Rückfrage"}</small>
+    <p class="ank__q">${absatz(m.meta.frage || "")}</p><p class="ank__a"><span aria-hidden="true">→</span> ${absatz(m.meta.antwort || "")}</p></div>`;
+  function inhalt(m, me) {
+    if (m.art === "rueckfragen" && m.meta?.fragen?.length) return rueckfragenCard(m, me);
+    if (m.art === "antwort" && m.meta?.frage) return antwortCard(m, me);
+    return `<div class="msg__bubble">${linkify(m.body)}</div>`;
+  }
+
   /** Chat-Verlauf in ein Element rendern. me = "client" | "team" (eigene Nachrichten rechts) */
   function render(log, msgs, me, emptyHtml) {
     if (!msgs.length) { log.innerHTML = `<div class="chat__empty">${emptyHtml}</div>`; return; }
@@ -33,9 +56,9 @@
       const same = m.sender === lastSender && t - lastTime < 5 * 60000;
       const mine = m.sender === me;
       const who = m.sender === "team" ? `${esc(m.author)} · Reeder Software` : esc(m.author);
-      html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--${m.sender} ${same ? "msg--same" : ""}">
+      html += `<div class="msg ${mine ? "msg--mine" : "msg--theirs"} msg--${m.sender} ${same ? "msg--same" : ""} ${m.art ? "msg--karte" : ""}">
         <span class="msg__who">${who}</span>
-        <div class="msg__bubble">${linkify(m.body)}</div>
+        ${inhalt(m, me)}
         ${m.has_prototype ? protoCard(m.prototype) : ""}
         <span class="msg__meta">${fmt(m.created_at, { hour: "2-digit", minute: "2-digit" })}${mine && m.read ? " · gelesen" : ""}</span></div>`;
       lastSender = m.sender; lastTime = t;
@@ -75,5 +98,5 @@
     return () => { stopped = true; clearTimeout(h); document.removeEventListener("visibilitychange", vis); };
   }
 
-  window.RSChat = { esc, fmt, size, render, composer, poll, protoCard, protoData, ICON, toDate };
+  window.RSChat = { esc, fmt, size, render, composer, poll, protoCard, protoData, ICON, toDate, dayLabel, dayKey };
 })();

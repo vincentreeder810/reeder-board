@@ -5,7 +5,7 @@
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
-import { db, getSetting, setSetting, DEFAULT_COMPANY } from "./db.mjs";
+import { db, getSetting, setSetting, DEFAULT_COMPANY, chatProjekt } from "./db.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
 import { firmaDaten } from "./firmen.mjs";
@@ -281,8 +281,8 @@ export function createContracts({ json, readJson, clean, logEvent, SITE_URL }) {
 
     // Chat-Nachricht + Mails
     const owner = db.prepare("SELECT name FROM users WHERE role = 'inhaber' AND active = 1 ORDER BY id LIMIT 1").get()?.name || "Ihr Team";
-    db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(c.id, owner,
-      `Vielen Dank für Ihren Auftrag, ${c.name.split(" ")[0]}! Wir haben die Annahme von Angebot ${inv.number} erhalten. Die Auftragsbestätigung liegt unter „Dokumente“. Wir melden uns in Kürze mit den nächsten Schritten.`);
+    db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id) VALUES(?, 'team', ?, ?, ?)").run(c.id, owner,
+      `Vielen Dank für Ihren Auftrag, ${c.name.split(" ")[0]}! Wir haben die Annahme von Angebot ${inv.number} erhalten. Die Auftragsbestätigung liegt unter „Dokumente“. Wir melden uns in Kürze mit den nächsten Schritten.`, result.pid ?? null);
     const firma = inv.firma || "software";   // dieselbe Firma wie auf dem Angebot und der Auftragsbestätigung (PDF)
     // Ein PDF enthält Nachweis der Annahme (mit Unterschrift), Bedingungen und ggf. die AVV. Fehlt es, geht die Mail ohne Anhang raus.
     if (!buf) console.warn(`Auftragsbestätigung ${inv.number}: PDF fehlt – Mail ohne Anhang.`);
@@ -307,7 +307,7 @@ export function createContracts({ json, readJson, clean, logEvent, SITE_URL }) {
     } catch (e) { db.exec("ROLLBACK"); throw e; }
     audit(`Kunde: ${c.name}`, "angebot abgelehnt", "angebot", inv.id, `${inv.number}${reason ? " · " + reason : ""}`);
     logEvent(c.id, inv.project_id, "angebot", "Angebot abgelehnt", `${inv.number}${reason ? " – " + reason : ""}`, false);
-    db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'client', ?, ?)").run(c.id, c.name, `Ich habe das Angebot ${inv.number} abgelehnt.${reason ? "\n\nGrund: " + reason : ""}`);
+    db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id) VALUES(?, 'client', ?, ?, ?)").run(c.id, c.name, `Ich habe das Angebot ${inv.number} abgelehnt.${reason ? "\n\nGrund: " + reason : ""}`, chatProjekt(c.id, inv.project_id));
     for (const u of db.prepare("SELECT email FROM users WHERE role = 'inhaber' AND active = 1").all())
       await sendMail({ to: u.email, ...vorlage("angebot_abgelehnt_team", { name: c.name, unternehmen: c.company, nummer: inv.number, grund: reason, link: `${SITE_URL}/admin/#kunden/${c.id}`, firma: inv.firma || "software" }) }).catch(e => console.warn(e.message));
     try { await onChange(); } catch {}

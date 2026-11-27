@@ -139,10 +139,11 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
       const ids = Array.isArray(d.ids) ? d.ids.map(String) : null;
       const fragen = (w?.fragen || []).filter(f => f.status === "offen" && (!ids || ids.includes(f.id)));
       if (!fragen.length) return json(res, 400, { error: "Es gibt keine offenen Fragen zum Senden." });
-      // Die Chat-Nachricht ist nur ein Hinweis: Beantwortet wird jede Frage einzeln im Portal unter „Rückfragen“, damit jede Antwort genau ihrer Frage zugeordnet ist
+      // Im Projekt-Chat erscheinen die Fragen als Karte (art = 'rueckfragen'); beantwortet wird jede Frage einzeln im Portal unter „Rückfragen“,
+      // damit jede Antwort genau ihrer Frage zugeordnet ist. Der Text ist nur der Rückfall für Stellen, die keine Karten zeigen (Vorschau, Benachrichtigungen).
       const n = fragen.length;
-      const text = `Hallo ${pr.client_name},\n\nfür Ihr Projekt „${pr.title}“ haben wir ${n === 1 ? "eine Rückfrage" : `${n} Rückfragen`}. Sie finden sie im Kundenportal unter „Rückfragen“ – auf der Startseite ganz oben. Bitte beantworten Sie ${n === 1 ? "sie" : "jede Frage"} dort direkt im zugehörigen Antwortfeld.`;
-      const msgId = db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'team', ?, ?)").run(pr.client_id, user.name, text).lastInsertRowid;
+      const text = `Rückfragen zu Ihrem Projekt „${pr.title}“: ${n === 1 ? "eine Frage" : `${n} Fragen`}. Bitte beantworten Sie ${n === 1 ? "sie" : "jede Frage"} im Kundenportal unter „Rückfragen“ – jede Frage hat ein eigenes Antwortfeld.`;
+      const msgId = db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id, art) VALUES(?, 'team', ?, ?, ?, 'rueckfragen')").run(pr.client_id, user.name, text, pr.id).lastInsertRowid;
       const jetzt = new Date().toISOString();
       // Merken, welche Fragen an welchen Kunden gingen. Erneutes Senden aktualisiert den Eintrag (auch eine frühere Antwort wird zurückgesetzt,
       // denn gesendet werden nur offene Fragen).
@@ -150,6 +151,10 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
         ON CONFLICT(project_id, frage_id) DO UPDATE SET client_id = excluded.client_id, text = excluded.text, gesendet_at = excluded.gesendet_at,
           message_id = excluded.message_id, antwort = NULL, beantwortet_at = NULL`);
       for (const f of fragen) merke.run(pr.id, pr.client_id, f.id, f.text, jetzt, msgId);
+      // Karte im Chat: je Frage die Nummer aus kunden_fragen (dieselbe wie unter „Rückfragen“ im Portal), Stand und Antwort kommen beim Lesen live dazu
+      const ids2 = db.prepare("SELECT id, frage_id FROM kunden_fragen WHERE project_id = ? AND message_id = ?").all(pr.id, msgId);
+      const meta = { fragen: fragen.map(f => ({ id: ids2.find(x => x.frage_id === f.id)?.id ?? null, text: f.text })).filter(f => f.id) };
+      db.prepare("UPDATE messages SET meta = ? WHERE id = ?").run(JSON.stringify(meta), msgId);
       const mitMail = d.mail !== false;
       const mailed = mitMail && pr.client_email ? await sendMail({ to: pr.client_email, ...vorlage("rueckfragen", { name: pr.client_name, projekt: pr.title, anzahl: n,
         link: `${SITE_URL}/portal/#rueckfragen`, firma: firmaVonProjekt(pr.id) }) }) : false;
@@ -198,7 +203,8 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
     db.prepare("UPDATE kunden_fragen SET antwort = ?, beantwortet_at = ? WHERE id = ?").run(antwort, jetzt, r.id);
     db.prepare("UPDATE projects SET updated_at = datetime('now') WHERE id = ?").run(r.project_id);
     // Im Chat festhalten, damit der Verlauf vollständig ist
-    db.prepare("INSERT INTO messages(client_id, sender, author, body) VALUES(?, 'client', ?, ?)").run(c.id, c.name, `Antwort auf: ${r.text} → ${antwort}`);
+    db.prepare("INSERT INTO messages(client_id, sender, author, body, project_id, art, meta) VALUES(?, 'client', ?, ?, ?, 'antwort', ?)")
+      .run(c.id, c.name, `Antwort auf: ${r.text} → ${antwort}`, r.project_id, JSON.stringify({ frage: r.text, antwort, rueckfrage_id: r.id }));
     sendMail({ to: getSetting("mail", DEFAULT_MAIL).notifyAddress, ...vorlage("rueckfrage_beantwortet_team", { name: c.name, unternehmen: c.company, projekt: r.projekt,
       frage: r.text, antwort, link: `${SITE_URL}/admin/#projekte/${r.project_id}` }) }).catch(e => console.warn("Mail:", e.message));
     return json(res, 200, { ok: true, id: r.id, antwort, beantwortet_at: jetzt });
