@@ -497,7 +497,7 @@ function renderThreads() {
     return `<button type="button" role="tab" class="thchip ${on ? "on" : ""} ${t.status === "abgeschlossen" ? "thchip--zu" : ""}" data-th="${thKey(t)}" aria-selected="${on}"><span>${esc(t.title)}</span>${t.unread && !on ? `<em>${t.unread}</em>` : ""}</button>`; }).join("");
   const wer = cur?.teilnehmer?.length ? `Im Chat: ${cur.teilnehmer.map(x => `${x.name} (${x.rolle})`).join(", ")}` : "Wir antworten in der Regel am selben Werktag.";
   $("#chatSub").textContent = threads.length > 1 && cur ? `${cur.thema ? `Thema „${cur.title}“` : cur.project_id ? `Projekt „${cur.title}“` : "Allgemein"} · ${wer}` : wer;
-  $("#composer textarea").placeholder = threads.length > 1 && cur?.project_id ? `Nachricht zu „${cur.title}“ …` : "Nachricht an unser Team …";
+  $("#composer textarea").placeholder = innerWidth < 560 ? "Nachricht schreiben …" : threads.length > 1 && cur?.project_id ? `Nachricht zu „${cur.title}“ …` : "Nachricht an unser Team …";
 }
 async function openThread(k) {
   thread = k; msgs = []; $("#log").dataset.scrolled = "";
