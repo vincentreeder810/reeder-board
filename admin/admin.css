@@ -1517,3 +1517,16 @@ label.auf__item{cursor:pointer}
 .ws__neu input{flex:1;min-width:0;height:36px;border-radius:999px;border:1px solid var(--line);background:#fff;padding:0 14px;font:inherit;font-size:13.5px}
 .ws__klarf{margin:8px 0 0;font-size:13px;color:var(--muted)}
 .ptime__eintr{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+
+/* Laufende Stoppuhr in der Zeit-Karte des Projekts */
+.ptimer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px;border-radius:16px;background:var(--grad);color:#fff;box-shadow:0 20px 40px -26px rgba(139,92,246,.9)}
+.ptimer>div{flex:1;min-width:0}
+.ptimer small{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.85)}
+.ptimer b{display:block;font-size:30px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15}
+.ptimer__punkt{flex:none;width:10px;height:10px;border-radius:50%;background:#fff;animation:ptpuls 1.6s ease-in-out infinite}
+@keyframes ptpuls{50%{opacity:.35}}
+.ptimer__anders{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:#f5f3ff;font-size:13px;line-height:1.5;color:var(--ink2)}
+@media (prefers-reduced-motion:reduce){.ptimer__punkt{animation:none}}
+/* Uhr oben, Stopp-Knopf darunter über die ganze Breite – auch in der schmalen Seitenspalte */
+.ptimer{display:grid;grid-template-columns:auto minmax(0,1fr);row-gap:12px}
+.ptimer .timer__stop{grid-column:1/-1;width:100%;justify-content:center}

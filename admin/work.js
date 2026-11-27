@@ -67,8 +67,10 @@
   }
   const clock = tm => { const s = Math.max(0, Math.floor((Date.now() - Date.parse(tm.started_at)) / 1000)); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
   function startTick() { clearInterval(tick); if (!W?.timer) return; tick = setInterval(() => { const el = $("#tmClock"); if (!el) return clearInterval(tick); el.textContent = clock(W.timer); }, 1000); }
-  async function startTimer(body) { const r = await api("/timer", { method: "POST", body }); toast(r.stopped?.minutes ? `Vorherige Zeit gespeichert (${hm(r.stopped.minutes)}) – Stoppuhr läuft.` : "Stoppuhr läuft."); window.updateBadges?.(); refreshViews(); }
-  async function stopTimer() { const r = await api("/timer", { method: "DELETE", body: {} }); toast(r.stopped?.minutes ? `${hm(r.stopped.minutes)} Std. gespeichert${r.stopped.capped ? " (auf 12 Std. begrenzt – bitte prüfen)" : ""}.` : "Stoppuhr gestoppt (unter einer Minute, nichts gespeichert)."); window.updateBadges?.(); refreshViews(); }
+  async function startTimer(body) { const r = await api("/timer", { method: "POST", body }); toast(r.stopped?.minutes ? `Vorherige Zeit gespeichert (${hm(r.stopped.minutes)}) – Stoppuhr läuft.` : "Stoppuhr läuft."); window.updateBadges?.(); zeitNeu(); }
+  // Auf der Projektseite nur die Zeit-Karte neu zeichnen – nicht die ganze Seite (sonst springt sie)
+  const zeitNeu = () => location.hash.startsWith("#projekte/") ? projectCards({ id: +location.hash.split("/")[1] }) : refreshViews();
+  async function stopTimer() { const r = await api("/timer", { method: "DELETE", body: {} }); toast(r.stopped?.minutes ? `${hm(r.stopped.minutes)} Std. gespeichert${r.stopped.capped ? " (auf 12 Std. begrenzt – bitte prüfen)" : ""}.` : "Stoppuhr gestoppt (unter einer Minute, nichts gespeichert)."); window.updateBadges?.(); zeitNeu(); }
   const refreshViews = () => { if (location.hash.startsWith("#arbeitsplatz") || !location.hash) load(); else if (location.hash.startsWith("#projekte/")) window.KUNDEN.openProjectPage(+location.hash.split("/")[1], true); else if (location.hash.startsWith("#cockpit")) window.BOARD.cockpit(); };
 
   /* ---------- Dialoge ---------- */
@@ -151,14 +153,21 @@
     // Zeiteinträge des Projekts: die letzten fünf sichtbar, ältere zum Aufklappen
     const eintrag = e => `<div class="tentry"><span class="tentry__d">${de(e.date).slice(0, 6)}</span><span class="tentry__m"><b>${esc([e.task_title, e.note].filter(Boolean).join(" · ") || "Ohne Beschreibung")}</b><small>${esc(e.user_name || "")}</small></span><b class="tentry__h">${hm(e.minutes)}</b><button class="x" data-del-time="${e.id}" title="Eintrag löschen">✕</button></div>`;
     const ein = time.entries || [];
-    tbox.innerHTML = `<div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Zeit</h2><div class="acts"><button class="btn btn--ghost btn--sm" data-ptime-log>Nachtragen</button><button class="btn btn--grad btn--sm" data-ptime-start>▶</button></div></div>
+    // Laufende Stoppuhr direkt in der Karte: Uhr mit Sekunden und Stopp-Knopf. Läuft sie für ein anderes Projekt, steht das dabei.
+    const tm = time.timer, hier = !!tm && +tm.project_id === +p.id;
+    const lauf = hier ? `<div class="ptimer"><span class="ptimer__punkt" aria-hidden="true"></span><div><small>Stoppuhr läuft${tm.task_title ? " · " + esc(tm.task_title) : ""}</small><b id="ptClock">${clock(tm)}</b></div><button class="btn btn--sm timer__stop" data-wp="stop">■ Stoppen &amp; speichern</button></div>`
+      : tm ? `<p class="ptimer__anders">Deine Stoppuhr läuft gerade für „${esc(tm.project_title || "ohne Projekt")}“ (${clock(tm)}). ▶ Start speichert die bisherige Zeit dort und läuft ab jetzt hier.</p>` : "";
+    tbox.innerHTML = `<div class="chead" style="margin-bottom:12px"><h2 style="font-size:18px">Zeit</h2><div class="acts"><button class="btn btn--ghost btn--sm" data-ptime-log>Nachtragen</button>${hier ? "" : `<button class="btn btn--grad btn--sm" data-ptime-start title="Stoppuhr für dieses Projekt starten">▶ Start</button>`}</div></div>
+      ${lauf}
       <div class="pmoney"><div><small>Erfasst gesamt</small><b>${hm(time.total)} Std.</b><span>${time.estimate ? `geschätzt ${hm(time.estimate)} Std.` : "ohne Schätzung"}</span></div><div><small>${time.rate !== undefined ? "Effektiver Stundensatz" : "Davon ich"}</small><b>${time.rate !== undefined ? money(time.rate) : hm(time.mine) + " Std."}</b><span>${time.rate !== undefined ? "Auftrag netto ÷ Stunden" : ""}</span></div></div>
       ${time.estimate ? `<div class="pbar"><i style="width:${Math.min(100, time.total / time.estimate * 100)}%;${time.total > time.estimate ? "background:#c4314b" : ""}"></i></div>` : ""}
       ${(time.byUser?.length || 0) > 1 ? `<div class="wplist" style="margin-top:12px">${time.byUser.map(u => `<div class="wpteam"><span class="avatar avatar--sm">${esc(ini(u.name))}</span><span><b>${esc(u.name)}</b></span><b>${hm(u.minutes)}</b></div>`).join("")}</div>` : ""}
       <div class="ptime__eintr">${ein.length ? `<div class="tlist">${ein.slice(0, 5).map(eintrag).join("")}</div>${window.weitere(ein.length - 5, `<div class="tlist">${ein.slice(5).map(eintrag).join("")}</div>`, ["älteren Eintrag", "ältere Einträge"])}`
         : `<p class="hint" style="margin:0">Noch keine Zeit erfasst. ▶ startet die Stoppuhr für dieses Projekt; beim Stoppen landet der Eintrag hier.</p>`}</div>`;
     box.dataset.pid = tbox.dataset.pid = p.id;
+    clearInterval(ptTick); if (hier) ptTick = setInterval(() => { const el = $("#ptClock"); if (!el) return clearInterval(ptTick); el.textContent = clock(tm); }, 1000);
   }
+  let ptTick = null;
 
   /* ---------- Klicks ---------- */
   document.addEventListener("click", async e => {

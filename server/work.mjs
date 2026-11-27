@@ -113,7 +113,7 @@ export function createWork({ json, readJson, clean, logEvent }) {
     const p = p0 && (["Launch", "Betreuung"].includes(p0.phase) || p0.status === "abgeschlossen") ? p0 : null;
     const entries = db.prepare(`SELECT e.*, u.name user_name, t.title task_title FROM time_entries e JOIN users u ON u.id = e.user_id LEFT JOIN tasks t ON t.id = e.task_id
       WHERE e.project_id = ? ${owner ? "" : "AND e.user_id = " + Number(user.id)} ORDER BY e.date DESC, e.id DESC LIMIT 60`).all(pid);
-    return { total, estimate: est, mine: byUser.find(x => x.id === user.id)?.minutes || 0, byUser: owner ? byUser : undefined, entries,
+    return { total, estimate: est, mine: byUser.find(x => x.id === user.id)?.minutes || 0, byUser: owner ? byUser : undefined, entries, timer: timerOut(user.id),
       rate: owner && p?.offer_net && total ? Math.round(p.offer_net / (total / 60)) : undefined };
   }
 
