@@ -186,11 +186,11 @@ export function createPortal({ json, send, readJson, clean, isEmail, limited, ip
         .filter(r => visible === null || r.stage === "mandant");   // Entwickler sehen nur Mandanten
       const now = new Date().toISOString(), owner = visible === null;
       const extra = r => {
-        const projs = db.prepare("SELECT id, title, phase, status, bereich FROM projects WHERE client_id = ?").all(r.id);
+        const projs = db.prepare("SELECT id, title, phase, status, bereich, kind, anfrage_art FROM projects WHERE client_id = ?").all(r.id);
         const team = db.prepare("SELECT DISTINCT u.id, u.name FROM project_members pm JOIN users u ON u.id = pm.user_id JOIN projects p ON p.id = pm.project_id WHERE p.client_id = ? AND p.status = 'aktiv' ORDER BY u.name").all(r.id);
         const next = db.prepare("SELECT id, title, start FROM appointments WHERE client_id = ? AND start >= ? ORDER BY start LIMIT 1").get(r.id, now) || null;
         const last = r.stage !== "mandant" ? db.prepare("SELECT id, title, start, summary, notes_intern FROM appointments WHERE client_id = ? AND start < ? ORDER BY start DESC LIMIT 1").get(r.id, now) || null : null;
-        const o = { projects: projs.map(p => ({ id: p.id, title: p.title, phase: p.phase, status: p.status, bereich: p.bereich || "software" })), team, next, last: last ? { id: last.id, title: last.title, start: last.start, summary: !!(last.summary || "").trim(), notiz: owner ? (last.notes_intern || "") : "" } : null };
+        const o = { projects: projs.map(p => ({ id: p.id, title: p.title, phase: p.phase, status: p.status, bereich: p.bereich || "software", kind: p.kind || null, anfrage_art: p.anfrage_art || null })), team, next, last: last ? { id: last.id, title: last.title, start: last.start, summary: !!(last.summary || "").trim(), notiz: owner ? (last.notes_intern || "") : "" } : null };
         if (owner) {
           o.open_net = db.prepare("SELECT COALESCE(SUM(pay.amount_net),0) s FROM payments pay JOIN projects p ON p.id = pay.project_id WHERE p.client_id = ? AND pay.status != 'bezahlt'").get(r.id).s;
           if (r.stage !== "mandant") {

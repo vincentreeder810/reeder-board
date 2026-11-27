@@ -77,7 +77,12 @@
       + list.map(c => { const ap = activeProjects(c);
         return `<a class="ltab__r kgrid ${c.active ? "" : "is-off"}" href="#kunden/${c.id}">
           <span class="lmain"><span class="avatar avatar--${(STAGE[c.stage] || STAGE.mandant)[1]}">${esc(initials(c.company))}</span><span class="lmain__t"><b>${esc(c.company)} ${c.stage !== "mandant" ? stagePill(c.stage) : ""}${c.unread ? `<em class="dot" title="${c.unread} ungelesene Nachricht(en)">${c.unread}</em>` : ""}</b><small>${esc(c.name)}${c.status !== "aktiv" ? ` · <span class="warn">${esc(STATUS_LABEL[c.status] || c.status)}</span>` : ""}</small></span></span>
-          <span class="lc">${ap.length ? `<b>${ap.length} aktiv ${bereicheTags(c)}</b><small>${esc(ap.map(p => p.phase).join(" · "))}</small>` : (() => { const an = (c.projects || []).filter(p => p.status === "anfrage"); return an.length ? `<b>${an.length} angefragt ${bereicheTags(c)}</b><small>${esc(an.map(p => p.title).join(" · ").slice(0, 60))}</small>` : `<small class="muted">${(c.projects || []).length ? "keine aktiven" : "noch kein Projekt"}</small>`; })()}</span>
+          <span class="lc">${(() => {
+            // Je Projekt ein eigenes Schild (Website, Software, Hardware) mit seiner Phase – in eigener Zeile, damit nichts abgeschnitten wird
+            const an = (c.projects || []).filter(p => p.status === "anfrage"), zeig = ap.length ? ap : an;
+            if (!zeig.length) return `<small class="muted">${(c.projects || []).length ? "keine aktiven" : "noch kein Projekt"}</small>`;
+            return `<b>${zeig.length} ${ap.length ? "aktiv" : "angefragt"}</b><span class="lproj">${zeig.map(p => `<span title="${esc(p.title)}">${bereichTag(p)}<small>${esc(ap.length ? p.phase : "Anfrage")}</small></span>`).join("")}</span>`;
+          })()}</span>
           <span class="pteam">${teamAv(c.team) || `<small class="muted">–</small>`}</span>
           <span class="lc">${c.next ? `<b>${C.fmt(c.next.start, { day: "numeric", month: "short" })}</b><small>${esc(c.next.title)}</small>` : `<small class="muted">–</small>`}</span>
           ${ME.owner ? `<span class="num">${c.open_net ? moneyR(c.open_net) : "–"}</span>` : ""}

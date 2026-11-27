@@ -1530,3 +1530,8 @@ label.auf__item{cursor:pointer}
 /* Uhr oben, Stopp-Knopf darunter über die ganze Breite – auch in der schmalen Seitenspalte */
 .ptimer{display:grid;grid-template-columns:auto minmax(0,1fr);row-gap:12px}
 .ptimer .timer__stop{grid-column:1/-1;width:100%;justify-content:center}
+
+/* Kundenliste: je Projekt ein Schild mit Phase, darf umbrechen statt abgeschnitten zu werden */
+.lproj{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:4px}
+.lproj>span{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.lproj small{display:inline!important;font-size:12px;color:var(--muted);white-space:nowrap}
