@@ -493,7 +493,9 @@ async function openThread(k) {
   renderThreads();
   refreshBadge().catch(() => {});
 }
+let imFlug = false;   // während der Antwort-Animation nicht neu zeichnen
 async function loadMessages() {
+  if (imFlug) return;
   const k = thread, q = `/messages?thread=${encodeURIComponent(k)}&after=`;
   const after = msgs.length ? msgs[msgs.length - 1].id : 0;
   const fresh = await api(q + after); if (k !== thread) return;
@@ -544,26 +546,59 @@ $("#log").addEventListener("submit", async e => {
   btn.disabled = true; ta.readOnly = true; li.classList.add("sendet");
   try { await api(`/rueckfragen/${f.dataset.rqForm}`, { method: "POST", body: { antwort: text } }); }
   catch (err) { toast(err.message); btn.disabled = false; ta.readOnly = false; li.classList.remove("sendet"); return; }
-  const neu = api(`/messages?thread=${encodeURIComponent(thread)}&after=0`);
-  if (!ruhig()) {
-    // 1) Antwort als Blase vom Feld nach unten rechts in den Chat fliegen lassen
-    const von = ta.getBoundingClientRect(), ziel = log.getBoundingClientRect();
-    const g = document.createElement("div"); g.className = "rqflug"; g.textContent = text; document.body.appendChild(g);
-    const gw = Math.min(von.width, 260); g.style.cssText = `left:${von.left}px;top:${von.top}px;width:${gw}px`;
-    const dx = ziel.right - 18 - gw - von.left, dy = ziel.bottom - 24 - g.offsetHeight - von.top;
-    const flug = g.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx * .55}px,${dy * .45}px) scale(.96)`, opacity: 1, offset: .55 },
-      { transform: `translate(${dx}px,${dy}px) scale(.92)`, opacity: 0 }], { duration: 620, easing: "cubic-bezier(.2,.75,.2,1)" });
-    // 2) gleichzeitig gleitet die Frage aus der Karte und klappt zusammen
-    li.style.height = li.offsetHeight + "px"; li.getBoundingClientRect(); li.classList.add("weg");
-    await Promise.all([flug.finished.catch(() => {}), warte(460)]); g.remove();
-  }
-  msgs = await neu.catch(() => msgs);
-  render(log, msgs, "client", EMPTY);
-  log.scrollTo({ top: log.scrollHeight, behavior: ruhig() ? "auto" : "smooth" });
-  const letzte = [...log.querySelectorAll(".msg--mine")].pop(); letzte?.classList.add("msg--pop");
+  msgs = await api(`/messages?thread=${encodeURIComponent(thread)}&after=0`).catch(() => msgs);
+  if (ruhig()) {
+    render(log, msgs, "client", EMPTY); log.scrollTop = log.scrollHeight;
+  } else { imFlug = true; try { await antwortFliegt({ log, ta, kid }); } finally { imFlug = false; } }
   log.querySelector(`[data-rqk="${CSS.escape(kid || "")}"].rqk--fertig`)?.classList.add("rqk--neu");   // letzte Frage beantwortet: Haken-Animation
   RQ = await api("/rueckfragen").catch(() => RQ);
 });
+/* Die Antwort wird ohne Lücke zur echten Chat-Blase (FLIP): Erst wird der neue Verlauf gezeichnet und die neue Blase
+   unsichtbar an ihren Platz gesetzt. Eine Kopie genau dieser Blase startet am Antwortfeld und gleitet – während der Chat
+   im selben Takt nach unten rollt und die Karte weich zusammenschrumpft – exakt auf die Position der echten Blase.
+   Dann wird die echte Blase sichtbar und die Kopie verschwindet. */
+const EASE = t => 1 - Math.pow(1 - t, 3.2);
+async function antwortFliegt({ log, ta, kid }) {
+  const DAUER = 640;
+  const roll = log.scrollHeight > log.clientHeight + 2 ? log : document.scrollingElement;   // wer scrollt: der Verlauf oder die Seite
+  const von = ta.getBoundingClientRect(), vorher = roll.scrollTop;
+  const alteKarte = log.querySelector(`[data-rqk="${CSS.escape(kid || "")}"]`), altH = alteKarte?.offsetHeight || 0;
+  render(log, msgs, "client", EMPTY);
+  roll.scrollTop = vorher;
+  // Karte von alter auf neue Höhe schrumpfen lassen (statt Sprung)
+  const karte = log.querySelector(`[data-rqk="${CSS.escape(kid || "")}"]`), neuH = karte?.offsetHeight || 0, diff = Math.max(0, altH - neuH);
+  if (karte && diff) { karte.style.height = altH + "px"; karte.style.overflow = "hidden"; }
+  const blase = [...log.querySelectorAll(".msg--mine")].pop()?.querySelector(".msg__bubble");
+  if (!blase) { if (karte) { karte.style.height = ""; karte.style.overflow = ""; } return; }
+  blase.style.visibility = "hidden";
+  // Ziel-Scrollposition und Ziel-Rechteck der Blase, wie sie am Ende der Animation stehen
+  const zielRoll = Math.max(0, roll.scrollHeight - diff - roll.clientHeight), weg = zielRoll - vorher;
+  const r = blase.getBoundingClientRect(), ziel = { left: r.left, top: r.top - diff - weg, width: r.width, height: r.height };
+  // Kopie der echten Blase (mit Zitat), fest im Fenster, an der Zielposition – per Transform zum Antwortfeld zurückversetzt
+  const huelle = document.createElement("div"); huelle.className = "msg msg--mine msg--client rqgeist";
+  huelle.appendChild(blase.cloneNode(true)); huelle.firstChild.style.visibility = "";
+  huelle.style.cssText = `position:fixed;left:${ziel.left}px;top:${ziel.top}px;width:${ziel.width}px;margin:0;max-width:none;z-index:9999;pointer-events:none;transform-origin:0 0`;
+  document.body.appendChild(huelle);
+  const s = Math.min(1.15, Math.max(.55, von.width / ziel.width));
+  const flug = huelle.animate([
+    { transform: `translate(${von.left - ziel.left}px,${von.top - ziel.top}px) scale(${s})`, opacity: .55, filter: "blur(.3px)" },
+    { transform: "translate(0,0) scale(1)", opacity: 1, filter: "none" }], { duration: DAUER, easing: "cubic-bezier(.22,.8,.24,1)", fill: "forwards" });
+  // im selben Takt: Chat rollt nach unten, Karte schrumpft
+  const start = performance.now();
+  await new Promise(fertig => {
+    const schritt = jetzt => {
+      const p = Math.min(1, (jetzt - start) / DAUER), e = EASE(p);
+      roll.scrollTop = vorher + weg * e;
+      if (karte && diff) karte.style.height = (altH - diff * e) + "px";
+      p < 1 ? requestAnimationFrame(schritt) : fertig();
+    };
+    requestAnimationFrame(schritt);
+  });
+  await flug.finished.catch(() => {});
+  if (karte) { karte.style.height = ""; karte.style.overflow = ""; }
+  roll.scrollTop = zielRoll;
+  blase.style.visibility = ""; huelle.remove();
+}
 composer($("#composer"), async text => {
   const m = await api("/messages", { method: "POST", body: { body: text, project_id: thread && thread !== "allgemein" ? +thread : null } }).catch(err => { toast(err.message); throw err; });
   if (!msgs.some(x => x.id === m.id)) msgs.push(m);
