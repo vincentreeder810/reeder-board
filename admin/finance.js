@@ -162,8 +162,9 @@
     const pctOf = r => Number(String($("[data-p=pct]", r).value).replace(",", ".")) || 0;
     const collect = () => ({ kind, client_id: +f.client_id.value || null, project_id: +f.project_id.value || null, payment_id: f.payment_id ? +f.payment_id.value || null : null, title: f.title.value, issue_date: f.issue_date.value,
       due_date: f.due_date?.value, valid_until: f.valid_until?.value, service_from: f.service_from?.value, service_to: f.service_to?.value, intro: f.intro.value, outro: f.outro.value,
-      plan: planBox ? $$(".fplanrow", planBox).map(r => ({ label: $("[data-p=label]", r).value, pct: pctOf(r), on: $("[data-p=on]", r).value })).filter(x => x.label.trim() || x.pct) : undefined, avv: f.avv?.checked, vereinbarung: f.v_titel ? { titel: f.v_titel.value, text: f.v_text.value, prozent: f.v_prozent.value } : undefined,
+      plan: planBox ? $$(".fplanrow", planBox).map(r => ({ label: $("[data-p=label]", r).value, pct: pctOf(r), on: $("[data-p=on]", r).value })).filter(x => x.label.trim() || x.pct) : undefined, avv: f.avv?.checked, betreuung: isQuote ? betreuungDaten : undefined, vereinbarung: f.v_titel ? { titel: f.v_titel.value, text: f.v_text.value, prozent: f.v_prozent.value } : undefined,
       items: $$(".fitem", rowsBox).map(r => Object.fromEntries($$("[data-k]", r).map(i => [i.dataset.k, i.dataset.k === "unit_net" ? (parseEuro(i.value) / 100).toFixed(2) : i.value]))).filter(x => x.title.trim()) });
+    let betreuungDaten = inv.betreuung || null;
     let monatlich = inv.vereinbarung?.titel && /^Betreuung/.test(inv.vereinbarung.titel) ? inv.vereinbarung.titel : "";
     const wachsen = () => $$("textarea.fitem__desc", rowsBox).forEach(x => { x.style.height = "auto"; x.style.height = x.scrollHeight + 2 + "px"; });
     const recalc = () => {
@@ -307,6 +308,7 @@
             ? `Nach der Übergabe übernehmen wir die Betreuung: ${betreuung.s[1]}. Vergütung: ${eur(tb)} netto im Monat zzgl. MwSt. Die ersten ${monate} Monate (${z.von} – ${z.bis}) werden mit diesem Angebot im Voraus berechnet. Vor Ablauf melden wir uns wegen der Verlängerung.`
             : `Nach der Übergabe übernehmen wir die Betreuung: ${betreuung.s[1]}. Vergütung: ${eur(tb)} netto im Monat zzgl. MwSt., monatlich im Voraus, ab ${z.von}. Mindestlaufzeit ${monate} Monate (bis ${z.bis}), danach monatlich kündbar.`;
         }
+        betreuungDaten = betreuung ? { titel: `Betreuung ${betreuung.stufe} – ${betreuung.s[0]}`, preis: Math.round(tb * 100), abr: st.abr, start: st.start, monate } : null;
         monatlich = betreuung && st.abr === "monatlich" ? `${eur(tb)} netto im Monat für die Betreuung ${betreuung.stufe}, ab ${z.von}, mindestens ${monate} Monate` : "";
         recalc(); zu(); toast(betreuung && st.abr === "voraus" ? `Pakete übernommen – ${monate} Monate Betreuung stehen als Position in der Summe.` : betreuung && f.v_titel ? "Pakete übernommen – die monatliche Betreuung steht unten als besondere Vereinbarung." : "Pakete übernommen – Positionen und Preise bitte prüfen.");
       });

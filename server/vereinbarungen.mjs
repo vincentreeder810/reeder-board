@@ -11,6 +11,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS agreements (
   created_by TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`);
 if (!db.prepare("PRAGMA table_info(invoices)").all().some(c => c.name === "vereinbarung")) db.exec("ALTER TABLE invoices ADD COLUMN vereinbarung TEXT");
+// Betreuung aus dem Pakete-Fenster (JSON): { titel, preis (Cent/Monat), abr: "voraus" | "monatlich", start (JJJJ-MM-TT), monate }
+if (!db.prepare("PRAGMA table_info(invoices)").all().some(c => c.name === "betreuung")) db.exec("ALTER TABLE invoices ADD COLUMN betreuung TEXT");
 // Erinnerung: alle wie viele Monate die Zahlen beim Kunden abgefragt werden (0 = gar nicht) und wann das nächste Mal
 { const sp = db.prepare("PRAGMA table_info(agreements)").all().map(c => c.name);
   if (!sp.includes("rhythmus")) db.exec("ALTER TABLE agreements ADD COLUMN rhythmus INTEGER NOT NULL DEFAULT 0");
@@ -93,4 +95,26 @@ export function createVereinbarungen({ json, readJson, clean }) {
     return null;
   }
   return { admin };
+}
+
+/* ---------- Betreuung aus dem Angebot → laufender Vertrag (Verträge & Produkte) ---------- */
+export function betreuungLesen(wert) { try { const b = typeof wert === "string" ? JSON.parse(wert) : wert; return b && b.preis > 0 && /^\d{4}-\d{2}-\d{2}$/.test(b.start) ? b : null; } catch { return null; } }
+export function betreuungSpeichern(d, clean) {
+  const preis = Math.round(Number(d?.preis) || 0), monate = Math.max(1, Math.min(60, Math.round(Number(d?.monate) || 1)));
+  if (!d || preis <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(String(d.start || ""))) return null;
+  return JSON.stringify({ titel: clean(d.titel, 120) || "Betreuung", preis, abr: d.abr === "monatlich" ? "monatlich" : "voraus", start: d.start, monate });
+}
+const plusMonate = (ymd, n) => { const [y, m, t] = ymd.split("-").map(Number), d = new Date(Date.UTC(y, m - 1 + n, 1)), letzter = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); d.setUTCDate(Math.min(t, letzter)); return d.toISOString().slice(0, 10); };
+/** Mit der Annahme: Vertrag anlegen.
+ *  monatlich: erste Rechnung am Startdatum, danach jeden Monat (als Entwurf zum Freigeben); Mindestlaufzeit, danach monatlich kündbar.
+ *  Vorauszahlung: die ersten Monate sind mit dem Angebot bezahlt; nächste Abrechnung (für denselben Zeitraum) erst danach, vorher erinnert das Board. */
+export function betreuungAusAngebot(invoiceId, projectId, wer) {
+  const inv = db.prepare("SELECT id, client_id, number, betreuung FROM invoices WHERE id = ?").get(invoiceId), b = betreuungLesen(inv?.betreuung);
+  if (!b || db.prepare("SELECT 1 FROM contracts WHERE notes LIKE ?").get(`%Angebot #${invoiceId}%`)) return null;
+  const voraus = b.abr === "voraus";
+  const r = db.prepare(`INSERT INTO contracts(client_id, project_id, kind, title, amount_net, interval_months, vat_rate, start_date, min_months, renew_months, notice_months, next_invoice, auto_invoice, notes)
+    VALUES(?, ?, 'Wartung & Support', ?, ?, ?, 19, ?, ?, 0, 1, ?, 1, ?)`).run(inv.client_id, projectId || null, b.titel, b.preis, voraus ? b.monate : 1, b.start, b.monate,
+      voraus ? plusMonate(b.start, b.monate) : b.start,
+      `Aus Angebot ${inv.number || ""} (Angebot #${invoiceId}), angelegt bei der Annahme durch ${wer || "Kunde"}. ${voraus ? `Die ersten ${b.monate} Monate sind mit dem Angebot im Voraus berechnet.` : "Erste Rechnung am Startdatum, danach monatlich."}`);
+  return Number(r.lastInsertRowid);
 }

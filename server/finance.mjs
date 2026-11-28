@@ -9,7 +9,7 @@ import { db, getSetting, setSetting, DEFAULT_COMPANY, chatPosten } from "./db.mj
 import { versandMerken, versandListe, letzterVersand } from "./versand.mjs";
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
-import { vereinbarungLesen, vereinbarungSpeichern, vereinbarungAusAngebot } from "./vereinbarungen.mjs";
+import { vereinbarungLesen, vereinbarungSpeichern, vereinbarungAusAngebot, betreuungLesen, betreuungSpeichern, betreuungAusAngebot } from "./vereinbarungen.mjs";
 import { firmaDaten, firmaVonProjekt, firmaSql, hardwareAktiv, DEFAULT_HARDWARE } from "./firmen.mjs";
 import { callModel, assistantStatus, DEFAULT_ASSISTANT } from "./assistant.mjs";
 import { antwortenView } from "./onboarding.mjs";
@@ -103,6 +103,7 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
       planText: inv.kind === "angebot" ? planText(plan, inv.locked ? inv.net : t.net, inv.locked ? inv.gross : t.gross) : "" };
     if (inv.kind === "angebot") { const a = db.prepare("SELECT decision, name, position, created_at, ip, doc_id, reason FROM acceptances WHERE invoice_id = ?").get(id); out.acceptance = a || null; }
     out.vereinbarung = vereinbarungLesen(inv.vereinbarung);
+    out.betreuung = betreuungLesen(inv.betreuung);
     if (inv.cancels_id) { const o = db.prepare("SELECT number, issue_date FROM invoices WHERE id = ?").get(inv.cancels_id); out.cancels_number = o?.number; out.cancels_date = o?.issue_date; }
     if (inv.kind === "rechnung" && inv.status === "offen") out.dunning = dunningOf(inv);
     out.versand = versandListe(inv.kind, inv.id);
@@ -402,7 +403,7 @@ Regeln:
       const plan = kind === "angebot" ? cleanPlan(d.plan) : null;
       const r = db.prepare("INSERT INTO invoices(kind, client_id, project_id, payment_id, title, issue_date, service_from, service_to, due_date, valid_until, intro, outro, created_by, plan, avv) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
         .run(kind, c.id, projectId, paymentId, clean(d.title, 200), ymd(d.issue_date), ymd(d.service_from), ymd(d.service_to), ymd(d.due_date), ymd(d.valid_until), clean(d.intro, 3000), clean(d.outro, 3000), user.name, plan ? JSON.stringify(plan) : null, kind === "angebot" && d.avv ? 1 : 0);
-      if (kind === "angebot") db.prepare("UPDATE invoices SET vereinbarung = ? WHERE id = ?").run(vereinbarungSpeichern(d.vereinbarung, clean), r.lastInsertRowid);
+      if (kind === "angebot") db.prepare("UPDATE invoices SET vereinbarung = ?, betreuung = ? WHERE id = ?").run(vereinbarungSpeichern(d.vereinbarung, clean), betreuungSpeichern(d.betreuung, clean), r.lastInsertRowid);
       const items = cleanItems(d.items, rate), ins = db.prepare("INSERT INTO invoice_items(invoice_id, pos, title, description, qty, unit, unit_net, vat_rate, net) VALUES(?,?,?,?,?,?,?,?,?)");
       for (const it of items) ins.run(r.lastInsertRowid, it.pos, it.title, it.description, it.qty, it.unit, it.unit_net, it.vat_rate, it.net);
       const t = totals(items); db.prepare("UPDATE invoices SET net = ?, vat = ?, gross = ? WHERE id = ?").run(t.net, t.vat, t.gross, r.lastInsertRowid);
@@ -435,7 +436,7 @@ Regeln:
         const items = cleanItems(d.items, rate), t = totals(items), plan = inv.kind === "angebot" ? cleanPlan(d.plan) : null;
         tx(() => {
           db.prepare("UPDATE invoices SET plan = ?, avv = ? WHERE id = ?").run(plan ? JSON.stringify(plan) : null, inv.kind === "angebot" && d.avv ? 1 : 0, id);
-          if (inv.kind === "angebot") db.prepare("UPDATE invoices SET vereinbarung = ? WHERE id = ?").run(vereinbarungSpeichern(d.vereinbarung, clean), id);
+          if (inv.kind === "angebot") db.prepare("UPDATE invoices SET vereinbarung = ?, betreuung = ? WHERE id = ?").run(vereinbarungSpeichern(d.vereinbarung, clean), betreuungSpeichern(d.betreuung, clean), id);
           db.prepare("UPDATE invoices SET project_id = ?, payment_id = ?, title = ?, issue_date = ?, service_from = ?, service_to = ?, due_date = ?, valid_until = ?, intro = ?, outro = ?, net = ?, vat = ?, gross = ? WHERE id = ?")
             .run(projectId, paymentId, clean(d.title, 200), ymd(d.issue_date), ymd(d.service_from), ymd(d.service_to), ymd(d.due_date), ymd(d.valid_until), clean(d.intro, 3000), clean(d.outro, 3000), t.net, t.vat, t.gross, id);
           db.prepare("DELETE FROM invoice_items WHERE invoice_id = ?").run(id);
@@ -508,6 +509,7 @@ Regeln:
           // Mündliche oder schriftliche Zusage: derselbe Schritt wie bei der Annahme im Portal
           db.prepare("UPDATE clients SET stage = 'mandant' WHERE id = ? AND stage IN ('anfrage','interessent')").run(inv.client_id);
           vereinbarungAusAngebot(inv.id, inv.project_id, user.name);
+          betreuungAusAngebot(inv.id, inv.project_id, user.name);   // Betreuung aus dem Pakete-Fenster wird ein laufender Vertrag
           if (inv.project_id) db.prepare("UPDATE projects SET status = 'aktiv', offer_net = COALESCE(offer_net, ?), updated_at = datetime('now') WHERE id = ? AND status = 'anfrage'").run(inv.net, inv.project_id);
         }
         return json(res, 200, invoiceFull(id));

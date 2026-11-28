@@ -9,7 +9,7 @@ import { db, getSetting, setSetting, DEFAULT_COMPANY, chatProjekt } from "./db.m
 import { sendMail } from "./mail.mjs";
 import { vorlage } from "./mail-vorlagen.mjs";
 import { firmaDaten } from "./firmen.mjs";
-import { vereinbarungAusAngebot, vereinbarungLesen } from "./vereinbarungen.mjs";
+import { vereinbarungAusAngebot, vereinbarungLesen, betreuungAusAngebot } from "./vereinbarungen.mjs";
 import { isOwner } from "./access.mjs";
 import { PHASES } from "./projects.mjs";
 import { renderContractPdf } from "./contract-pdf.mjs";
@@ -265,6 +265,7 @@ export function createContracts({ json, readJson, clean, logEvent, SITE_URL }) {
     } catch (e) { db.exec("ROLLBACK"); throw e; } })();
 
     vereinbarungAusAngebot(inv.id, result.pid, name);   // besondere Vereinbarung aus dem Angebot gilt ab jetzt am Projekt
+    betreuungAusAngebot(inv.id, result.pid, name);      // Betreuung wird ein laufender Vertrag (Rechnungen ab Startdatum)
     audit(`Kunde: ${name}`, "angebot angenommen", "angebot", inv.id, `${inv.number} · ${euro(inv.gross)} · ${c.company}`);
     logEvent(c.id, result.pid, "angebot", "Auftrag erteilt", `Angebot ${inv.number} angenommen · ${euro(inv.net)} netto`, false);
     if (result.phaseMoved) logEvent(c.id, result.pid, "phase", "Phase: Konzept", "Das Projekt ist gestartet.", false);

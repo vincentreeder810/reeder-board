@@ -199,8 +199,10 @@ export function createAutomation({ json, readJson, clean, SITE_URL }) {
       const c = contractOut(c0);
       if (c.status === "aktiv" && c.noticeBy && c.noticeBy >= now && c.noticeBy <= soon) {
         const k = `frist:${c.id}:${c.noticeBy}`; keys.push(k);
-        nudge({ key: k, kind: "frist", ref: c.id, client: c.client_id, project: c.project_id, title: `Vertrag verlängert sich bald · ${c0.company}`, href: "#software/vertraege", action: "openContract",
-          text: `${c.title} (${euro(c.amount_net)}/Monat): Kündigungsfrist endet am ${dmy(c.noticeBy)}, danach verlängert er sich um ${c.renew_months} Monate (bis ${dmy(c.periodEnd)} läuft die aktuelle Periode). Guter Zeitpunkt für ein Gespräch über Zufriedenheit und Ausbau.` });
+        nudge({ key: k, kind: "frist", ref: c.id, client: c.client_id, project: c.project_id, title: c.renew_months > 0 ? `Vertrag verlängert sich bald · ${c0.company}` : /im Voraus/.test(c0.notes || "") ? `Bezahlte Betreuung läuft bald aus · ${c0.company}` : `Mindestlaufzeit endet bald · ${c0.company}`, href: "#software/vertraege", action: "openContract",
+          text: c.renew_months > 0 ? `${c.title} (${euro(c.amount_net)}/Monat): Kündigungsfrist endet am ${dmy(c.noticeBy)}, danach verlängert er sich um ${c.renew_months} Monate (bis ${dmy(c.periodEnd)} läuft die aktuelle Periode). Guter Zeitpunkt für ein Gespräch über Zufriedenheit und Ausbau.`
+            : /im Voraus/.test(c0.notes || "") ? `${c.title} (${euro(c.amount_net)}/Monat): Der im Voraus bezahlte Zeitraum endet am ${dmy(c.periodEnd)}. Jetzt mit dem Kunden die Verlängerung klären – die Rechnung für den nächsten Zeitraum legt das Board am ${dmy(c0.next_invoice)} als Entwurf an.`
+            : `${c.title} (${euro(c.amount_net)}/Monat): Die Mindestlaufzeit endet am ${dmy(c.periodEnd)}, danach ist der Vertrag monatlich kündbar. Guter Zeitpunkt für ein Gespräch über Zufriedenheit und Ausbau.` });
       }
       if (c.status === "gekuendigt" && c.end_date && c.end_date <= soon) {
         const k = `ende:${c.id}`; keys.push(k);
