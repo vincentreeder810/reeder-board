@@ -1,0 +1,277 @@
+/* Beispiel-Website Handwerk (fiktive Schreinerei Holm) – warm, ehrlich, klare Wege zur Anfrage */
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_400Regular.ttf") format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_600SemiBold.ttf") format("truetype");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter";src:url("/assets/fonts/Inter_700Bold.ttf") format("truetype");font-weight:700;font-display:swap}
+@font-face{font-family:"Fraunces";src:url("/assets/fonts/Fraunces_600SemiBold.ttf") format("truetype");font-weight:600;font-display:swap}
+
+:root{
+  --holz:#8a5a33;--holz-dunkel:#4a2e1a;--holz-hell:#c89b6d;--creme:#f7f1e8;--papier:#fbf8f3;--tinte:#211a14;--grau:#6f665d;--linie:rgba(33,26,20,.1);
+  --gruen:#2f5d3a;--akzent:#c4622d;--radius:18px;--max:1180px;--ease:cubic-bezier(.22,1,.36,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:var(--tinte);background:var(--papier);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit}
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin:0}
+h2{font-size:clamp(30px,3.6vw,46px)}
+h3{font-size:21px}
+p{margin:0}
+
+/* Hinweis: Beispiel-Website */
+.demo-hinweis{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 20px;background:#111;color:#fff;font-size:13px}
+.demo-hinweis a{color:#c4b5fd;text-decoration:none;font-weight:600}
+
+/* Knöpfe */
+.knopf{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 26px;border-radius:999px;border:0;background:var(--akzent);color:#fff;font:600 16px/1 "Inter",sans-serif;text-decoration:none;cursor:pointer;box-shadow:0 14px 30px -16px rgba(196,98,45,.9);transition:transform .3s var(--ease),box-shadow .3s}
+.knopf:hover{transform:translateY(-2px);box-shadow:0 20px 40px -18px rgba(196,98,45,1)}
+.knopf--hell{background:#fff;color:var(--tinte);box-shadow:0 10px 30px -18px rgba(0,0,0,.5)}
+.knopf--klein{min-height:42px;padding:0 18px;font-size:14.5px}
+
+/* Kopf */
+.kopf{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:22px;padding:12px max(20px,calc((100% - var(--max))/2));background:rgba(251,248,243,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--linie)}
+.marke{display:flex;align-items:center;gap:11px;text-decoration:none;margin-right:auto}
+.marke__zeichen{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--holz-dunkel);color:var(--creme);font:600 22px/1 "Fraunces",serif}
+.marke b{display:block;font-size:16px}.marke small{display:block;font-size:12px;color:var(--grau)}
+.kopf__nav{display:flex;gap:22px;font-size:15px}
+.kopf__nav a{text-decoration:none;color:var(--grau)}.kopf__nav a:hover{color:var(--tinte)}
+.kopf__tel{text-decoration:none;font-weight:600;font-size:15px;white-space:nowrap}
+.kopf__menue{display:none;width:42px;height:42px;border:0;background:none;cursor:pointer;flex-direction:column;justify-content:center;gap:6px;padding:10px}
+.kopf__menue span{display:block;height:2px;background:var(--tinte);border-radius:2px;transition:transform .3s}
+
+/* Bilder: Platzhalter in warmen Holztönen, bis echte Fotos eingesetzt sind (Motiv steht unten links) */
+.bild{position:relative;overflow:hidden;border-radius:var(--radius);background:linear-gradient(135deg,#a8774c,#5b3a22);isolation:isolate;min-height:200px}
+.bild::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.35;background:repeating-linear-gradient(98deg,rgba(255,255,255,.08) 0 2px,transparent 2px 9px),repeating-linear-gradient(94deg,rgba(0,0,0,.12) 0 1px,transparent 1px 23px)}
+.bild::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 80% at 70% 20%,rgba(255,224,180,.45),transparent 60%)}
+.bild__motiv{position:absolute;left:14px;bottom:12px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.35);color:#fff;font-size:12px;letter-spacing:.02em}
+.bild--werkstatt{background:linear-gradient(160deg,#3b2414 0%,#7a4d2a 45%,#c08a55 100%)}
+.bild--kueche{background:linear-gradient(140deg,#d8c2a4,#9b7046)}
+.bild--schrank{background:linear-gradient(140deg,#efe3cf,#b48a5c)}
+.bild--treppe{background:linear-gradient(140deg,#6d4426,#2f1d10)}
+.bild--tuer{background:linear-gradient(140deg,#9c6b3f,#4f3019)}
+.bild--ref1{background:linear-gradient(150deg,#c9a77e,#6b4529)}
+.bild--ref2{background:linear-gradient(150deg,#e5d6bd,#a1784d)}
+.bild--ref3{background:linear-gradient(150deg,#7c5132,#3a2413)}
+.bild--team{background:linear-gradient(150deg,#b78d62,#4c3420)}
+
+/* Kopfbild */
+.held{position:relative;min-height:min(86vh,760px);display:grid;align-items:end;padding:0 max(20px,calc((100% - var(--max))/2)) clamp(36px,6vw,70px);color:#fff;overflow:hidden}
+.held__bild{position:absolute;inset:0;border-radius:0;min-height:0}
+.held__bild::after{background:linear-gradient(90deg,rgba(20,12,6,.78) 0%,rgba(20,12,6,.55) 45%,rgba(20,12,6,.15) 80%),linear-gradient(180deg,rgba(20,12,6,0) 55%,rgba(20,12,6,.6) 100%)}
+.held__bild .bild__motiv{top:16px;bottom:auto;right:16px;left:auto}
+.held__inhalt{position:relative;max-width:720px;animation:rein .9s var(--ease) both}
+.held__ort{display:inline-block;margin-bottom:16px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);font-size:14px;font-weight:600}
+.held h1{font-size:clamp(42px,6.4vw,82px)}
+.held h1 em{font-style:normal;color:var(--holz-hell)}
+.held__text{margin-top:18px;font-size:clamp(17px,1.6vw,20px);max-width:600px;color:rgba(255,255,255,.88)}
+.held__knoepfe{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.held__vertrauen{list-style:none;display:flex;flex-wrap:wrap;gap:10px 34px;margin:30px 0 0;padding:0}
+.held__vertrauen b{display:block;font:600 30px/1 "Fraunces",serif}
+.held__vertrauen span{font-size:13.5px;color:rgba(255,255,255,.8)}
+@keyframes rein{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+/* Vertrauensleiste */
+.leiste{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--linie);border-bottom:1px solid var(--linie)}
+.leiste>div{background:var(--creme);padding:20px max(16px,2vw);display:grid;gap:2px}
+.leiste b{font-size:15.5px}.leiste span{font-size:13.5px;color:var(--grau)}
+
+/* Abschnitte */
+.abschnitt{padding:clamp(64px,8vw,110px) max(20px,calc((100% - var(--max))/2))}
+.abschnitt--hell{background:var(--creme)}
+.abschnitt--dunkel{background:var(--holz-dunkel);color:var(--creme)}
+.abschnitt--dunkel .abschnitt__kopf p:not(.dach){color:rgba(247,241,232,.75)}
+.abschnitt__kopf{max-width:680px;margin-bottom:clamp(28px,4vw,46px)}
+.abschnitt__kopf p:not(.dach){margin-top:12px;color:var(--grau);font-size:18px}
+.dach{margin-bottom:10px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--akzent)}
+
+/* Leistungen */
+.leistungen{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.leistung{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit}
+.leistung .bild{aspect-ratio:4/5;min-height:0;margin-bottom:8px;transition:transform .5s var(--ease)}
+.leistung:hover .bild{transform:scale(1.02)}
+.leistung p{font-size:15px;color:var(--grau)}
+.leistung__mehr{margin-top:auto;font-size:14px;font-weight:600;color:var(--akzent)}
+.leistungen__klein{margin-top:28px;color:var(--grau)}
+
+/* Galerie */
+.galerie{display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:1fr 1fr;gap:18px}
+.galerie figure{margin:0;display:grid;gap:10px}
+.galerie__gross{grid-row:span 2}
+.galerie .bild{min-height:240px;height:100%}
+.galerie figcaption b{display:block;font-size:16px}.galerie figcaption span{font-size:14px;color:rgba(247,241,232,.7)}
+
+/* Ablauf */
+.ablauf{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;counter-reset:s}
+.ablauf li{padding:24px;border-radius:var(--radius);background:#fff;box-shadow:0 0 0 1px var(--linie)}
+.ablauf li span{display:grid;place-items:center;width:40px;height:40px;margin-bottom:16px;border-radius:50%;background:var(--akzent);color:#fff;font-weight:700}
+.ablauf b{display:block;font-size:17px;margin-bottom:6px}.ablauf p{font-size:15px;color:var(--grau)}
+
+/* Kundenstimmen */
+.stimmen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.stimmen blockquote{margin:0;padding:26px;border-radius:var(--radius);background:#fff;box-shadow:0 20px 40px -32px rgba(74,46,26,.5)}
+.stimmen p{font-family:"Fraunces",serif;font-size:19px;line-height:1.45}
+.stimmen footer{margin-top:14px;font-size:14px;color:var(--grau)}
+.abschnitt__kopf small{font-size:12px;opacity:.7}
+
+/* Über uns */
+.ueber{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,70px);align-items:center}
+.ueber .bild{aspect-ratio:4/3}
+.ueber h2{margin-bottom:16px}.ueber p{color:var(--grau)}
+.haken{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:8px}
+.haken li{position:relative;padding-left:28px;font-weight:600}
+.haken li::before{content:"✓";position:absolute;left:0;color:var(--gruen)}
+
+/* Einsatzgebiet */
+.gebiet{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(28px,5vw,70px);align-items:center}
+.gebiet p:not(.dach){margin-top:14px;color:var(--grau)}
+.karte{position:relative;aspect-ratio:4/3;border-radius:var(--radius);background:radial-gradient(circle at 50% 50%,#efe5d3,#e2d2b8);overflow:hidden;display:grid;place-items:center}
+.karte::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(74,46,26,.06) 0 1px,transparent 1px 34px),repeating-linear-gradient(90deg,rgba(74,46,26,.06) 0 1px,transparent 1px 34px)}
+.karte__punkt{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--akzent);box-shadow:0 0 0 6px rgba(196,98,45,.25)}
+.karte__ring{position:absolute;width:60%;aspect-ratio:1;border-radius:50%;border:2px dashed rgba(196,98,45,.5);animation:puls 3s var(--ease) infinite}
+.karte__ring--2{width:85%;animation-delay:1.5s;opacity:.6}
+.karte b{position:relative;margin-top:44px;font-family:"Fraunces",serif;font-size:20px}
+@keyframes puls{0%{transform:scale(.9);opacity:.9}100%{transform:scale(1.05);opacity:.3}}
+
+/* Kontakt */
+.kontakt{display:grid;grid-template-columns:1fr 1.1fr;gap:clamp(28px,5vw,70px);align-items:start}
+.kontakt h2{margin-bottom:14px}.kontakt>div>p{color:var(--grau)}
+.kontakt__daten{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:14px}
+.kontakt__daten b{display:block;font-size:13px;color:var(--grau);font-weight:600}
+.kontakt__daten a{font-size:22px;font-weight:700;text-decoration:none;color:var(--akzent)}
+.formular{display:grid;gap:14px;padding:clamp(22px,3vw,34px);border-radius:24px;background:#fff;box-shadow:0 30px 60px -40px rgba(74,46,26,.6)}
+.formular fieldset{border:0;margin:0;padding:0}
+.formular legend,.formular label{font-size:14px;font-weight:600}
+.formular label{display:grid;gap:6px}
+.formular input,.formular textarea{font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--linie);background:var(--papier)}
+.formular input:focus,.formular textarea:focus{outline:none;border-color:var(--akzent);background:#fff}
+.formular .check{display:flex;align-items:center;gap:10px;font-weight:500}
+.formular .check input{width:20px;height:20px;accent-color:var(--akzent)}
+.formular .knopf{width:100%}
+.formular__klein{font-size:12.5px;color:var(--grau)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chips label{display:block}
+.chips input{position:absolute;opacity:0;pointer-events:none}
+.chips span{display:block;padding:9px 15px;border-radius:999px;background:var(--creme);font-size:14.5px;font-weight:500;cursor:pointer;transition:background .2s,color .2s}
+.chips input:checked+span{background:var(--holz-dunkel);color:var(--creme)}
+.chips input:focus-visible+span{outline:2px solid var(--akzent);outline-offset:2px}
+
+/* FAQ */
+.faq details{max-width:820px;border-bottom:1px solid var(--linie)}
+.faq summary{cursor:pointer;list-style:none;padding:20px 0;font-weight:600;font-size:18px;display:flex;justify-content:space-between;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--akzent);font-size:24px;line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding:0 0 20px;color:var(--grau)}
+
+/* Fuß */
+.fuss{padding:40px max(20px,calc((100% - var(--max))/2)) 110px;background:var(--tinte);color:rgba(247,241,232,.8);display:grid;grid-template-columns:1fr auto;gap:20px;font-size:14.5px}
+.fuss b{display:block;color:#fff;font-family:"Fraunces",serif;font-size:20px;margin-bottom:6px}.fuss span{display:block}
+.fuss nav{display:flex;gap:18px;flex-wrap:wrap}.fuss a{color:rgba(247,241,232,.8)}
+.fuss p{grid-column:1/-1;font-size:13px;opacity:.7}
+
+/* Handy-Leiste und Meldung */
+.mobil-leiste{display:none}
+.meldung{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:60;padding:12px 18px;border-radius:14px;background:var(--tinte);color:#fff;font-size:14.5px;box-shadow:0 20px 40px -20px rgba(0,0,0,.6);max-width:min(92vw,460px)}
+
+/* Sanftes Einblenden beim Scrollen */
+.rein{opacity:0;transform:translateY(22px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.rein.ist-da{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rein{opacity:1;transform:none}.held__inhalt,.karte__ring{animation:none}}
+
+/* Responsiv */
+@media (max-width:1060px){.kopf__nav{display:none}.leistungen{grid-template-columns:repeat(2,minmax(0,1fr))}.ablauf{grid-template-columns:repeat(2,minmax(0,1fr))}.leiste{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:820px){
+  .kopf{gap:10px}.kopf__tel{display:none}.kopf .knopf--klein{display:none}.kopf__menue{display:flex}
+  .kopf.offen .kopf__nav{display:flex;position:absolute;left:0;right:0;top:100%;flex-direction:column;gap:0;background:var(--papier);border-bottom:1px solid var(--linie);padding:6px 20px 14px}
+  .kopf.offen .kopf__nav a{padding:12px 0;font-size:17px;color:var(--tinte);border-bottom:1px solid var(--linie)}
+  .kopf.offen .kopf__menue span:first-child{transform:translateY(4px) rotate(45deg)}.kopf.offen .kopf__menue span:last-child{transform:translateY(-4px) rotate(-45deg)}
+  .galerie{grid-template-columns:1fr;grid-template-rows:none}.galerie__gross{grid-row:auto}
+  .stimmen,.ueber,.gebiet,.kontakt{grid-template-columns:1fr}
+  .mobil-leiste{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:40;padding:8px;border-radius:999px;background:rgba(33,26,20,.94);box-shadow:0 20px 40px -18px rgba(0,0,0,.6)}
+  .mobil-leiste a{display:grid;place-items:center;height:46px;border-radius:999px;color:#fff;text-decoration:none;font-weight:600;font-size:15px}
+  .mobil-leiste__haupt{background:var(--akzent)}
+}
+@media (max-width:560px){.held__bild .bild__motiv{display:none}body{font-size:16px}.leistungen,.ablauf,.leiste{grid-template-columns:1fr}.held{min-height:88vh}.held__vertrauen b{font-size:26px}.demo-hinweis{font-size:12px}}
+
+/* Echte Fotos und Video */
+.bild img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1;transition:transform .8s var(--ease)}
+.bild:has(img)::before{display:none}
+.leistung:hover .bild img,.galerie figure:hover .bild img{transform:scale(1.04)}
+.leistung:hover .bild{transform:none}
+.held__video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1}
+.held__bild::before{display:none}
+/* Einblicke: Bilderstreifen, am Handy zum Wischen */
+.einblicke{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:10px;background:var(--holz-dunkel)}
+.einblicke figure{position:relative;margin:0;aspect-ratio:3/4;overflow:hidden;border-radius:14px}
+.einblicke img{width:100%;height:100%;object-fit:cover;transition:transform .8s var(--ease)}
+.einblicke figure:hover img{transform:scale(1.05)}
+.einblicke figcaption{position:absolute;left:10px;bottom:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.45);color:#fff;font-size:12.5px}
+@media (max-width:820px){.einblicke{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}.einblicke::-webkit-scrollbar{display:none}.einblicke figure{flex:0 0 62%;scroll-snap-align:start}}
+/* In der Blase auf der Seite „Beispiele“: Hinweisleiste schlanker */
+.in-blase .demo-hinweis{padding:6px 60px 6px 16px}.in-blase .demo-hinweis a{display:none}
+.bild:has(img)::after{display:none}
+.held__bild::after{display:block}
+.held h1,.held__text{text-shadow:0 2px 24px rgba(0,0,0,.35)}
+.galerie figure{grid-template-rows:1fr auto}.galerie__gross .bild{min-height:420px}
+
+/* Kopf-Video: immer ganz zu sehen, von Rand zu Rand. Breite Fenster: Der Kopf hat genau das 16:9-Format des Videos –
+   nichts wird abgeschnitten, keine Ränder. Schmale Fenster und Hochformat: Video oben in voller Breite, Text darunter. */
+.held{min-height:0;height:auto;aspect-ratio:16/9}
+.held__video{object-fit:contain;z-index:0}
+.held__unschaerfe{position:absolute;inset:-60px;width:calc(100% + 120px);height:calc(100% + 120px);object-fit:cover;filter:blur(40px) brightness(.5) saturate(1.15);z-index:0}
+.held__bild::after{z-index:1}
+.held__inhalt{z-index:2}
+@media (max-aspect-ratio:1/1),(max-width:1000px){
+  .held{height:auto;aspect-ratio:auto;display:block;padding:0;background:var(--holz-dunkel)}
+  .held__bild{position:relative;inset:auto;aspect-ratio:16/9;width:100%}
+  .held__bild::after{background:linear-gradient(180deg,rgba(20,12,6,0) 60%,rgba(74,46,26,.95) 100%)}
+  .held__unschaerfe{display:none}
+  .held__video{object-fit:cover}
+  .held__inhalt{padding:22px 20px 44px;max-width:none;animation:none}
+  .held__ort{margin-bottom:12px}
+}
+
+@media (max-aspect-ratio:1/1),(max-width:1000px){.held{min-height:0}}
+
+/* „Reeder erklärt“: schwebende Glas-Karte, die beim Scrollen erklärt, warum der Abschnitt Kunden gewinnt */
+.erklaert{position:fixed;left:clamp(12px,2vw,28px);bottom:clamp(12px,2.4vw,28px);z-index:50;width:min(360px,calc(100vw - 24px));padding:16px 18px 16px;border-radius:22px;color:#fff;
+  background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.06)),rgba(24,16,10,.42);backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(255,255,255,.08),0 24px 60px -24px rgba(0,0,0,.55);
+  opacity:0;transform:translateY(16px) scale(.97);pointer-events:none;transition:opacity .45s var(--ease),transform .55s var(--ease)}
+.erklaert::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120% 60% at 10% 0%,rgba(255,255,255,.28),transparent 55%)}
+.erklaert.ist-da{opacity:1;transform:none;pointer-events:auto}
+.erklaert.wechselt .erklaert__inhalt{opacity:0;transform:translateY(6px)}
+.erklaert__inhalt{transition:opacity .25s,transform .35s var(--ease)}
+.erklaert__kopf{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.erklaert__marke{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;background:linear-gradient(120deg,#4f7cff,#8b5cf6 55%,#ec4899);color:#fff;font-size:11px;letter-spacing:0}
+.erklaert__nr{margin-left:auto;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.erklaert__zu{width:26px;height:26px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:12px;cursor:pointer}
+.erklaert h4{margin:0 0 6px;font:600 19px/1.25 "Fraunces",Georgia,serif;letter-spacing:-.01em}
+.erklaert ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.erklaert li{position:relative;padding-left:20px;font-size:14px;line-height:1.45;color:rgba(255,255,255,.92)}
+.erklaert li::before{content:"";position:absolute;left:2px;top:.55em;width:8px;height:8px;border-radius:50%;background:linear-gradient(120deg,#4f7cff,#8b5cf6 55%,#ec4899);box-shadow:0 0 10px rgba(139,92,246,.8)}
+.erklaert__punkte{display:flex;gap:4px;margin-top:12px}
+.erklaert__punkte i{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.22);transition:background .3s}
+.erklaert__punkte i.an{background:rgba(255,255,255,.85)}
+.erklaert-an{position:fixed;left:clamp(12px,2vw,28px);bottom:clamp(12px,2.4vw,28px);z-index:50;height:40px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:#fff;font:600 13.5px/1 "Inter",sans-serif;cursor:pointer;
+  background:rgba(24,16,10,.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);display:none;align-items:center;gap:8px}
+.erklaert-an.ist-da{display:inline-flex}
+/* Hervorhebung des erklärten Abschnitts: feiner Rahmen in Reeder-Farben */
+.erklaert-ziel{outline:2px solid rgba(139,92,246,.0);outline-offset:-2px;transition:outline-color .5s}
+
+@media (max-width:820px){.erklaert,.erklaert-an{bottom:calc(78px + env(safe-area-inset-bottom))}.erklaert{padding:13px 15px}.erklaert h4{font-size:17px}.erklaert li{font-size:13.5px}}
+@media (prefers-reduced-motion:reduce){.erklaert,.erklaert__inhalt{transition:none}}
+/* Weißraum enger */
+.abschnitt{padding-top:clamp(54px,6.5vw,92px);padding-bottom:clamp(54px,6.5vw,92px)}
+.abschnitt__kopf{margin-bottom:clamp(24px,3vw,38px)}
+@media (min-width:821px){.erklaert,.erklaert-an{left:auto;right:clamp(14px,2vw,28px)}}
+
+/* Handy: Erklärung kompakter, damit Knöpfe frei bleiben (Titel + Kernaussage) */
+@media (max-width:820px){.erklaert li:nth-child(n+2){display:none}.erklaert h4{margin-bottom:4px}.erklaert__punkte{margin-top:9px}}
+@media (max-width:560px){.leiste{grid-template-columns:repeat(2,minmax(0,1fr))}.leiste>div{padding:14px 16px}.leiste b{font-size:14.5px}.leiste span{font-size:12.5px}}
+
+/* Weicher Wechsel der Erklär-Karte */
+.erklaert{overflow:hidden;transition:opacity .45s var(--ease),transform .55s var(--ease),height .45s var(--ease)}
+.erklaert__inhalt{transition:opacity .22s ease,transform .4s var(--ease),filter .22s ease}
+.erklaert.wechselt .erklaert__inhalt{opacity:0;transform:translateY(8px);filter:blur(3px)}
+.erklaert__punkte i{transition:background .5s var(--ease)}

@@ -775,3 +775,28 @@ let BAUKASTEN = null;   // wird aus assets/data/baukasten.json geladen (gemeinsa
   new IntersectionObserver(([en]) => document.body.classList.toggle("bk-sicht", en.isIntersecting), { rootMargin: "-30% 0px -30% 0px" }).observe(sec);
   if (q.get("typ") && location.hash !== "#baukasten") sec.scrollIntoView();
 })();
+
+
+/* ---------- Beispiele: Demo als „Blase“ öffnen (fast Vollbild, ✕ oder Esc schließt) ---------- */
+(() => {
+  const links = $$("[data-demo]"); if (!links.length) return;
+  let blase = null, zurueck = null;
+  const zu = () => { if (!blase) return; blase.classList.remove("ist-offen"); document.body.classList.remove("blase-offen"); const b = blase; blase = null; setTimeout(() => b.remove(), 350); zurueck?.focus(); };
+  const auf = (url, titel) => {
+    zurueck = document.activeElement;
+    blase = document.createElement("div"); blase.className = "demo-blase"; blase.setAttribute("role", "dialog"); blase.setAttribute("aria-modal", "true"); blase.setAttribute("aria-label", titel);
+    blase.innerHTML = `<div class="demo-blase__rahmen"><button type="button" class="demo-blase__zu" aria-label="Beispiel schließen">✕</button><iframe src="${url}" title="${titel}"></iframe></div>`;
+    document.body.appendChild(blase); document.body.classList.add("blase-offen");
+    requestAnimationFrame(() => blase.classList.add("ist-offen"));
+    blase.querySelector(".demo-blase__zu").focus();
+    blase.addEventListener("click", e => { if (e.target === blase || e.target.closest(".demo-blase__zu")) zu(); });
+  };
+  links.forEach(a => a.addEventListener("click", e => { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); auf(a.getAttribute("href"), "Beispiel-Website: " + (a.closest("article")?.querySelector("h3")?.textContent || "Demo")); }));
+  addEventListener("keydown", e => { if (e.key === "Escape") zu(); });
+  addEventListener("message", e => { if (e.origin === location.origin && e.data === "demo-schliessen") zu(); });
+  // Videos auf den Karten nur abspielen, solange sie zu sehen sind (spart Akku und Datenvolumen)
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(es => es.forEach(x => { const v = x.target; if (x.isIntersecting && !reduced) v.play().catch(() => {}); else v.pause(); }), { threshold: .2 });
+    $$(".bsp__video").forEach(v => { if (reduced) v.removeAttribute("autoplay"); io.observe(v); });
+  }
+})();

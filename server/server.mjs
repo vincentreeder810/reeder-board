@@ -654,13 +654,14 @@ async function adminApi(req, res, url) {
 }
 
 /* ================= Statische Dateien (nur freigegebene Pfade) ================= */
-const PUBLIC_DIRS = ["assets", "admin", "portal"];
+const PUBLIC_DIRS = ["assets", "admin", "portal", "demo"];   // demo/: Beispiel-Websites zum Durchklicken (Seite „Beispiele“)
 const PUBLIC_FILES = new Set(["robots.txt", "sitemap.xml"]);
 async function serveStatic(req, res, url) {
   let rel = decodeURIComponent(url.pathname).replace(/^\/+/, "");
   if (rel === "" ) rel = "index.html";
   if (rel === "admin" || rel === "admin/") rel = "admin/index.html";
   if (rel === "portal" || rel === "portal/") rel = "portal/index.html";
+  if (/^demo\/[\w-]+\/?$/.test(rel)) rel = rel.replace(/\/?$/, "/index.html");   // /demo/handwerk/ → index.html
   const top = rel.split("/")[0];
   const allowed = (!rel.includes("/") && (rel.endsWith(".html") || PUBLIC_FILES.has(rel))) || PUBLIC_DIRS.includes(top);
   const file = path.resolve(ROOT, rel);
