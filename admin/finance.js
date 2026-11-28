@@ -212,7 +212,9 @@
       const S = ["M", "L", "XXL"], eur = n => n.toLocaleString("de-DE") + " €";
       const cid = +f.client_id.value, w = cid ? await api(`/finance/clients/${cid}/wunsch`).catch(() => null) : null;
       if (!PK) {
-        PK = { typ: "website", wahl: { design: 0, umfang: 0, qualitaet: 0, inhalte: 0, betreuung: 0 }, extras: new Set(), aufTitel: "", aufBetrag: "", rabatt: "", rabattArt: "%" };
+        const n1 = new Date(); n1.setDate(1); n1.setMonth(n1.getMonth() + 1);
+        PK = { typ: "website", wahl: { design: 0, umfang: 0, qualitaet: 0, inhalte: 0, betreuung: 0 }, extras: new Set(), aufTitel: "", aufBetrag: "", rabatt: "", rabattArt: "%",
+          abr: "voraus", start: `${n1.getFullYear()}-${String(n1.getMonth() + 1).padStart(2, "0")}-01`, monate: 12 };
         if (w?.text) {   // z. B. „Website: Design XXL, Umfang M, …, Online-Terminbuchung · Richtwert ab 4.500 €“
           const [kopf, rest = ""] = w.text.split(":"), teile = rest.split("·")[0].split(",").map(x => x.trim());
           const ty = BK.typen.find(y => kopf.trim() === y.name); if (ty) PK.typ = ty.k;
@@ -229,7 +231,12 @@
         <div class="pkw__typen">${BK.typen.map(y => `<label class="pkw__t" data-typ="${y.k}"><input type="radio" name="typ" value="${y.k}"><b>${esc(y.name)}</b><small>ab ${eur(y.grund)}</small></label>`).join("")}</div>
         ${BK.bausteine.map(b => `<div class="pkw__z"><b>${esc(b.name)}</b><div class="pkw__st">${b.stufen.map((s, i) => `<label class="pkw__s" data-b="${b.k}" data-i="${i}"><input type="radio" name="${b.k}" value="${i}"><em>${S[i]}</em> ${esc(s[0])}<small data-preis></small></label>`).join("")}</div></div>`).join("")}
         <div class="pkw__z"><b>Extras</b><div class="pkw__st pkw__st--x">${BK.extras.map(e => `<label class="pkw__s" data-x="${e.k}" data-nicht="${(e.nichtBei || []).join(" ")}"><input type="checkbox" name="x" value="${e.k}">${esc(e.name)}<small>${e.preis == null ? "Preis offen" : "+ " + eur(e.preis)}</small></label>`).join("")}</div></div>
-        <div class="pkw__z"><b>Betreuung<small>monatlich</small></b><div class="pkw__st">${BK.betreuung.map((s, i) => `<label class="pkw__s" data-b="betreuung" data-i="${i}"><input type="radio" name="betreuung" value="${i}"><em>${S[i]}</em> ${esc(s[0])}<small data-preis></small></label>`).join("")}</div></div>
+        <div class="pkw__z"><b>Betreuung</b><div class="pkw__st">${BK.betreuung.map((s, i) => `<label class="pkw__s" data-b="betreuung" data-i="${i}"><input type="radio" name="betreuung" value="${i}"><em>${S[i]}</em> ${esc(s[0])}<small data-preis></small></label>`).join("")}</div>
+          <div class="pkw__abr" data-abr>
+            <div class="pkw__seg"><label><input type="radio" name="abr" value="voraus"><span>Vorauszahlung</span></label><label><input type="radio" name="abr" value="monatlich"><span>Monatlich</span></label></div>
+            <label>Beginn<input type="date" name="start" value="${esc(st.start)}"></label>
+            <label><span data-monate-label>Monate im Voraus</span><input type="number" name="monate" min="1" max="60" value="${st.monate}"></label>
+            <p class="pkw__abrtext" data-abrtext></p></div></div>
         <div class="pkw__z"><b>Aufschlag</b><div class="pkw__auf"><input name="aufTitel" placeholder="z. B. Individuelle Mehrarbeit" value="${esc(st.aufTitel)}"><input name="aufBetrag" inputmode="decimal" placeholder="Betrag netto, z. B. 500" value="${esc(st.aufBetrag)}"></div></div>
         <div class="pkw__z"><b>Rabatt</b><div class="pkw__auf pkw__auf--rabatt"><input name="rabatt" inputmode="decimal" placeholder="z. B. 10" value="${esc(st.rabatt)}"><select name="rabattArt"><option value="%" ${st.rabattArt === "%" ? "selected" : ""}>Prozent</option><option value="€" ${st.rabattArt === "€" ? "selected" : ""}>Euro netto</option></select></div></div>
         <footer class="pkw__fuss"><span data-summe></span><button type="submit" class="btn btn--grad">Übernehmen</button></footer></form>`;
@@ -239,8 +246,12 @@
         for (const e of BK.extras) if (st.extras.has(e.k) && !(e.nichtBei || []).includes(t.k) && e.preis) s += e.preis;
         s += parseEuro(st.aufBetrag || "") / 100;
         const r = Number(String(st.rabatt || "").replace(",", ".")) || 0, rab = r > 0 ? (st.rabattArt === "%" ? Math.round(s * Math.min(r, 100) / 100) : r) : 0;
-        return { s, rab };
+        const tb = typ().betreuung[st.wahl.betreuung] || 0, monate = Math.max(1, Math.min(60, +st.monate || 1));
+        const vor = st.wahl.betreuung && st.abr === "voraus" ? tb * monate : 0;
+        return { s, rab, vor, tb, monate };
       };
+      const datumDe = d => d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const zeitraum = () => { const a = new Date((st.start || "") + "T00:00:00"); if (isNaN(a)) return null; const b = new Date(a); b.setMonth(b.getMonth() + Math.max(1, +st.monate || 1)); b.setDate(b.getDate() - 1); return { von: datumDe(a), bis: datumDe(b) }; };
       // Nur umschalten, nichts neu aufbauen: Auswahl, Preise der Stufen, sichtbare Extras, Summe
       const aktualisieren = () => {
         const t = typ();
@@ -248,22 +259,28 @@
         $$("[data-b]", d).forEach(el => { const k = el.dataset.b, i = +el.dataset.i, on = st.wahl[k] === i; el.classList.toggle("is-on", on); el.querySelector("input").checked = on;
           const pr = el.querySelector("[data-preis]"); if (pr) pr.textContent = k === "betreuung" ? (i ? `${eur(t.betreuung[i])} / Monat` : "keine") : (t.preise[k][i] ? "+ " + eur(t.preise[k][i]) : "inklusive"); });
         $$("[data-x]", d).forEach(el => { const weg = el.dataset.nicht.split(" ").includes(t.k), on = st.extras.has(el.dataset.x); el.hidden = weg; el.classList.toggle("is-on", on && !weg); el.querySelector("input").checked = on; });
-        const { s, rab } = summe();
-        $("[data-summe]", d).innerHTML = `Richtwert <b>${eur(s - rab)}</b> netto${rab ? ` <small>(nach ${eur(rab)} Rabatt)</small>` : ""}${st.wahl.betreuung ? ` <span class="pkw__monat">+ ${eur(t.betreuung[st.wahl.betreuung])} / Monat Betreuung</span>` : ""}`;
+        const { s, rab, vor, tb, monate } = summe(), z = zeitraum(), ab = $("[data-abr]", d);
+        ab.hidden = !st.wahl.betreuung;
+        $$("input[name=abr]", d).forEach(x => { x.checked = x.value === st.abr; x.parentElement.classList.toggle("is-on", x.checked); });
+        $("[data-monate-label]", d).textContent = st.abr === "voraus" ? "Monate im Voraus" : "Mindestlaufzeit (Monate)";
+        $("[data-abrtext]", d).textContent = !st.wahl.betreuung ? "" : st.abr === "voraus"
+          ? `${monate} × ${eur(tb)} = ${eur(vor)} netto im Voraus${z ? `, Zeitraum ${z.von} – ${z.bis}` : ""}. Steht als Position im Angebot und in der Summe.`
+          : `${eur(tb)} netto im Monat${z ? ` ab ${z.von}, mindestens bis ${z.bis}` : ""}, danach monatlich kündbar. Steht als besondere Vereinbarung im Angebot.`;
+        $("[data-summe]", d).innerHTML = `Richtwert <b>${eur(s - rab + vor)}</b> netto${rab ? ` <small>(nach ${eur(rab)} Rabatt)</small>` : ""}${st.wahl.betreuung ? (st.abr === "voraus" ? ` <span class="pkw__monat">inkl. ${monate} Monate Betreuung</span>` : ` <span class="pkw__monat">+ ${eur(tb)} / Monat Betreuung</span>`) : ""}`;
       };
       aktualisieren(); document.body.appendChild(d);
       const zu = () => d.remove();
       d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-zu]")) zu(); });
-      d.addEventListener("input", e => { const i = e.target; if (["aufTitel", "aufBetrag", "rabatt"].includes(i.name)) { st[i.name] = i.value; aktualisieren(); } });
+      d.addEventListener("input", e => { const i = e.target; if (["aufTitel", "aufBetrag", "rabatt", "start", "monate"].includes(i.name)) { st[i.name] = i.value; aktualisieren(); } });
       d.addEventListener("change", e => {
         const i = e.target;
         if (i.name === "typ") st.typ = i.value; else if (i.name === "x") i.checked ? st.extras.add(i.value) : st.extras.delete(i.value);
-        else if (i.name === "rabattArt") st.rabattArt = i.value; else if (st.wahl[i.name] !== undefined) st.wahl[i.name] = +i.value; else return;
+        else if (i.name === "rabattArt") st.rabattArt = i.value; else if (i.name === "abr") st.abr = i.value; else if (i.name === "start" || i.name === "monate") st[i.name] = i.value; else if (st.wahl[i.name] !== undefined) st.wahl[i.name] = +i.value; else return;
         aktualisieren();
       });
       d.addEventListener("submit", e => {
         e.preventDefault(); const t = typ(), pos = [];
-        const p = (title, description, euro, unit = "pauschal") => pos.push({ title, description, qty: 1, unit, unit_net: euro == null ? 0 : Math.round(euro * 100), vat_rate: rate, offen: euro == null });
+        const p = (title, description, euro, unit = "pauschal", qty = 1) => pos.push({ title, description, qty, unit, unit_net: euro == null ? 0 : Math.round(euro * 100), vat_rate: rate, offen: euro == null });
         const b0 = BK.bausteine.find(b => b.k === "design");
         p(`${t.name} – Grundpaket`, `Kleinste Version: ${t.umfang[0]}, Design „${b0.stufen[0][0]}“, Prüfbericht nach jedem Stand, technische Optimierung für Google.`, t.grund);
         for (const b of BK.bausteine) { const i = st.wahl[b.k]; if (i) p(`${b.name} ${S[i]} – ${b.stufen[i][0]}`, b.k === "umfang" ? t.umfang[i] : b.stufen[i][1], t.preise[b.k][i]); }
@@ -271,23 +288,27 @@
         const aufB = parseEuro(st.aufBetrag || ""); if ((st.aufTitel || "").trim() && aufB) p(st.aufTitel.trim(), "", aufB / 100);
         const { rab } = summe(), r = Number(String(st.rabatt || "").replace(",", ".")) || 0;
         if (rab) p(st.rabattArt === "%" ? `Rabatt ${String(r).replace(".", ",")} %` : "Rabatt", "", -rab);
-        const betreuung = st.wahl.betreuung ? { s: BK.betreuung[st.wahl.betreuung], preis: t.betreuung[st.wahl.betreuung], stufe: S[st.wahl.betreuung] } : null;
-        // Ohne Feld für Vereinbarungen (Rechnung): Betreuung als Position je Monat
-        if (betreuung && !f.v_titel) p(`Betreuung ${betreuung.stufe} – ${betreuung.s[0]}`, betreuung.s[1], betreuung.preis, "Monat");
+        const { tb, monate } = summe(), z = zeitraum() || { von: "Übergabe", bis: "" };
+        const betreuung = st.wahl.betreuung ? { s: BK.betreuung[st.wahl.betreuung], preis: tb, stufe: S[st.wahl.betreuung] } : null;
+        if (betreuung && (st.abr === "voraus" || !f.v_titel))
+          p(st.abr === "voraus" ? `Betreuung ${betreuung.stufe} – ${betreuung.s[0]}, ${monate} Monate im Voraus` : `Betreuung ${betreuung.stufe} – ${betreuung.s[0]}`,
+            st.abr === "voraus" ? `Zeitraum ${z.von} – ${z.bis}: ${betreuung.s[1]}.` : `${betreuung.s[1]}, ab ${z.von}.`, tb, "Monat", st.abr === "voraus" ? monate : 1);
         // Nur die früheren Paket-Positionen und leere Zeilen ersetzen; eigene Positionen bleiben
         $$(".fitem", rowsBox).forEach(el => { if (el.dataset.paket || !$("[data-k=title]", el).value.trim()) el.remove(); });
         const tmp = document.createElement("div"); tmp.innerHTML = pos.map(x => row(x)).join("");
         $$(".fitem", tmp).forEach((el, k) => { el.dataset.paket = "1"; if (pos[k].offen) $("[data-k=unit_net]", el).classList.add("fehlt"); });
         rowsBox.prepend(...tmp.children);
         if (!f.title.value.trim()) f.title.value = t.name;
-        // Angebot: Betreuung ist monatlich – als besondere Vereinbarung (wird mit dem Angebot unterschrieben), dazu ein Hinweis unter den Summen
+        // Angebot: Betreuung als besondere Vereinbarung (wird mit dem Angebot unterschrieben); bei Vorauszahlung steht der Betrag zusätzlich als Position in der Summe
         if (betreuung && f.v_titel) {
           $(".fverein", m).open = true;
           f.v_titel.value = `Betreuung ${betreuung.stufe} – ${betreuung.s[0]}`;
-          f.v_text.value = `Nach der Übergabe übernehmen wir die Betreuung: ${betreuung.s[1]}. Vergütung: ${eur(betreuung.preis)} netto im Monat zzgl. MwSt., ab dem Monat nach der Übergabe, monatlich kündbar.`;
+          f.v_text.value = st.abr === "voraus"
+            ? `Nach der Übergabe übernehmen wir die Betreuung: ${betreuung.s[1]}. Vergütung: ${eur(tb)} netto im Monat zzgl. MwSt. Die ersten ${monate} Monate (${z.von} – ${z.bis}) werden mit diesem Angebot im Voraus berechnet. Vor Ablauf melden wir uns wegen der Verlängerung.`
+            : `Nach der Übergabe übernehmen wir die Betreuung: ${betreuung.s[1]}. Vergütung: ${eur(tb)} netto im Monat zzgl. MwSt., monatlich im Voraus, ab ${z.von}. Mindestlaufzeit ${monate} Monate (bis ${z.bis}), danach monatlich kündbar.`;
         }
-        monatlich = betreuung ? `${eur(betreuung.preis)} netto im Monat für die Betreuung ${betreuung.stufe}` : "";
-        recalc(); zu(); toast(betreuung && f.v_titel ? "Pakete übernommen – die Betreuung steht unten als besondere Vereinbarung." : "Pakete übernommen – Positionen und Preise bitte prüfen.");
+        monatlich = betreuung && st.abr === "monatlich" ? `${eur(tb)} netto im Monat für die Betreuung ${betreuung.stufe}, ab ${z.von}, mindestens ${monate} Monate` : "";
+        recalc(); zu(); toast(betreuung && st.abr === "voraus" ? `Pakete übernommen – ${monate} Monate Betreuung stehen als Position in der Summe.` : betreuung && f.v_titel ? "Pakete übernommen – die monatliche Betreuung steht unten als besondere Vereinbarung." : "Pakete übernommen – Positionen und Preise bitte prüfen.");
       });
     });
     $("[data-vki]", m)?.addEventListener("click", async e => {
