@@ -80,6 +80,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS kunden_fragen (
   UNIQUE(project_id, frage_id)
 )`);
 db.exec("CREATE INDEX IF NOT EXISTS kunden_fragen_client ON kunden_fragen(client_id)");
+// Neue Antworten des Kunden bleiben im Board oben sichtbar („Antwort erhalten“), bis der Inhaber sie mit „Gesehen“ wegdrückt
+if (!db.prepare("PRAGMA table_info(kunden_fragen)").all().some(c => c.name === "gesehen_at")) db.exec("ALTER TABLE kunden_fragen ADD COLUMN gesehen_at TEXT");
 const ANTWORT_MAX = 1000;   // wie „Antwort eintragen“ im Board und arbeitsstand.json
 
 export function workspaceLesen(pid) {
@@ -87,7 +89,9 @@ export function workspaceLesen(pid) {
   let g = {}; try { g = JSON.parse(r.gesendet || "{}"); } catch {}
   const kb = Object.fromEntries(db.prepare("SELECT frage_id, beantwortet_at FROM kunden_fragen WHERE project_id = ? AND beantwortet_at IS NOT NULL").all(pid).map(x => [x.frage_id, x.beantwortet_at]));
   const d = reihe(r);
-  return { ...d, fragen: d.fragen.map(f => ({ ...f, gesendet: g[f.id] || null, vomKunden: kb[f.id] || null })), aktualisiert: r.updated_at };
+  // Direkt aus kunden_fragen, damit eine Antwort auch dann sichtbar bleibt, wenn Claude die Frage inzwischen aus seiner Liste genommen hat
+  const neueAntworten = db.prepare("SELECT id, frage_id, text, antwort, beantwortet_at FROM kunden_fragen WHERE project_id = ? AND beantwortet_at IS NOT NULL AND gesehen_at IS NULL ORDER BY beantwortet_at").all(pid);
+  return { ...d, fragen: d.fragen.map(f => ({ ...f, gesendet: g[f.id] || null, vomKunden: kb[f.id] || null })), neueAntworten, aktualisiert: r.updated_at };
 }
 /** Fragen im Board selbst anlegen, beantworten oder löschen */
 function teamAendern(pid, fn) {
@@ -105,7 +109,7 @@ export function antwortEintragen(pid, fid, antwort) {
 
 export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
   async function admin(req, res, p, m, user) {
-    const mm = p.match(/^\/projects\/(\d+)\/workspace(\/fragen-senden|\/fragen(?:\/([\w-]{1,40}))?)?$/); if (!mm) return null;
+    const mm = p.match(/^\/projects\/(\d+)\/workspace(\/fragen-senden|\/antworten-gesehen|\/fragen(?:\/([\w-]{1,40}))?)?$/); if (!mm) return null;
     const pr = db.prepare("SELECT p.*, c.name client_name, c.email client_email, c.company FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.id = ?").get(+mm[1]);
     if (!pr || !canProject(user, pr.id)) return json(res, 404, { error: "Projekt nicht gefunden" });
     if (!mm[2] && m === "GET") phaseNachziehen(pr.id);
@@ -132,6 +136,13 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
       return null;
     }
     if (!mm[2] && m === "GET") return json(res, 200,workspaceLesen(pr.id) || { leer: true });
+    // „Gesehen“: neue Antworten des Kunden aus dem Block „Antwort erhalten“ nehmen (einzelne über ids, sonst alle)
+    if (mm[2] === "/antworten-gesehen" && m === "POST") {
+      const d = await readJson(req), ids = Array.isArray(d.ids) ? d.ids.map(Number).filter(Boolean) : null;
+      const st = db.prepare("UPDATE kunden_fragen SET gesehen_at = datetime('now') WHERE project_id = ? AND beantwortet_at IS NOT NULL AND gesehen_at IS NULL" + (ids ? ` AND id IN (${ids.map(() => "?").join(",")})` : ""));
+      const n = st.run(pr.id, ...(ids || [])).changes;
+      return json(res, 200, { ok: true, anzahl: n });
+    }
     if (mm[2] === "/fragen-senden" && m === "POST") {
       // Offene Fragen an den Kunden schicken: als Nachricht im Kundenportal, zum Beantworten unter „Rückfragen“ im Portal
       // und – wenn der Inhaber das Häkchen lässt (Standard) – zusätzlich per E-Mail
@@ -150,7 +161,7 @@ export function createWorkspace({ json, readJson, clean, limited, SITE_URL }) {
       // denn gesendet werden nur offene Fragen).
       const merke = db.prepare(`INSERT INTO kunden_fragen(project_id, client_id, frage_id, text, gesendet_at, message_id) VALUES(?, ?, ?, ?, ?, ?)
         ON CONFLICT(project_id, frage_id) DO UPDATE SET client_id = excluded.client_id, text = excluded.text, gesendet_at = excluded.gesendet_at,
-          message_id = excluded.message_id, antwort = NULL, beantwortet_at = NULL`);
+          message_id = excluded.message_id, antwort = NULL, beantwortet_at = NULL, gesehen_at = NULL`);
       for (const f of fragen) merke.run(pr.id, pr.client_id, f.id, f.text, jetzt, msgId);
       // Karte im Chat: je Frage die Nummer aus kunden_fragen (dieselbe wie unter „Rückfragen“ im Portal), Stand und Antwort kommen beim Lesen live dazu
       const ids2 = db.prepare("SELECT id, frage_id FROM kunden_fragen WHERE project_id = ? AND message_id = ?").all(pr.id, msgId);

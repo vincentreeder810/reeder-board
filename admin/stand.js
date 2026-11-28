@@ -173,8 +173,16 @@
       <span class="ws__fk"><button type="button" class="link" data-wsf="erneut" data-id="${esc(f.id)}">↻ Erneut schicken</button><button type="button" class="link" data-wsf="antwort" data-id="${esc(f.id)}">Antwort eintragen</button><button type="button" class="link link--leise" data-wsf="loeschen" data-id="${esc(f.id)}">Löschen</button></span></div>`;
     const neuF = offen.filter(f => !f.gesendet), wegF = offen.filter(f => f.gesendet);
     const ZEIG_N = 3, ZEIG_F = 4;
+    // Neue Antworten des Kunden: bleiben oben stehen, bis du sie mit „Gesehen“ wegdrückst
+    const neuA = W.neueAntworten || [];
+    const antwortZeile = a => `<div class="ws__a"><span class="ws__ai" aria-hidden="true">✓</span><span class="ws__at"><small>${absatz(a.text)}</small><b>${absatz(a.antwort || "")}</b><small>vom Kunden beantwortet am ${tag(a.beantwortet_at)}</small></span><button type="button" class="link" data-wsa="${a.id}">✓ Gesehen</button></div>`;
+    const antwortBlock = neuA.length ? `<div class="ws__na"><div class="ws__na-kopf"><b>Antwort erhalten <em>${neuA.length}</em></b>
+        <span class="ws__na-acts">${ME.owner ? `<button type="button" class="btn btn--grad btn--sm" data-br="claude" title="Claude bekommt die Antworten im Projektordner">Mit Claude weiterarbeiten</button>` : ""}${neuA.length > 1 ? `<button type="button" class="btn btn--ghost btn--sm" data-wsa="alle">Alle gesehen</button>` : ""}</span></div>
+        <p class="ws__woher">Der Kunde hat geantwortet. Claude findet die Antworten im Projektordner – sag ihm: <b>„Übernimm die Antworten des Kunden.“</b></p>
+        ${neuA.slice(0, 4).map(antwortZeile).join("")}${weitere(neuA.length - 4, neuA.slice(4).map(antwortZeile).join(""), ["weitere Antwort", "weitere Antworten"])}</div>` : "";
     const fragenBlock = `<div class="ws__b ws__fragen"><b>Fragen an den Kunden${offen.length ? ` <em>${offen.length}</em>` : ""}</b>
-        ${!offen.length ? `<p>Keine offenen Fragen.</p>` : ""}
+        ${antwortBlock}
+        ${!offen.length && !neuA.length ? `<p>Keine offenen Fragen.</p>` : ""}
         ${wegF.length ? `<p class="ws__gruppe">Beim Kunden – wartet auf Antwort <em>${wegF.length}</em></p>` + wegF.map(frageWeg).join("") : ""}
         ${neuF.length ? `<p class="ws__gruppe">Noch nicht geschickt <em>${neuF.length}</em></p><p class="ws__woher">Von Claude gesammelt oder von dir angelegt. Zum Senden ankreuzen – oder, wenn du die Antwort schon hast, eintragen.</p>`
           + neuF.slice(0, ZEIG_F).map(frage).join("") + weitere(neuF.length - ZEIG_F, neuF.slice(ZEIG_F).map(frage).join(""), ["weitere Frage", "weitere Fragen"]) : ""}
@@ -191,6 +199,13 @@
       ${fragenBlock}`;
     window.kuerzungPruefen?.();
   }
+  // „Gesehen“: Antwort aus dem Block „Antwort erhalten“ nehmen
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-wsa]"); if (!b) return;
+    const pid = +$("#pWs").dataset.pid; b.disabled = true;
+    try { await api(`/projects/${pid}/workspace/antworten-gesehen`, { method: "POST", body: b.dataset.wsa === "alle" ? {} : { ids: [+b.dataset.wsa] } }); workspace({ id: pid }); }
+    catch (err) { toast(err.message); b.disabled = false; }
+  });
   // Eigene Fragen: anlegen, Antwort eintragen, löschen
   document.addEventListener("submit", async e => {
     const f = e.target.closest("[data-wsf-neu]"); if (!f) return; e.preventDefault();

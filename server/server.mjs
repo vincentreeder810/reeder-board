@@ -490,7 +490,7 @@ async function adminApi(req, res, url) {
   if (/^\/projects\/\d+\/(pruefung|pruefbericht)$|^\/pruefung\//.test(p)) { const r = await pruefung.admin(req, res, p, m, user, url); if (r !== null) return; }
   if (/^\/projects\/\d+\/auftrag$|^\/auftrag\/\d+/.test(p)) { const r = await auftrag.admin(req, res, p, m, user); if (r !== null) return; }
   if (p === "/assistant" || /^\/annotations\/\d+\/assist$/.test(p)) { const r = await assistant.admin(req, res, p, m, user); if (r !== null) return; }
-  if (/^\/projects\/\d+\/workspace(\/fragen-senden|\/fragen(\/[\w-]{1,40})?)?$/.test(p)) { const r = await workspace.admin(req, res, p, m, user); if (r !== null) return; }
+  if (/^\/projects\/\d+\/workspace(\/fragen-senden|\/antworten-gesehen|\/fragen(\/[\w-]{1,40})?)?$/.test(p)) { const r = await workspace.admin(req, res, p, m, user); if (r !== null) return; }
   if (p === "/stand-cli" ||/^\/projects\/\d+\/stand(\/key)?$/.test(p)) { const r = await stand.admin(req, res, p, m, user); if (r !== null) return; }
   if (p.startsWith("/security") || p === "/livegang") { const r = await security.admin(req, res, url, p, m, user); if (r !== null) return; }
   if (p === "/vereinbarungen" || /^\/vereinbarungen\/\d+(\/meldung)?$|^\/projects\/\d+\/vereinbarungen$/.test(p)) { if (!owner) return json(res, 403, { error: "Nur für Inhaber." }); const r = await vereinbarungen.admin(req, res, p, m, user); if (r !== null) return; }
