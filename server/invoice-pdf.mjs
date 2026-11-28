@@ -94,38 +94,52 @@ export function renderInvoicePdf(inv) {
       y += mm(4.5); doc.moveTo(L, y).lineTo(R, y).lineWidth(.8).strokeColor(INK).stroke(); y += mm(4.5);
     };
     // Hinweise vorab zusammenstellen, um ihren Platzbedarf zu kennen
-    const notes = [];
+    const notes = []; let anlage = null;
     if (inv.kind === "rechnung") notes.push(`Bitte überweisen Sie den Rechnungsbetrag bis zum ${dateDe(inv.due_date)} ohne Abzug${s.iban ? ` auf das unten genannte Konto (IBAN ${s.iban})` : ""}. Verwendungszweck: ${inv.number || "Rechnungsnummer"}.`);
     if (inv.kind === "storno") notes.push(`Diese Stornorechnung hebt die Rechnung ${inv.cancels_number || ""} vom ${dateDe(inv.cancels_date)} vollständig auf.`);
     if (inv.kind === "angebot") notes.push(`Dieses Angebot ist gültig bis ${dateDe(inv.valid_until)}. Sie können es in Ihrem Kundenportal ansehen, unterschreiben und verbindlich annehmen – wir freuen uns auf Ihre Zusage.`);
     if (inv.kind === "angebot" && inv.planText) notes.push(inv.planText + ". Rechnungen sind innerhalb von 14 Tagen ohne Abzug zahlbar.");
     if (inv.kind === "angebot") notes.push(`Es gelten unsere Vertragsbedingungen${inv.avv ? " sowie die Vereinbarung zur Auftragsverarbeitung nach Art. 28 DSGVO; beide sind" : "; sie sind"} bei der Annahme im Kundenportal einsehbar.`);
     { let v = inv.vereinbarung; if (typeof v === "string") { try { v = JSON.parse(v); } catch { v = null; } }
-      if (inv.kind === "angebot" && v && (v.titel || v.text)) notes.push(`Besondere Vereinbarung – ${v.titel || ""}: ${v.text || ""}${v.prozent ? ` (${String(v.prozent).replace(".", ",")} %)` : ""}`.replace(/ – : /, ": ")); }
+      if (inv.kind === "angebot" && v && (v.titel || v.text)) {
+        if (String(v.text || "").length > 320 || /\n/.test(v.text || "")) { anlage = v; notes.push(`Besondere Vereinbarung – ${v.titel || ""}: siehe Anlage. Sie gilt mit der Annahme dieses Angebots als vereinbart.`); }
+        else notes.push(`Besondere Vereinbarung – ${v.titel || ""}: ${v.text || ""}${v.prozent ? ` (${String(v.prozent).replace(".", ",")} %)` : ""}`.replace(/ – : /, ": ")); } }
     if (inv.outro) notes.push(inv.outro);
     doc.font("R").fontSize(9.5);
     const noteH = notes.map(t => doc.heightOfString(t, { width: W, lineGap: 2.5 }));
     const steuern = Object.entries(inv.vatByRate || {});
     const sumH = mm(6) * (1 + steuern.length) + mm(15);
     const restH = sumH + mm(7) + noteH.reduce((x, b) => x + b + mm(3.5), 0) - mm(3.5);   // Platz für Summen und Hinweise
+    // Kompakt-Automatik: Passt alles mit etwas kleinerer Schrift auf die erste Seite, wird es kleiner gesetzt (nie unter 88 %).
+    // Sonst bleibt die normale Größe und es wird sauber umbrochen.
+    const groessen = k => ({ t: 10 * k, d: 8.5 * k, m: 8 * k, lg: 1.8 * k, abst: mm(3.1) * k, nach: mm(1.2) * k });
+    const posHoehe = (it, G) => {
+      const einzeln = Number(it.qty) === 1 && /pauschal/i.test(it.unit || "");
+      const hT = doc.font("S").fontSize(G.t).heightOfString(it.title, { width: TW });
+      const hD = it.description ? doc.font("R").fontSize(G.d).heightOfString(it.description, { width: TW, lineGap: G.lg }) + 3 : 0;
+      return hT + hD + (einzeln ? 0 : G.m + 4.5);
+    };
+    const gesamtHoehe = G => mm(9) + inv.items.reduce((s, it) => s + posHoehe(it, G) + G.abst + G.nach, 0) + sumH + mm(8) + noteH.reduce((x, b) => x + b + mm(3.5), 0);
+    let G = groessen(1);
+    if (y + gesamtHoehe(G) > UNTEN) { for (const k of [0.94, 0.88]) { const g2 = groessen(k); if (y + gesamtHoehe(g2) <= UNTEN) { G = g2; break; } } }
     header();
     inv.items.forEach((it, i) => {
       const menge = `${qtyDe(it.qty)} ${it.unit || ""} × ${euro(it.unit_net)}`.replace(/\s+/g, " ");
       const einzeln = Number(it.qty) === 1 && /pauschal/i.test(it.unit || "");
-      const hT = doc.font("S").fontSize(10.5).heightOfString(it.title, { width: TW }), hD = it.description ? doc.font("R").fontSize(9).heightOfString(it.description, { width: TW, lineGap: 2 }) + 3 : 0, hM = einzeln ? 0 : 13;
-      const h = hT + hD + hM;
-      // Die letzte Position nimmt Summen und Hinweise mit auf die nächste Seite, damit dort nie nur die Summe allein steht
+      const h = posHoehe(it, G);
+      // Jede Position bleibt ganz. Die letzte nimmt nur den Summenblock mit, damit die Summe nie allein auf einer Seite steht;
+      // die Hinweise dürfen danach auf der nächsten Seite weiterlaufen.
       const letzte = i === inv.items.length - 1 && i > 0;
-      if (y + h > UNTEN || (letzte && y + h + mm(6) + restH > UNTEN)) { folge(); header(); }
-      doc.font("S").fontSize(10.5).fillColor(INK).text(it.title, L, y, { width: TW });
-      if (it.description) doc.font("R").fontSize(9).fillColor(INK2).text(it.description, L, doc.y + 2, { width: TW, lineGap: 2 });
-      if (!einzeln) doc.font("R").fontSize(8.5).fillColor(MUTED).text(menge, L, doc.y + 3, { width: TW, lineBreak: false });
-      doc.font("S").fontSize(10.5).fillColor(INK).text(euro(it.net), L, y, { width: W, align: "right", lineBreak: false });
-      y += h + mm(3.4); doc.moveTo(L, y - mm(1.7)).lineTo(R, y - mm(1.7)).lineWidth(.4).strokeColor(LINE).stroke(); y += mm(1.3);
+      if (y + h > UNTEN || (letzte && y + h + G.abst + G.nach + sumH > UNTEN)) { folge(); header(); }
+      doc.font("S").fontSize(G.t).fillColor(INK).text(it.title, L, y, { width: TW });
+      if (it.description) doc.font("R").fontSize(G.d).fillColor(INK2).text(it.description, L, doc.y + 2, { width: TW, lineGap: G.lg });
+      if (!einzeln) doc.font("R").fontSize(G.m).fillColor(MUTED).text(menge, L, doc.y + 3, { width: TW, lineBreak: false });
+      doc.font("S").fontSize(G.t).fillColor(INK).text(euro(it.net), L, y, { width: W, align: "right", lineBreak: false });
+      y += h + G.abst; doc.moveTo(L, y - G.abst / 2).lineTo(R, y - G.abst / 2).lineWidth(.4).strokeColor(LINE).stroke(); y += G.nach;
     });
 
-    // Passen Summen und Hinweise nicht mehr gemeinsam auf dieses Blatt, wandern sie zusammen auf das nächste
-    if (y + restH > UNTEN) folge();
+    // Der Summenblock bleibt immer zusammen; die Hinweise danach laufen Absatz für Absatz weiter
+    if (y + sumH > UNTEN) folge();
 
     // Summen: Zwischenzeilen schlicht, der Endbetrag groß unter einer kräftigen Linie
     y += mm(1);
@@ -144,6 +158,24 @@ export function renderInvoicePdf(inv) {
       doc.font("R").fontSize(9.5).fillColor(INK2).text(t, L, y, { width: W, lineGap: 2.5, height: noteH[i] + 4 });
       y += noteH[i] + mm(3.5);
     });
+
+    // Anlage: besondere Vereinbarung als eigenes Blatt – Abschnitte „§ n …“ fett, darunter der Text
+    if (anlage) {
+      folge();
+      klein("Anlage zum " + title(inv) + " " + (inv.number || ""), L, y); y += mm(6);
+      doc.font("B").fontSize(18).fillColor(INK).text("Besondere Vereinbarung", L, y, { width: W }); y = doc.y + mm(1.5);
+      if (anlage.titel) { doc.font("S").fontSize(11).fillColor(INK).text(anlage.titel + (anlage.prozent ? ` (${String(anlage.prozent).replace(".", ",")} %)` : ""), L, y, { width: W }); y = doc.y + mm(4); }
+      for (const absatz of String(anlage.text || "").split(/\n+/).map(x => x.trim()).filter(Boolean)) {
+        const kopf = /^(§\s*\d+|\d+\.)\s/.test(absatz);
+        doc.font(kopf ? "S" : "R").fontSize(kopf ? 10.5 : 9.5);
+        const h = doc.heightOfString(absatz, { width: W, lineGap: 2.5 });
+        if (y + h + (kopf ? mm(8) : 0) > UNTEN) folge();
+        if (kopf) y += mm(2);
+        doc.fillColor(kopf ? INK : INK2).text(absatz, L, y, { width: W, lineGap: 2.5 }); y = doc.y + mm(kopf ? 1 : 2.5);
+      }
+      y += mm(4);
+      doc.font("R").fontSize(8.5).fillColor(MUTED).text("Diese Vereinbarung ergänzt das Angebot und die Vertragsbedingungen. Sie wird mit der Annahme des Angebots im Kundenportal mitunterschrieben.", L, y, { width: W, lineGap: 2 });
+    }
 
     // Fußzeile und Seitenzahl auf jedem Blatt
     const blaetter = doc.bufferedPageRange();

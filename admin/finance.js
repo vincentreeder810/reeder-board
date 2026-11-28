@@ -112,7 +112,7 @@
       <header class="fedit__head"><div><p class="kicker">${isQuote ? "Angebot" : "Rechnung"} · Entwurf</p><h2>${inv.id ? "Entwurf bearbeiten" : isQuote ? "Neues Angebot" : "Neue Rechnung"}</h2></div><button type="button" class="x" data-close>✕</button></header>
       <div class="fedit__body">
         ${isQuote && !inv.locked ? `<div class="fvorl"><label>Vorlage<select id="fVorl"><option value="">– ohne Vorlage –</option></select></label>
-          <button type="button" class="btn btn--grad btn--sm" data-ki title="Entwurf aus Gesprächsnotizen, Fragebogen und Vorlagen">KI-Vorschlag</button><button type="button" class="btn btn--ghost btn--sm" data-vsave>Als Vorlage speichern</button><button type="button" class="link" data-vdel hidden>Vorlage löschen</button></div>` : ""}
+          <button type="button" class="btn btn--grad btn--sm" data-ki title="Entwurf aus Gesprächsnotizen, Fragebogen und Vorlagen">KI-Vorschlag</button><button type="button" class="btn btn--ghost btn--sm" data-pakete title="Positionen aus den Paketen des Preis-Baukastens (M / L / XXL)">Pakete wählen</button><button type="button" class="btn btn--ghost btn--sm" data-vsave>Als Vorlage speichern</button><button type="button" class="link" data-vdel hidden>Vorlage löschen</button></div>` : ""}
         ${inv.notizen ? `<details class="fnotes" open><summary>Ihre Gesprächsnotizen <small>nur für Sie, erscheinen nicht im Angebot</small></summary><p>${esc(inv.notizen)}</p></details>` : ""}
         <div class="fki" id="fKi" hidden></div>
         <div class="fhw" id="fHw" hidden><b>Hardware: zuerst nur das Konzept anbieten.</b> Was der Prototyp kostet, steht erst mit Stückliste und Bauanleitung fest. Sein Angebot erstellen Sie danach im Projekt unter „Konzept“ aus der Kalkulation – als Pauschalpreis.</div>
@@ -132,13 +132,16 @@
           <div id="fRows"></div><button type="button" class="link" data-addrow>+ Position hinzufügen</button></div>
         <div class="ftotals" id="fTotals"></div>
         ${isQuote ? `<div class="fplan"><div class="fplan__h"><b>Zahlungsplan &amp; Vertrag</b><small>Nimmt der Kunde das Angebot im Portal an, übernimmt das Board diesen Plan ins Projekt und legt jede Rechnung als Entwurf an, sobald sie fällig ist – Sie geben nur noch frei.</small></div>
+          <div class="fplan__vor"><span>Schnellwahl:</span><button type="button" class="btn btn--ghost btn--sm" data-planvor="100">Einmalig 100 %</button><button type="button" class="btn btn--ghost btn--sm" data-planvor="50">50 / 50</button><button type="button" class="btn btn--ghost btn--sm" data-planvor="30">30 / 40 / 30</button></div>
           <div id="planRows"></div><div class="fplan__foot"><button type="button" class="link" data-addplan>+ Rate hinzufügen</button><span id="planSum"></span></div>
           <label class="check"><input type="checkbox" name="avv" ${inv.avv ? "checked" : ""}> <span>Kunde bestätigt zusätzlich die <b>Vereinbarung zur Auftragsverarbeitung (AVV)</b> – nötig, wenn wir personenbezogene Daten des Kunden verarbeiten oder hosten</span></label></div>` : ""}
         ${isQuote ? `<details class="fverein" ${inv.vereinbarung ? "open" : ""}><summary>Besondere Vereinbarung <small>optional – zum Beispiel eine Umsatzbeteiligung, wenn der Preis dafür niedriger ist</small></summary>
           <div class="fgrid" style="margin-top:10px"><label>Worum geht es?<input name="v_titel" maxlength="120" value="${esc(inv.vereinbarung?.titel || "")}" placeholder="z. B. Umsatzbeteiligung"></label>
             <label>Anteil in % <small class="muted">(falls zutreffend)</small><input name="v_prozent" inputmode="decimal" value="${inv.vereinbarung?.prozent ? String(inv.vereinbarung.prozent).replace(".", ",") : ""}" placeholder="5"></label>
-            <label class="span2">Was genau gilt?<textarea name="v_text" rows="2" placeholder="z. B. 5 % des Nettoumsatzes mit dem Produkt ab Markteinführung, für 36 Monate, Abrechnung vierteljährlich.">${esc(inv.vereinbarung?.text || "")}</textarea></label></div>
-          <p class="hint" style="margin:8px 0 0">Steht im Angebot und in der Auftragsbestätigung. Mit der Annahme hängt die Vereinbarung am Projekt.</p></details>` : ""}
+            <label class="span2">Was genau gilt?<textarea name="v_text" rows="${(inv.vereinbarung?.text || "").length > 200 ? 9 : 3}" placeholder="z. B. 5 % des Nettoumsatzes mit dem Produkt ab Markteinführung, für 36 Monate, Abrechnung vierteljährlich.">${esc(inv.vereinbarung?.text || "")}</textarea></label></div>
+          <div class="fverein__ki"><button type="button" class="btn btn--ghost btn--sm" data-vki>Mit KI ausformulieren</button><small>Stichpunkte in eigenen Worten eintragen – die KI macht daraus ein sauberes Schreiben in Abschnitten. Bitte prüfen; für die Grundvorlage einmal einen Anwalt draufschauen lassen.</small></div>
+          <div class="fki" id="fVki" hidden></div>
+          <p class="hint" style="margin:8px 0 0">Längere Vereinbarungen stehen im Angebot als eigene Anlage und werden mit der Annahme im Kundenportal mitunterschrieben. Sie stehen auch in der Auftragsbestätigung. Mit der Annahme hängt die Vereinbarung am Projekt.</p></details>` : ""}
         <label>Schlusstext<textarea name="outro" rows="2">${esc(inv.outro ?? (isQuote ? "Bei Fragen sind wir jederzeit für Sie da." : "Vielen Dank für die gute Zusammenarbeit!"))}</textarea></label>
       </div>
       <footer class="fedit__foot">
@@ -172,6 +175,10 @@
         const ok = !rows.length || Math.abs(sum - 100) < .01; $("#planSum", m).innerHTML = rows.length ? `<b class="${ok ? "ok" : "warn"}">${String(Math.round(sum * 100) / 100).replace(".", ",")} %</b>${ok ? "" : " – muss 100 % ergeben"}` : "ohne Zahlungsplan"; }
     };
     rowsBox.addEventListener("input", recalc); rowsBox.addEventListener("change", recalc); planBox?.addEventListener("input", recalc); recalc();
+    const PLAN_VOR = { 100: [{ label: "Gesamtbetrag nach Abnahme", pct: 100, on: "Launch" }],
+      50: [{ label: "Anzahlung bei Auftrag", pct: 50, on: "Auftrag" }, { label: "Restzahlung nach Abnahme", pct: 50, on: "Launch" }],
+      30: [{ label: "Anzahlung bei Auftrag", pct: 30, on: "Auftrag" }, { label: "Freigabe Prototyp", pct: 40, on: "Prototyp" }, { label: "Abnahme & Launch", pct: 30, on: "Launch" }] };
+    $$("[data-planvor]", m).forEach(b => b.addEventListener("click", () => { planBox.innerHTML = PLAN_VOR[b.dataset.planvor].map(planRow).join(""); recalc(); }));
     // KI-Vorschlag: Der Server liest Notizen, Fragebogen, Projekt und Vorlagen und liefert einen Entwurf samt Rückfragen.
     // Übernommen wird in die Felder; verschickt wird nichts.
     $("[data-ki]", m)?.addEventListener("click", async e => {
@@ -185,11 +192,90 @@
         if (r.title) f.title.value = r.title; if (r.intro) f.intro.value = r.intro; if (r.outro) f.outro.value = r.outro;
         if (r.items?.length) { rowsBox.innerHTML = r.items.map(it => row({ ...it, unit_net: it.unit_net ?? 0 })).join("");
           $$(".fitem", rowsBox).forEach((el, i) => { if (r.items[i].unit_net == null) $("[data-k=unit_net]", el).classList.add("fehlt"); }); recalc(); }
+        if (planBox && r.plan?.length) { planBox.innerHTML = r.plan.map(planRow).join(""); recalc(); }
         const box = $("#fKi", m); box.hidden = false;
         box.innerHTML = `<b>Vorschlag der KI übernommen – bitte prüfen</b>${r.hinweis ? `<p>${esc(r.hinweis)}</p>` : ""}${r.fragen?.length ? `<p>Dazu fehlt noch etwas:</p><ul>${r.fragen.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}${r.items?.some(it => it.unit_net == null) ? `<p>Rot markierte Preise sind offen.</p>` : ""}`;
         box.scrollIntoView({ behavior: "smooth", block: "nearest" });
       } catch (e2) { toast(e2.message); }
       finally { b.disabled = false; b.textContent = "KI-Vorschlag"; }
+    });
+    /* Pakete aus dem Preis-Baukasten der Website (assets/data/baukasten.json): Auswahl → Positionen mit Richtwert-Preisen.
+       Der Wunsch des Kunden aus der Anfrage (Terminbuchung über den Baukasten) ist vorausgewählt. Danach frei änderbar. */
+    $("[data-pakete]", m)?.addEventListener("click", async () => {
+      let BK;
+      try { BK = await (await fetch("/assets/data/baukasten.json", { cache: "no-cache" })).json(); } catch { return toast("Die Preisliste der Website ließ sich nicht laden."); }
+      const S = ["M", "L", "XXL"], eur = n => n.toLocaleString("de-DE") + " €";
+      // Wunsch aus der Anfrage, z. B. „Website: Design XXL, Umfang M, …, Online-Terminbuchung · Richtwert ab 4.500 €“
+      const cid = +f.client_id.value, w = cid ? await api(`/finance/clients/${cid}/wunsch`).catch(() => null) : null;
+      const st = { typ: "website", wahl: { design: 0, umfang: 0, qualitaet: 0, inhalte: 0, betreuung: 0 }, extras: new Set() };
+      if (w?.text) {
+        const [kopf, rest = ""] = w.text.split(":"), teile = rest.split("·")[0].split(",").map(x => x.trim());
+        const ty = BK.typen.find(y => kopf.trim() === y.name); if (ty) st.typ = ty.k;
+        for (const tl of teile) {
+          const b = [...BK.bausteine, { k: "betreuung", name: "Betreuung" }].find(x => tl.startsWith(x.name + " ")); const s = b && S.indexOf(tl.slice(b.name.length + 1));
+          if (b && s >= 0) st.wahl[b.k] = s; const e = BK.extras.find(x => x.name === tl); if (e) st.extras.add(e.k);
+        }
+      }
+      const d = document.createElement("div"); d.className = "modal";
+      const typ = () => BK.typen.find(y => y.k === st.typ);
+      const zeichnen = () => {
+        const t = typ(); let summe = t.grund;
+        for (const b of BK.bausteine) summe += t.preise[b.k][st.wahl[b.k]];
+        for (const e of BK.extras) if (st.extras.has(e.k) && !(e.nichtBei || []).includes(t.k) && e.preis) summe += e.preis;
+        d.innerHTML = `<form class="card pkw"><header class="fedit__head"><div><p class="kicker">Angebot</p><h2>Pakete wählen</h2></div><button type="button" class="x" data-zu>✕</button></header>
+          <p class="hint" style="margin:0 0 12px">Richtwerte aus dem Preis-Baukasten der Website. Daraus entstehen Positionen, die Sie danach frei ändern und ergänzen können.${w?.text ? ` <b>Wunsch aus der Anfrage ist vorausgewählt:</b> ${esc(w.text)}` : ""}</p>
+          <div class="pkw__typen">${BK.typen.map(y => `<label class="pkw__t ${y.k === st.typ ? "is-on" : ""}"><input type="radio" name="typ" value="${y.k}" ${y.k === st.typ ? "checked" : ""}><b>${esc(y.name)}</b><small>ab ${eur(y.grund)}</small></label>`).join("")}</div>
+          ${BK.bausteine.map(b => `<div class="pkw__z"><b>${esc(b.name)}</b><div class="pkw__st">${b.stufen.map((s, i) => `<label class="pkw__s ${st.wahl[b.k] === i ? "is-on" : ""}"><input type="radio" name="${b.k}" value="${i}" ${st.wahl[b.k] === i ? "checked" : ""}><em>${S[i]}</em> ${esc(s[0])}<small>${t.preise[b.k][i] ? "+ " + eur(t.preise[b.k][i]) : "inklusive"}</small></label>`).join("")}</div></div>`).join("")}
+          <div class="pkw__z"><b>Extras</b><div class="pkw__st pkw__st--x">${BK.extras.filter(e => !(e.nichtBei || []).includes(t.k)).map(e => `<label class="pkw__s ${st.extras.has(e.k) ? "is-on" : ""}"><input type="checkbox" name="x" value="${e.k}" ${st.extras.has(e.k) ? "checked" : ""}>${esc(e.name)}<small>${e.preis == null ? "Preis offen" : "+ " + eur(e.preis)}</small></label>`).join("")}</div></div>
+          <div class="pkw__z"><b>Betreuung</b><div class="pkw__st">${BK.betreuung.map((s, i) => `<label class="pkw__s ${st.wahl.betreuung === i ? "is-on" : ""}"><input type="radio" name="betreuung" value="${i}" ${st.wahl.betreuung === i ? "checked" : ""}><em>${S[i]}</em> ${esc(s[0])}<small>${i ? eur(t.betreuung[i]) + " / Monat" : "keine"}</small></label>`).join("")}</div></div>
+          <div class="pkw__z"><b>Aufschlag</b><div class="pkw__auf"><input name="aufTitel" placeholder="z. B. Individuelle Mehrarbeit" value="${esc(st.aufTitel || "")}"><input name="aufBetrag" inputmode="decimal" placeholder="Betrag netto, z. B. 500" value="${esc(st.aufBetrag || "")}"></div></div>
+          <footer class="pkw__fuss"><span>Richtwert <b>${eur(summe)}</b> netto${st.wahl.betreuung ? ` + ${eur(t.betreuung[st.wahl.betreuung])} / Monat` : ""}</span>
+            <label class="check"><input type="checkbox" name="ersetzen" ${st.ersetzen !== false ? "checked" : ""}> vorhandene Positionen ersetzen</label>
+            <button type="submit" class="btn btn--grad">Übernehmen</button></footer></form>`;
+      };
+      zeichnen(); document.body.appendChild(d);
+      const zu = () => d.remove();
+      d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-zu]")) zu(); });
+      d.addEventListener("input", e => { const i = e.target; if (i.name === "aufTitel") st.aufTitel = i.value; if (i.name === "aufBetrag") st.aufBetrag = i.value; });
+      d.addEventListener("change", e => {
+        const i = e.target;
+        if (i.name === "typ") st.typ = i.value; else if (i.name === "x") i.checked ? st.extras.add(i.value) : st.extras.delete(i.value);
+        else if (i.name === "ersetzen") { st.ersetzen = i.checked; return; } else if (st.wahl[i.name] !== undefined) st.wahl[i.name] = +i.value; else return;
+        zeichnen();
+      });
+      d.addEventListener("submit", e => {
+        e.preventDefault(); const t = typ(), pos = [];
+        const p = (title, description, euro) => pos.push({ title, description, qty: 1, unit: "pauschal", unit_net: euro == null ? 0 : Math.round(euro * 100), vat_rate: rate, offen: euro == null });
+        const b0 = BK.bausteine.find(b => b.k === "design");
+        p(`${t.name} – Grundpaket`, `Kleinste Version: ${t.umfang[0]}, Design „${b0.stufen[0][0]}“, Prüfbericht nach jedem Stand, technische Optimierung für Google.`, t.grund);
+        for (const b of BK.bausteine) { const i = st.wahl[b.k]; if (i) p(`${b.name} ${S[i]} – ${b.stufen[i][0]}`, b.k === "umfang" ? t.umfang[i] : b.stufen[i][1], t.preise[b.k][i]); }
+        for (const x of BK.extras) if (st.extras.has(x.k) && !(x.nichtBei || []).includes(t.k)) p(x.name, x.hinweis ? `Hinweis: ${x.hinweis}.` : "", x.preis);
+        const aufB = parseEuro(st.aufBetrag || ""); if ((st.aufTitel || "").trim() && aufB) p(st.aufTitel.trim(), "", aufB / 100);
+        const neu = pos.map(x => row({ ...x, unit_net: x.unit_net })).join("");
+        if (st.ersetzen !== false) rowsBox.innerHTML = neu; else rowsBox.insertAdjacentHTML("beforeend", neu);
+        $$(".fitem", rowsBox).forEach(el => { const t2 = $("[data-k=title]", el).value; if (pos.find(x => x.offen && x.title === t2)) $("[data-k=unit_net]", el).classList.add("fehlt"); });
+        if (!f.title.value.trim()) f.title.value = t.name;
+        // Betreuung ist monatlich: nicht als einmalige Position, sondern als besondere Vereinbarung (wird mit dem Angebot unterschrieben)
+        if (st.wahl.betreuung && f.v_titel) {
+          const s = BK.betreuung[st.wahl.betreuung]; $(".fverein", m).open = true;
+          f.v_titel.value = `Betreuung ${S[st.wahl.betreuung]} – ${s[0]}`;
+          f.v_text.value = `Nach der Übergabe übernehmen wir die Betreuung: ${s[1]}. Vergütung: ${eur(t.betreuung[st.wahl.betreuung])} netto im Monat zzgl. MwSt., ab dem Monat nach der Übergabe, monatlich kündbar.`;
+        }
+        recalc(); zu(); toast("Pakete übernommen – Positionen und Preise bitte prüfen.");
+      });
+    });
+    $("[data-vki]", m)?.addEventListener("click", async e => {
+      const b = e.currentTarget, d = collect();
+      if (!d.client_id) return toast("Bitte zuerst den Kunden wählen.");
+      if (!f.v_text.value.trim() && !f.v_titel.value.trim()) return toast("Bitte erst in eigenen Worten eintragen, was gelten soll.");
+      b.disabled = true; b.textContent = "Wird formuliert …";
+      try {
+        const r = await api("/finance/agreement-draft", { method: "POST", body: { client_id: d.client_id, project_id: d.project_id, titel: f.v_titel.value, text: f.v_text.value, prozent: f.v_prozent.value, angebot_titel: d.title, positionen: d.items.map(x => x.title) } });
+        if (r.titel) f.v_titel.value = r.titel; f.v_text.value = r.text; f.v_text.rows = 12;
+        const box = $("#fVki", m); box.hidden = false;
+        box.innerHTML = `<b>Ausformuliert – bitte prüfen und bei Bedarf ändern</b>${r.fehlt?.length ? `<p>Dazu fehlt noch etwas:</p><ul>${r.fehlt.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
+      } catch (e2) { toast(e2.message); }
+      finally { b.disabled = false; b.textContent = "Mit KI ausformulieren"; }
     });
     rowsBox.addEventListener("input", e => e.target.classList?.remove("fehlt"));
     // Vorlagen: füllen Titel, Texte und Positionen; die aktuelle Fassung lässt sich als Vorlage speichern
@@ -205,13 +291,15 @@
         const zusatz = f.title.value.replace(/^Entwicklungskonzept\s*/, "").trim();
         f.title.value = [v.title, f.project_id.selectedOptions[0]?.value ? f.project_id.selectedOptions[0].textContent : zusatz].filter(Boolean).join(" – ").slice(0, 200);
         if (v.intro) f.intro.value = v.intro; if (v.outro) f.outro.value = v.outro;
-        rowsBox.innerHTML = (v.items || []).map(row).join(""); recalc();
+        rowsBox.innerHTML = (v.items || []).map(row).join("");
+        if (planBox && v.plan?.length) planBox.innerHTML = v.plan.map(planRow).join("");
+        recalc();
       });
       $("[data-vsave]", m).addEventListener("click", async () => {
         const d = collect(); if (!d.items.length) return toast("Erst mindestens eine Position eintragen.");
-        const name = await UI.prompt("Als Vorlage speichern", { label: "Name der Vorlage. Ein vorhandener Name wird überschrieben. Gespeichert werden Titel, Texte, Positionen und Preise.", value: vorlagen[+vSel.value]?.name || "", ok: "Speichern" });
+        const name = await UI.prompt("Als Vorlage speichern", { label: "Name der Vorlage. Ein vorhandener Name wird überschrieben. Gespeichert werden Titel, Texte, Positionen, Preise und der Zahlungsplan.", value: vorlagen[+vSel.value]?.name || "", ok: "Speichern" });
         if (!name || !name.trim()) return;
-        const neu = { name: name.trim(), title: (vorlagen[+vSel.value]?.title || d.title || "").split(" – ")[0], intro: d.intro, outro: d.outro, items: d.items };
+        const neu = { name: name.trim(), title: (vorlagen[+vSel.value]?.title || d.title || "").split(" – ")[0], intro: d.intro, outro: d.outro, items: d.items, plan: d.plan || [] };
         const liste = [...vorlagen.filter(v => v.name !== neu.name).map(inEuro), neu].sort((a, b) => a.name.localeCompare(b.name));
         try { vorlagen = await api("/finance/templates", { method: "PUT", body: { templates: liste } }); fuellen(); toast("Vorlage gespeichert"); } catch (e2) { toast(e2.message); }
       });

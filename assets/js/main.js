@@ -594,6 +594,8 @@ if (booker) {
   if (q.get("art")) { const ziel = /website/i.test(q.get("art")) ? "Website" : /hardware/i.test(q.get("art")) ? "Hardware" : "Software"; $$('#topics input').forEach(i => { if (i.value === ziel) i.checked = true; }); }
   if ((q.get("demo") || typ) && !typ.startsWith("hw_") && !topics().length) $$('#topics input').forEach(i => { if (i.value === "Software") i.checked = true; });
   if (q.get("modell")) state.extra = `Interesse am Modell: ${q.get("modell")}`;
+  // Aus dem Preis-Baukasten (Seite „Preise“): die Auswahl kommt als Notiz mit in die Anfrage
+  if (q.get("auswahl")) $("#bMsg").value = `Meine Auswahl im Preis-Baukasten: ${q.get("auswahl").slice(0, 600)}\n\n`;
   if (q.get("bezug")) $("#bMsg").value = `Ähnlich wie „${q.get("bezug")}“: `;
 
   serverReady.then(() => { state.type = ""; syncType(); seitenleiste(); if (topics().length && (q.get("typ") || q.get("demo") || q.get("art"))) teil(true, false); if (!serverMode) renderCal(); });
@@ -703,4 +705,73 @@ if (fab) {
     b.type = "button"; b.className = "mfold__btn"; b.textContent = "Mehr zu " + name; w.after(b);
     b.addEventListener("click", () => { const auf = w.classList.toggle("is-auf"); b.classList.toggle("is-auf", auf); b.textContent = auf ? "Weniger anzeigen" : "Mehr zu " + name; });
   });
+})();
+
+
+/* =========================================================
+   Preis-Baukasten (Seite „Preise“, #baukasten)
+   RICHTWERTE – hier anpassen. Preise in Euro netto, einmalig; Betreuung monatlich.
+   Je Baustein drei Stufen [M, L, XXL]; M ist immer inklusive.
+   ========================================================= */
+let BAUKASTEN = null;   // wird aus assets/data/baukasten.json geladen (gemeinsam mit dem Board)
+(async () => {
+  const box = $("[data-baukasten]"); if (!box) return;
+  try { BAUKASTEN = await (await fetch("assets/data/baukasten.json", { cache: "no-cache" })).json(); } catch { return; }   // ohne Datei bleibt der Hinweis aus <noscript> bzw. die Tabelle
+  const S = ["M", "L", "XXL"], eur = n => n.toLocaleString("de-DE") + " €";
+  const q = new URLSearchParams(location.search);
+  const st = { typ: BAUKASTEN.typen.some(t => t.k === q.get("typ")) ? q.get("typ") : "website", wahl: { design: 0, umfang: 0, qualitaet: 0, inhalte: 0, betreuung: 0 }, extras: new Set() };
+  const typ = () => BAUKASTEN.typen.find(t => t.k === st.typ);
+  const preisText = n => n === 0 ? "inklusive" : "+ " + eur(n);
+  function summe() {
+    const t = typ(); let einmal = t.grund;
+    for (const b of BAUKASTEN.bausteine) einmal += t.preise[b.k][st.wahl[b.k]];
+    let anfrage = false;
+    for (const e of BAUKASTEN.extras) if (st.extras.has(e.k) && !(e.nichtBei || []).includes(t.k)) { if (e.preis == null) anfrage = true; else einmal += e.preis; }
+    return { einmal, monat: t.betreuung[st.wahl.betreuung], anfrage };
+  }
+  const stufeKarte = (gruppe, i, titel, text, preis, extra = "") => `<label class="bk__s ${st.wahl[gruppe] === i ? "is-on" : ""}">
+      <input type="radio" name="bk-${gruppe}" value="${i}" ${st.wahl[gruppe] === i ? "checked" : ""}>
+      <span class="bk__sz">${S[i]}</span><b>${titel}</b><span class="bk__st">${text}</span><span class="bk__sp">${preis}</span>${extra}</label>`;
+  function zeile(b) {
+    const t = typ();
+    return `<div class="bk__row"><div class="bk__rk"><h3>${b.name}</h3>${b.beispiele ? `<a href="${t.beispiele}" class="bk__bsp">So sieht das aus →</a>` : ""}</div>
+      <div class="bk__stufen">${b.stufen.map((s, i) => stufeKarte(b.k, i, s[0], b.k === "umfang" ? t.umfang[i] : s[1], preisText(t.preise[b.k][i]))).join("")}</div></div>`;
+  }
+  function render() {
+    const t = typ(), x = summe();
+    const auswahl = BAUKASTEN.bausteine.map(b => `${b.name} ${S[st.wahl[b.k]]}`).concat(st.wahl.betreuung ? [`Betreuung ${S[st.wahl.betreuung]}`] : []);
+    const extrasAn = BAUKASTEN.extras.filter(e => st.extras.has(e.k) && !(e.nichtBei || []).includes(t.k));
+    box.innerHTML = `<div class="bk__main">
+        <div class="bk__row bk__row--typ"><div class="bk__rk"><h3>Was soll entstehen?</h3></div>
+          <div class="bk__typen">${BAUKASTEN.typen.map(y => `<label class="bk__typ ${y.k === st.typ ? "is-on" : ""}"><input type="radio" name="bk-typ" value="${y.k}" ${y.k === st.typ ? "checked" : ""}><b>${y.name}</b><span>${y.kurz}</span><em>ab ${eur(y.grund)}</em></label>`).join("")}</div></div>
+        ${BAUKASTEN.bausteine.map(zeile).join("")}
+        <div class="bk__row"><div class="bk__rk"><h3>Extras</h3><span class="bk__rh">einzeln dazu</span></div>
+          <div class="bk__extras">${BAUKASTEN.extras.filter(e => !(e.nichtBei || []).includes(t.k)).map(e => `<label class="bk__x ${st.extras.has(e.k) ? "is-on" : ""}"><input type="checkbox" value="${e.k}" ${st.extras.has(e.k) ? "checked" : ""}><b>${e.name}</b><span>${e.preis == null ? "auf Anfrage" : "+ " + eur(e.preis)}${e.hinweis ? ` · ${e.hinweis}` : ""}</span></label>`).join("")}${t.k === "shop" ? `<p class="bk__rh bk__rh--voll">Online-Zahlung ist beim Shop schon enthalten.</p>` : ""}</div></div>
+        <div class="bk__row"><div class="bk__rk"><h3>Betreuung danach</h3><span class="bk__rh">monatlich</span></div>
+          <div class="bk__stufen">${BAUKASTEN.betreuung.map((s, i) => stufeKarte("betreuung", i, s[0], s[1], i ? `${eur(t.betreuung[i])} / Monat` : "nicht enthalten")).join("")}</div></div>
+      </div>
+      <aside class="bk__sum" id="bkSum" aria-live="polite">
+        <p class="bk__sk">Ihr Richtwert · ${t.name}</p>
+        <p class="bk__preis"><small>ab</small> ${eur(x.einmal)}</p>
+        <p class="bk__monat">${x.monat ? `+ ${eur(x.monat)} im Monat für die Betreuung` : "einmalig, ohne laufende Betreuung"}${x.anfrage ? "<br>+ Anbindung nach Aufwand" : ""}</p>
+        <ul class="bk__liste">${auswahl.map(a => `<li>${a}</li>`).join("")}${extrasAn.map(e => `<li>${e.name}</li>`).join("")}</ul>
+        <p class="bk__disc">Richtwert zzgl. Einrichtung nach Aufwand und MwSt. Die Preise variieren je nach Projekt und werden individuell zusammengestellt – verbindlich ist erst das Angebot nach dem Erstgespräch.</p>
+        <a class="btn btn--lime bk__cta" href="termin.html?art=${t.k === "website" ? "Website" : "Software"}&amp;auswahl=${encodeURIComponent(`${t.name}: ${auswahl.concat(extrasAn.map(e => e.name)).join(", ")} · Richtwert ab ${eur(x.einmal)}${x.monat ? ` + ${eur(x.monat)}/Monat` : ""}`)}">Mit dieser Auswahl Erstgespräch buchen <span class="arr">→</span></a>
+        <a class="bk__bsp bk__bsp--sum" href="${t.beispiele}">Beispiele: ${t.viele} ansehen →</a>
+      </aside>`;
+    const bar = $("#bkBar"); if (bar) bar.innerHTML = `<span><small>Richtwert ab</small><b>${eur(x.einmal)}</b>${x.monat ? `<small>+ ${eur(x.monat)}/Monat</small>` : ""}</span><a href="#bkSum" class="btn btn--lime">Übersicht <span class="arr">↓</span></a>`;
+  }
+  box.addEventListener("change", e => {
+    const i = e.target; if (!i.name && i.type !== "checkbox") return;
+    if (i.name === "bk-typ") st.typ = i.value;
+    else if (i.name?.startsWith("bk-")) st.wahl[i.name.slice(3)] = +i.value;
+    else if (i.type === "checkbox") i.checked ? st.extras.add(i.value) : st.extras.delete(i.value);
+    const y = scrollY; render(); scrollTo(0, y);
+  });
+  // Handy: kleine Leiste unten mit dem aktuellen Richtwert, solange der Baukasten zu sehen ist
+  const bar = document.createElement("div"); bar.className = "bk__bar"; bar.id = "bkBar"; document.body.appendChild(bar);
+  render();
+  const sec = $("#baukasten");
+  new IntersectionObserver(([en]) => document.body.classList.toggle("bk-sicht", en.isIntersecting), { rootMargin: "-30% 0px -30% 0px" }).observe(sec);
+  if (q.get("typ") && location.hash !== "#baukasten") sec.scrollIntoView();
 })();

@@ -18,7 +18,8 @@ NAV = [
         ("leistungen.html#beratung", "Beratung & Konzept"), ("leistungen.html#anpassung", "Bestehende Software anpassen")]),
     ("hardware", "Hardware", "", [("hardware.html", "Überblick"), ("hardware.html#schritte", "So läuft es ab"), ("produkte.html#hardware", "Hardware-Produkte")]),
     ("produkte", "Produkte", "", [("produkte.html#software", "Software-Produkte"), ("produkte.html#hardware", "Hardware-Produkte")]),
-    ("modelle", "Preise", "", []),
+    ("beispiele", "Beispiele", "", [("beispiele.html", "Überblick"), ("beispiele.html#websites", "Websites"), ("beispiele.html#shops", "Online-Shops"), ("beispiele.html#plattformen", "Plattformen & Portale"), ("beispiele.html#software", "Software für Betriebe"), ("beispiele.html#apps", "Apps"), ("beispiele.html#ki", "KI")]),
+    ("modelle", "Preise", "", [("modelle.html#baukasten", "Preis-Baukasten"), ("modelle.html#neu", "Bezahlmodelle"), ("modelle.html#wege", "Andere Wege")]),
     ("arbeitsweise", "So arbeiten wir", "ablauf projekte", [("arbeitsweise.html", "Arbeitsweise & KI"), ("ablauf.html", "Ablauf & FAQ"), ("projekte.html", "Projekte")]),
 ]
 CHEV = '<svg class="nav__chev" viewBox="0 0 10 6" width="9" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
@@ -53,7 +54,7 @@ FOOTER = f'''<footer class="footer">
       <p class="footer__small">Software und Hardware aus Deutschland: digitale Lösungen mit KI, physische Produkte vom Konzept bis zum Prototyp – und eigene Produkte für Bildung und Gesellschaft.</p>
     </div>
     <div class="footer__col"><b>Leistungen</b><a href="leistungen.html#websites">Websites &amp; Web-Apps</a><a href="leistungen.html#telefon">KI-Telefonassistent</a><a href="leistungen.html#praxis">Praxissysteme</a><a href="hardware.html">Hardware-Entwicklung</a><a href="produkte.html">Eigene Produkte</a></div>
-    <div class="footer__col"><b>Unternehmen</b><a href="modelle.html">Angebote &amp; Preise</a><a href="projekte.html">Projekte</a><a href="arbeitsweise.html">Arbeitsweise &amp; KI</a><a href="ablauf.html">Ablauf &amp; FAQ</a><a href="termin.html">Termin buchen</a></div>
+    <div class="footer__col"><b>Unternehmen</b><a href="beispiele.html">Beispiele</a><a href="modelle.html">Angebote &amp; Preise</a><a href="modelle.html#baukasten">Preis-Baukasten</a><a href="projekte.html">Projekte</a><a href="arbeitsweise.html">Arbeitsweise &amp; KI</a><a href="ablauf.html">Ablauf &amp; FAQ</a><a href="termin.html">Termin buchen</a></div>
     <div class="footer__col"><b>Kontakt</b><a href="mailto:{EMAIL}" class="js-mail">{EMAIL}</a><a href="login">Kundenportal</a><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a></div>
   </div>
   <div class="footer__big" aria-hidden="true">Reeder.</div>
@@ -76,6 +77,16 @@ ORG = {
 def faq_ld(body):
     qa = re.findall(r"<summary>(.*?)</summary><p>(.*?)</p>", body, re.S)
     return {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": html.unescape(q), "acceptedAnswer": {"@type": "Answer", "text": html.unescape(re.sub("<.*?>", "", a))}} for q, a in qa]}
+
+# Richtwerte für Suchmaschinen (Preise-Seite und Beispiele): Leistung mit Mindestpreis
+PREIS_LD = [("Website erstellen lassen", "Firmen-Website, individuell gestaltet und für Google optimiert", 1500),
+            ("Online-Shop erstellen lassen", "Online-Shop von Grund auf, ohne Shopify oder externe Dienstleister", 3000),
+            ("Web-App entwickeln lassen", "Plattformen und Portale, z. B. Buchungsplattform oder Kundenportal", 3000),
+            ("Software für Betriebe entwickeln lassen", "Branchensoftware wie Patienten- oder Auftragsverwaltung", 5000)]
+def preis_ld():
+    return {"@type": "OfferCatalog", "name": "Richtwerte für Websites, Online-Shops, Web-Apps und Software", "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": n, "description": d, "provider": {"@id": DOMAIN + "/#org"}, "areaServed": "DE"},
+         "priceSpecification": {"@type": "PriceSpecification", "minPrice": p, "priceCurrency": "EUR", "valueAddedTaxIncluded": False}} for n, d, p in PREIS_LD]}
 
 def crumbs(name, path):
     return {"@type": "BreadcrumbList", "itemListElement": [
@@ -119,10 +130,14 @@ PAGES = [
          title="Ablauf & FAQ: So arbeiten wir | Reeder Software GmbH",
          desc="Vom kostenlosen Erstgespräch über Konzept und kostenlosen Prototyp bis zur Einrichtung: So läuft ein Softwareprojekt mit Reeder Software. Plus Antworten auf häufige Fragen.",
          fraunces=False, ld=lambda b: [crumbs("Ablauf & FAQ", "ablauf.html"), faq_ld(b)]),
+    dict(file="beispiele.html", page="beispiele", path="beispiele.html",
+         title="Beispiele: Website, Online-Shop & Software erstellen lassen | Reeder Software",
+         desc="Beispiele zum Durchklicken: Firmen-Websites, Online-Shops ohne Shopify, Buchungsplattformen, Kundenportale, Patienten- und Auftragsverwaltung – mit Vorteilen und Richtwerten ab 1.500 €.",
+         fraunces=False, ld=lambda b: [crumbs("Beispiele", "beispiele.html"), preis_ld(), faq_ld(b)]),
     dict(file="modelle.html", page="modelle", path="modelle.html",
-         title="Angebote & Preise: Beratung, Neuentwicklung, Anpassung | Reeder Software",
-         desc="Vier Wege zu Ihrer Software: kostenlose Beratung, Neuentwicklung (Festpreis, Betreuung oder Signature ohne Entwicklungskosten), Reeder-Software angepasst oder bestehende Software verbessert.",
-         fraunces=False, ld=lambda b: [crumbs("Angebote & Preise", "modelle.html"), faq_ld(b)]),
+         title="Preise: Was kostet eine Website, ein Online-Shop oder Software? | Reeder Software",
+         desc="Website ab 1.500 €, Online-Shop ab 3.000 €, Web-App ab 3.000 €, Software ab 5.000 € – Richtwerte im interaktiven Preis-Baukasten, für Google optimiert. Dazu Festpreis, Betreuung oder Signature.",
+         fraunces=False, ld=lambda b: [crumbs("Angebote & Preise", "modelle.html"), preis_ld(), faq_ld(b)]),
     dict(file="arbeitsweise.html", page="arbeitsweise", path="arbeitsweise.html",
          title="So entstehen unsere Produkte: Softwareentwicklung mit KI | Reeder Software",
          desc="Wir programmieren mit KI – und zeigen offen, wie. Warum es auf die Menschen ankommt, die die KI führen, und was Sie davon haben: schnellere Prototypen, faire Preise, geprüfte Qualität.",

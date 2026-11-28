@@ -1,0 +1,287 @@
+{
+  "typen": [
+    {
+      "k": "website",
+      "name": "Website",
+      "viele": "Websites",
+      "kurz": "Firmen-Website, Landingpage",
+      "grund": 1500,
+      "beispiele": "beispiele.html#websites",
+      "preise": {
+        "design": [
+          0,
+          1000,
+          3000
+        ],
+        "umfang": [
+          0,
+          1000,
+          3000
+        ],
+        "qualitaet": [
+          0,
+          250,
+          750
+        ],
+        "inhalte": [
+          0,
+          250,
+          750
+        ]
+      },
+      "betreuung": [
+        0,
+        30,
+        99
+      ],
+      "umfang": [
+        "bis 5 Seiten",
+        "bis 12 Seiten, mit News oder Blog",
+        "beliebig viele Seiten, mehrsprachig vorbereitet"
+      ]
+    },
+    {
+      "k": "shop",
+      "name": "Online-Shop",
+      "viele": "Online-Shops",
+      "kurz": "ohne Shopify oder externe Dienstleister",
+      "grund": 3000,
+      "beispiele": "beispiele.html#shops",
+      "preise": {
+        "design": [
+          0,
+          2000,
+          6000
+        ],
+        "umfang": [
+          0,
+          2000,
+          6000
+        ],
+        "qualitaet": [
+          0,
+          500,
+          1500
+        ],
+        "inhalte": [
+          0,
+          500,
+          1500
+        ]
+      },
+      "betreuung": [
+        0,
+        59,
+        199
+      ],
+      "umfang": [
+        "bis 50 Produkte",
+        "bis 500 Produkte, mit Varianten (z. B. Größe, Farbe)",
+        "unbegrenzt, mit Filtern, Kundenpreisen und Schnittstellen"
+      ]
+    },
+    {
+      "k": "webapp",
+      "name": "Plattform & Portal",
+      "viele": "Plattformen & Portale",
+      "kurz": "Web-App für Buchung, Kundenportal, Community",
+      "grund": 3000,
+      "beispiele": "beispiele.html#plattformen",
+      "preise": {
+        "design": [
+          0,
+          2000,
+          6000
+        ],
+        "umfang": [
+          0,
+          2000,
+          6000
+        ],
+        "qualitaet": [
+          0,
+          500,
+          1500
+        ],
+        "inhalte": [
+          0,
+          500,
+          1500
+        ]
+      },
+      "betreuung": [
+        0,
+        59,
+        199
+      ],
+      "umfang": [
+        "eine Kernfunktion (z. B. Buchung)",
+        "bis drei Funktionen mit Benutzerkonten",
+        "umfangreiche Plattform mit Rollen und Verwaltung"
+      ]
+    },
+    {
+      "k": "software",
+      "name": "Software für Betriebe",
+      "viele": "Software für Betriebe",
+      "kurz": "z. B. Patienten- oder Auftragsverwaltung",
+      "grund": 5000,
+      "beispiele": "beispiele.html#software",
+      "preise": {
+        "design": [
+          0,
+          3000,
+          9000
+        ],
+        "umfang": [
+          0,
+          3000,
+          9000
+        ],
+        "qualitaet": [
+          0,
+          750,
+          2250
+        ],
+        "inhalte": [
+          0,
+          750,
+          2250
+        ]
+      },
+      "betreuung": [
+        0,
+        89,
+        299
+      ],
+      "umfang": [
+        "ein Modul (z. B. Terminplanung)",
+        "bis drei Module (z. B. Termine, Kundenakte, Rechnungen)",
+        "komplettes System mit allen Modulen"
+      ]
+    }
+  ],
+  "bausteine": [
+    {
+      "k": "design",
+      "name": "Design",
+      "beispiele": true,
+      "stufen": [
+        [
+          "Klassisch",
+          "Klassisch hochwertiges Design, leichte Animationen"
+        ],
+        [
+          "Individuell",
+          "Individuell für Sie gestaltet, eigene Animationen"
+        ],
+        [
+          "Signature",
+          "Eigens für Sie erstellte Animationen, Übergänge und 3D-Modelle"
+        ]
+      ]
+    },
+    {
+      "k": "umfang",
+      "name": "Umfang",
+      "stufen": [
+        [
+          "Kompakt"
+        ],
+        [
+          "Erweitert"
+        ],
+        [
+          "Groß"
+        ]
+      ]
+    },
+    {
+      "k": "qualitaet",
+      "name": "Qualität & Sicherheit",
+      "stufen": [
+        [
+          "Geprüft",
+          "Prüfbericht nach jedem neuen Stand"
+        ],
+        [
+          "Abnahmeprüfung",
+          "Zusätzlich große Prüfung vor der Übergabe: alle Geräte, Ladezeit, Barrierefreiheit"
+        ],
+        [
+          "Stresstest",
+          "Intensive KI-Stresstests und KI-Sicherheitsprüfung mit hohem Rechenaufwand"
+        ]
+      ]
+    },
+    {
+      "k": "inhalte",
+      "name": "Texte & SEO",
+      "stufen": [
+        [
+          "Von Ihnen",
+          "Sie liefern Texte und Bilder, wir setzen sie für Google sauber um (technische SEO inklusive)"
+        ],
+        [
+          "SEO-Texte",
+          "Wir schreiben suchmaschinenoptimierte Texte für Ihre Seiten"
+        ],
+        [
+          "SEO-Paket",
+          "Keyword-Recherche, SEO-Texte, Grafiken und Google-Unternehmensprofil"
+        ]
+      ]
+    }
+  ],
+  "extras": [
+    {
+      "k": "termine",
+      "name": "Online-Terminbuchung",
+      "preis": 500
+    },
+    {
+      "k": "konto",
+      "name": "Kundenkonto mit Login",
+      "preis": 750
+    },
+    {
+      "k": "zahlung",
+      "name": "Online-Zahlung",
+      "preis": 500,
+      "nichtBei": [
+        "shop"
+      ]
+    },
+    {
+      "k": "sprache",
+      "name": "Weitere Sprache",
+      "preis": 500
+    },
+    {
+      "k": "ki",
+      "name": "KI-Chat-Assistent",
+      "preis": 750,
+      "hinweis": "zzgl. laufender KI-Kosten"
+    },
+    {
+      "k": "anbindung",
+      "name": "Anbindung an vorhandene Programme",
+      "preis": null
+    }
+  ],
+  "betreuung": [
+    [
+      "Ohne",
+      "Nicht enthalten – Sie betreuen selbst oder buchen später"
+    ],
+    [
+      "Betreut",
+      "Hosting, Sicherheitsupdates und Backups"
+    ],
+    [
+      "Rundum betreut",
+      "Dazu kleine Änderungen jeden Monat und bevorzugter Support"
+    ]
+  ],
+  "_hinweis": "Richtwerte des Preis-Baukastens (Euro netto, einmalig, ohne Einrichtung – die berechnen wir nach Aufwand; betreuung monatlich). Je Baustein drei Stufen [M, L, XXL]. Diese Datei lesen die Website (Seite Preise) und das Board (Angebot → Pakete wählen)."
+}

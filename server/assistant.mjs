@@ -136,10 +136,11 @@ function mockAnswer(stage, user) {
   if (stage === "gegenpruefen") return { confirmed: [0] };
   if (stage === "name") return { name: "Testname Projekt" };
   if (stage === "mitschrift") return { intern: "– Testmodus: auf Budget achten", zusammenfassung: "Testmodus: Sie wünschen sich eine neue Website.", naechste_schritte: "– Wir schicken das Angebot bis Freitag." };
+  if (stage === "vereinbarung") return { titel: "Betreuung der Website", text: "§ 1 Gegenstand\nDer Auftragnehmer betreut die Website des Auftraggebers nach der Übergabe (Testmodus).\n\n§ 2 Leistungen\nHosting, Sicherheitsupdates, Backups und kleine Änderungen nach Absprache.\n\n§ 3 Vergütung\n30 € netto im Monat zzgl. MwSt., monatlich im Voraus.\n\n§ 4 Laufzeit und Kündigung\nDie Betreuung beginnt mit dem Monat nach der Übergabe und ist monatlich kündbar.", fehlt: ["Testmodus: Dieser Text kommt nicht von der KI."] };
   if (stage === "angebot") return { titel: "Entwicklungskonzept (Testvorschlag)", einleitung: "vielen Dank für das Gespräch. Wie besprochen bieten wir Ihnen Folgendes an:", schlusstext: "Bei Fragen sind wir jederzeit für Sie da.",
     positionen: [{ titel: "Entwicklungskonzept", beschreibung: "Anforderungen, Varianten, 3D-Modell und Prüfplan als Konzeptdokument.", menge: 1, einheit: "pauschal", preis_bekannt: true, einzelpreis: 2500 },
       { titel: "Abstimmungstermin", beschreibung: "Vorstellung des Konzepts per Video.", menge: 1, einheit: "pauschal", preis_bekannt: false, einzelpreis: 0 }],
-    rueckfragen: ["Was soll der Abstimmungstermin kosten, oder ist er im Konzept enthalten?"], hinweis: "Testmodus: Dieser Vorschlag kommt nicht von der KI." };
+    rueckfragen: ["Was soll der Abstimmungstermin kosten, oder ist er im Konzept enthalten?"], hinweis: "Testmodus: Dieser Vorschlag kommt nicht von der KI.", zahlungsplan: [{ bezeichnung: "Anzahlung bei Auftrag", prozent: 50, faellig: "Auftrag" }, { bezeichnung: "Restzahlung nach Abnahme", prozent: 50, faellig: "Launch" }] };
   const d = JSON.parse(user.split("\n<<DATEN>>\n")[1] || "{}");
   if (stage === "erkennen") {
     if (/oder/i.test(d.kommentar || "") || !d.elemente?.length) return { target: d.elemente?.[0]?.i ?? null, confidence: d.elemente?.length > 1 ? "unsicher" : "sicher", alternatives: (d.elemente || []).slice(0, 2).map(e => e.i), question: "Meinen Sie die Überschrift oder den Text darunter?" };

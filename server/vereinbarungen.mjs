@@ -35,7 +35,7 @@ export function vereinbarungLesen(wert) {
 export function vereinbarungSpeichern(d, clean) {
   if (!d || !(String(d.titel || "").trim() || String(d.text || "").trim())) return null;
   const p = Number(String(d.prozent ?? "").replace(",", "."));
-  return JSON.stringify({ titel: clean(d.titel, 120) || "Besondere Vereinbarung", text: clean(d.text, 1500), prozent: p > 0 && p <= 100 ? p : null });
+  return JSON.stringify({ titel: clean(d.titel, 120) || "Besondere Vereinbarung", text: clean(d.text, 8000), prozent: p > 0 && p <= 100 ? p : null });
 }
 /** Mit der Annahme des Angebots wird die Vereinbarung gültig und hängt am Projekt */
 export function vereinbarungAusAngebot(invoiceId, projectId, wer) {

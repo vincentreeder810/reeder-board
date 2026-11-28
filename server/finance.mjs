@@ -303,7 +303,8 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
       let fragebogen = [];
       try { if (ob) { const a = JSON.parse(ob.answers); fragebogen = JSON.parse(ob.kinds).flatMap(k => antwortenView(k, a[k]).flatMap(g => g.rows.map(r => `${r.k}: ${[...(r.chips || []), r.v].filter(Boolean).join(", ")}`))); } } catch {}
       const vorlagen = (getSetting("offerTemplates", { list: DEFAULT_TEMPLATES }).list || []).map(v => ({ name: v.name, titel: v.title, einleitung: v.intro, schlusstext: v.outro,
-        positionen: (v.items || []).map(it => ({ titel: it.title, beschreibung: it.description, menge: it.qty, einheit: it.unit, einzelpreis_euro: it.unit_net ? it.unit_net / 100 : null })) }));
+        positionen: (v.items || []).map(it => ({ titel: it.title, beschreibung: it.description, menge: it.qty, einheit: it.unit, einzelpreis_euro: it.unit_net ? it.unit_net / 100 : null })),
+        zahlungsplan: (v.plan || []).map(p => ({ bezeichnung: p.label, prozent: p.pct, faellig: p.on })) }));
       const daten = {
         kunde: { firma: c.company, ansprechpartner: c.name },
         projekt: pr ? { titel: pr.title, bereich: pr.bereich || "software", art: pr.kind || "", beschreibung: clean(pr.description, 1500) } : null,
@@ -313,6 +314,7 @@ export function createFinance({ json, send, readJson, clean, logEvent, SITE_URL,
         fragebogen: fragebogen.slice(0, 60),
         wunsch_des_inhabers: clean(d.wunsch, 2000),
         bisheriger_entwurf: { titel: clean(d.title, 200), positionen: (Array.isArray(d.items) ? d.items : []).slice(0, 20).map(it => ({ titel: clean(it.title, 300), beschreibung: clean(it.description, 600), einzelpreis_euro: Number(it.unit_net) || null })) },
+        bisheriger_zahlungsplan: (Array.isArray(d.plan) ? d.plan : []).slice(0, 6).map(p => ({ bezeichnung: clean(p.label, 80), prozent: Number(p.pct) || 0, faellig: clean(p.on, 20) })),
         vorlagen,
       };
       const system = `Du bereitest für den Inhaber einer kleinen deutschen Firma (Software, KI-Lösungen und Entwicklung physischer Produkte) den Entwurf eines Angebots vor. Der Inhaber prüft jeden Entwurf selbst, bevor er ihn verschickt.
@@ -324,10 +326,12 @@ Regeln:
 - Hardware (Projekt mit bereich "hardware"): Solange kein fertiges Entwicklungskonzept vorliegt, biete ausschließlich das Entwicklungskonzept an. Prototyp, Bau oder Serie bekommen keinen Preis und keine Position, denn ihre Kosten stehen erst mit der Stückliste fest; erwähne im hinweis, dass der Prototyp danach als Pauschalpreis aus der Kalkulation angeboten wird.
 - Alle Preise sind Nettobeträge in Euro. Zur Umsatzsteuer schreibst du nichts, sie wird automatisch ergänzt.
 - Einleitung und Schlusstext: höflich, Anrede mit „Sie“, ohne Anrede-Zeile und ohne Grußformel (beides setzt das Dokument selbst), je ein bis zwei Sätze. Die Einleitung beginnt klein geschrieben, weil die Anrede davor steht.
-- Beschreibungen der Positionen: ein bis zwei Sätze, konkret, verständlich für Nicht-Techniker.
+- Beschreibungen der Positionen: ein bis zwei kurze Sätze (höchstens etwa 200 Zeichen), konkret, verständlich für Nicht-Techniker. Lieber eine Position mehr als eine sehr lange Beschreibung.
+- zahlungsplan: Raten, die zusammen genau 100 % ergeben; faellig ist eines von Auftrag, Konzept, Prototyp, Umsetzung, Launch, Betreuung. Hat der Inhaber eine Zahlungsweise genannt, gilt sie. Sonst: kleine Projekte (unter etwa 5.000 € netto) eine Rate mit 100 % bei Launch oder 50 % bei Auftrag und 50 % bei Launch; größere Projekte 30 % bei Auftrag, 40 % bei Prototyp, 30 % bei Launch. Hat eine passende Vorlage einen Zahlungsplan, übernimm ihn.
 - rueckfragen: höchstens fünf kurze Fragen an den Inhaber zu allem, was für ein verbindliches Angebot fehlt (Preis, Umfang, Zahlungsweise, Frist). Leer, wenn nichts fehlt.
 - hinweis: ein Satz dazu, worauf du den Entwurf gestützt hast, oder leer.`;
-      const schema = { type: "object", additionalProperties: false, required: ["titel", "einleitung", "positionen", "schlusstext", "rueckfragen", "hinweis"], properties: {
+      const schema = { type: "object", additionalProperties: false, required: ["titel", "einleitung", "positionen", "schlusstext", "rueckfragen", "hinweis", "zahlungsplan"], properties: {
+        zahlungsplan: { type: "array", items: { type: "object", additionalProperties: false, required: ["bezeichnung", "prozent", "faellig"], properties: { bezeichnung: { type: "string" }, prozent: { type: "number" }, faellig: { type: "string", enum: ["Auftrag", "Konzept", "Prototyp", "Umsetzung", "Launch", "Betreuung"] } } } },
         titel: { type: "string" }, einleitung: { type: "string" }, schlusstext: { type: "string" }, hinweis: { type: "string" }, rueckfragen: { type: "array", items: { type: "string" } },
         positionen: { type: "array", items: { type: "object", additionalProperties: false, required: ["titel", "beschreibung", "menge", "einheit", "preis_bekannt", "einzelpreis"],
           properties: { titel: { type: "string" }, beschreibung: { type: "string" }, menge: { type: "number" }, einheit: { type: "string" }, preis_bekannt: { type: "boolean" }, einzelpreis: { type: "number" } } } } } };
@@ -338,8 +342,36 @@ Regeln:
       audit(user.name, "ki-vorschlag", "angebot", 0, c.company);
       return json(res, 200, { title: clean(r.titel, 200), intro: clean(r.einleitung, 3000), outro: clean(r.schlusstext, 3000), hinweis: clean(r.hinweis, 400),
         fragen: (Array.isArray(r.rueckfragen) ? r.rueckfragen : []).slice(0, 5).map(x => clean(x, 300)).filter(Boolean),
+        plan: cleanPlan((Array.isArray(r.zahlungsplan) ? r.zahlungsplan : []).map(p => ({ label: p.bezeichnung, pct: p.prozent, on: p.faellig }))) || [],
         items: (Array.isArray(r.positionen) ? r.positionen : []).slice(0, 20).map(it => ({ title: clean(it.titel, 300), description: clean(it.beschreibung, 1200), qty: Number(it.menge) > 0 ? Number(it.menge) : 1, unit: clean(it.einheit, 20) || "pauschal",
           unit_net: it.preis_bekannt && Number(it.einzelpreis) > 0 ? Math.round(Number(it.einzelpreis) * 100) : null })).filter(it => it.title) });
+    }
+
+    /* --- Besondere Vereinbarung: aus Stichpunkten des Inhabers ein sauberes Schreiben (zum Mitunterschreiben mit dem Angebot) --- */
+    if (q === "/agreement-draft" && m === "POST") {
+      const st = assistantStatus();
+      if (!st.key && !st.mock) return json(res, 503, { error: "Für KI-Vorschläge fehlt der API-Schlüssel (ANTHROPIC_API_KEY in der .env)." });
+      if (!st.available) return json(res, 503, { error: st.enabled ? `Das Monatslimit für KI-Kosten (${st.cap} $) ist erreicht.` : "Der KI-Assistent ist in den Einstellungen ausgeschaltet." });
+      const d = await readJson(req, 64 * 1024);
+      const c = db.prepare("SELECT company, name FROM clients WHERE id = ?").get(+d.client_id); if (!c) return json(res, 400, { error: "Bitte zuerst einen Kunden wählen." });
+      const stichpunkte = clean(d.text, 4000); if (!stichpunkte && !clean(d.titel, 120)) return json(res, 400, { error: "Bitte erst in eigenen Worten eintragen, was gelten soll." });
+      const firma = company();
+      const daten = { auftragnehmer: firma.name || "Reeder Software GmbH", auftraggeber: c.company || c.name, worum: clean(d.titel, 120), stichpunkte, anteil_prozent: clean(String(d.prozent || ""), 10),
+        angebot: { titel: clean(d.angebot_titel, 200), positionen: (Array.isArray(d.positionen) ? d.positionen : []).slice(0, 15).map(x => clean(x, 200)) } };
+      const system = `Du formulierst für den Inhaber einer kleinen deutschen Firma aus seinen Stichpunkten eine „Besondere Vereinbarung“, die als Anlage zum Angebot vom Kunden mitunterschrieben wird.
+Regeln:
+- Nur regeln, was in den Stichpunkten steht. Nichts erfinden: keine Beträge, Fristen, Laufzeiten oder Pflichten, die nicht genannt sind. Fehlt etwas Wichtiges (z. B. Laufzeit, Kündigung, Vergütung), nenne es in fehlt.
+- Aufbau als nummerierte Abschnitte, jeweils eine Zeile „§ n Überschrift“ und darunter ein bis drei kurze Sätze: Gegenstand, Leistungen, Vergütung, Laufzeit und Kündigung, Sonstiges – nur die Abschnitte, für die es Inhalt gibt.
+- Klare, verständliche Sprache ohne Juristendeutsch, Parteien als „Auftragnehmer“ (${daten.auftragnehmer}) und „Auftraggeber“ (${daten.auftraggeber}). Beträge netto zzgl. MwSt.
+- Der Text ergänzt das Angebot und die Vertragsbedingungen; im Zweifel gelten diese. Füge am Ende keinen Unterschriftenblock ein, unterschrieben wird mit der Annahme des Angebots.
+- titel: kurz, z. B. „Betreuung der Website“.`;
+      const schema = { type: "object", additionalProperties: false, required: ["titel", "text", "fehlt"], properties: { titel: { type: "string" }, text: { type: "string" }, fehlt: { type: "array", items: { type: "string" } } } };
+      const modell = getSetting("assistant", {}).modelReply || DEFAULT_ASSISTANT.modelReply;
+      let r;
+      try { r = await callModel("vereinbarung", modell, system, `Formuliere die Vereinbarung.\n<<DATEN>>\n${JSON.stringify(daten)}`, schema, null, +d.project_id || null); }
+      catch (e) { return json(res, e.code === 503 ? 503 : 500, { error: e.message || "Die Vereinbarung ließ sich nicht formulieren." }); }
+      audit(user.name, "ki-vorschlag", "vereinbarung", 0, c.company || c.name);
+      return json(res, 200, { titel: clean(r.titel, 120), text: clean(r.text, 8000), fehlt: (Array.isArray(r.fehlt) ? r.fehlt : []).slice(0, 5).map(x => clean(x, 200)).filter(Boolean) });
     }
 
     /* --- Angebotsvorlagen: Titel, Texte und Positionen zum Wiederverwenden --- */
@@ -347,7 +379,8 @@ Regeln:
     if (q === "/templates" && m === "PUT") {
       const d = await readJson(req, 256 * 1024), rate = Number(company().vatRate ?? 19);
       const liste = (Array.isArray(d.templates) ? d.templates : []).slice(0, 40).map(t => ({ name: clean(t.name, 80), title: clean(t.title, 200), intro: clean(t.intro, 3000), outro: clean(t.outro, 3000),
-        items: cleanItems(t.items, rate).map(it => ({ title: it.title, description: it.description, qty: it.qty, unit: it.unit, unit_net: it.unit_net, vat_rate: it.vat_rate })) })).filter(t => t.name);
+        items: cleanItems(t.items, rate).map(it => ({ title: it.title, description: it.description, qty: it.qty, unit: it.unit, unit_net: it.unit_net, vat_rate: it.vat_rate })),
+        plan: cleanPlan(t.plan) || [] })).filter(t => t.name);
       setSetting("offerTemplates", { list: liste }); audit(user.name, "vorlagen", "angebot", 0, `${liste.length} Vorlagen`);
       return json(res, 200, liste);
     }
@@ -498,6 +531,14 @@ Regeln:
         service_from: ymd(d.service_from), service_to: ymd(d.service_to), due_date: ymd(d.due_date) || addDays(ymd(d.issue_date) || today(), company().paymentDays || 14), valid_until: ymd(d.valid_until) || addDays(today(), 30),
         intro: clean(d.intro, 3000), outro: clean(d.outro, 3000), sender: senderOf(), recipient: recipientOf(c), items, ...totals(items) });
       return send(res, 200, buf, { "Content-Type": "application/pdf", "Cache-Control": "no-store" });
+    }
+
+    /* --- Wunsch aus dem Preis-Baukasten der Website (steht in der Nachricht der letzten Terminbuchung) --- */
+    mm = q.match(/^\/clients\/(\d+)\/wunsch$/);
+    if (mm && m === "GET") {
+      const b = db.prepare("SELECT message FROM bookings WHERE client_id = ? AND message LIKE '%Preis-Baukasten:%' ORDER BY id DESC LIMIT 1").get(+mm[1]);
+      const z = String(b?.message || "").match(/Preis-Baukasten:\s*([^\n]+)/);
+      return json(res, 200, { text: z ? z[1].trim().slice(0, 600) : "" });
     }
 
     /* --- Kunden-Rechnungsadresse --- */
