@@ -79,7 +79,7 @@ if (!db.prepare("SELECT COUNT(*) n FROM users").get().n) {
 
 /* ================= Helfer ================= */
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json",
-  ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".ico": "image/x-icon",
+  ".svg": "image/svg+xml", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".ico": "image/x-icon", ".mp4": "video/mp4",
   ".ttf": "font/ttf", ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8", ".xml": "application/xml" };
 // Sicherheits-Header für jede Antwort; HSTS nur, wenn die Seite über https läuft
 const SEC_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "SAMEORIGIN",
@@ -670,7 +670,16 @@ async function serveStatic(req, res, url) {
     const st = await stat(file); if (!st.isFile()) throw 0;
     const ext = path.extname(file).toLowerCase();
     const extra = top === "admin" || top === "portal" ? { "X-Frame-Options": "DENY", "Cache-Control": "no-store" } : { "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=3600" };
-    send(res, 200, await readFile(file), { "Content-Type": MIME[ext] || "application/octet-stream", ...extra });
+    const typ = { "Content-Type": MIME[ext] || "application/octet-stream", "Accept-Ranges": "bytes", ...extra };
+    // Teilabrufe (Range): Safari auf iPhone/iPad spielt Videos nur ab, wenn der Server einzelne Abschnitte liefern kann
+    const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ""));
+    if (range && (range[1] || range[2])) {
+      let a = range[1] ? +range[1] : Math.max(0, st.size - +range[2]), b = range[1] && range[2] ? Math.min(+range[2], st.size - 1) : st.size - 1;
+      if (a >= st.size || a > b) return send(res, 416, "", { "Content-Range": `bytes */${st.size}` });
+      const daten = await readFile(file);
+      return send(res, 206, daten.subarray(a, b + 1), { ...typ, "Content-Range": `bytes ${a}-${b}/${st.size}`, "Content-Length": b - a + 1 });
+    }
+    send(res, 200, await readFile(file), typ);
   } catch { send(res, 404, "Nicht gefunden"); }
 }
 
