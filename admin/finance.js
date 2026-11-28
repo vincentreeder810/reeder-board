@@ -129,7 +129,7 @@
           <label class="span2">Einleitung<textarea name="intro" rows="2">${esc(inv.intro ?? (isQuote ? "vielen Dank für Ihr Interesse. Gern bieten wir Ihnen folgende Leistungen an:" : "für die erbrachten Leistungen erlauben wir uns, wie folgt zu berechnen:"))}</textarea></label>
         </div>
         <div class="fitems"><div class="fitems__h"><span>Leistung</span><span>Menge</span><span>Einheit</span><span>Einzelpreis netto</span><span>USt</span><span class="num">Gesamt</span><span></span></div>
-          <div id="fRows"></div><button type="button" class="link" data-addrow>+ Position hinzufügen</button></div>
+          <div id="fRows"></div><div class="fitems__neu"><button type="button" class="link" data-addrow>+ Position hinzufügen</button><button type="button" class="link" data-addrabatt>+ Rabatt</button></div></div>
         <div class="ftotals" id="fTotals"></div>
         ${isQuote ? `<div class="fplan"><div class="fplan__h"><b>Zahlungsplan &amp; Vertrag</b><small>Nimmt der Kunde das Angebot im Portal an, übernimmt das Board diesen Plan ins Projekt und legt jede Rechnung als Entwurf an, sobald sie fällig ist – Sie geben nur noch frei.</small></div>
           <div class="fplan__vor"><span>Schnellwahl:</span><button type="button" class="btn btn--ghost btn--sm" data-planvor="100">Einmalig 100 %</button><button type="button" class="btn btn--ghost btn--sm" data-planvor="50">50 / 50</button><button type="button" class="btn btn--ghost btn--sm" data-planvor="30">30 / 40 / 30</button></div>
@@ -150,7 +150,7 @@
       </footer></form>`;
     document.body.appendChild(m);
     const f = $("form", m), rowsBox = $("#fRows", m);
-    const row = it => `<div class="fitem"><div><input data-k="title" value="${esc(it.title || "")}" placeholder="Leistung" required><input data-k="description" value="${esc(it.description || "")}" placeholder="Beschreibung (optional)" class="fitem__desc"></div>
+    const row = it => `<div class="fitem"><div><input data-k="title" value="${esc(it.title || "")}" placeholder="Leistung" required><textarea data-k="description" rows="1" placeholder="Beschreibung (optional)" class="fitem__desc">${esc(it.description || "")}</textarea></div>
       <input data-k="qty" value="${String(it.qty ?? 1).replace(".", ",")}" inputmode="decimal"><input data-k="unit" value="${esc(it.unit || "")}" placeholder="Std."><input data-k="unit_net" value="${euroIn(it.unit_net)}" inputmode="decimal" placeholder="0,00">
       <select data-k="vat_rate">${[19, 7, 0].map(r => `<option value="${r}" ${Number(it.vat_rate ?? rate) === r ? "selected" : ""}>${r} %</option>`).join("")}</select><span class="num" data-sum></span><button type="button" class="x" data-delrow>✕</button></div>`;
     rowsBox.innerHTML = items.map(row).join("");
@@ -164,12 +164,15 @@
       due_date: f.due_date?.value, valid_until: f.valid_until?.value, service_from: f.service_from?.value, service_to: f.service_to?.value, intro: f.intro.value, outro: f.outro.value,
       plan: planBox ? $$(".fplanrow", planBox).map(r => ({ label: $("[data-p=label]", r).value, pct: pctOf(r), on: $("[data-p=on]", r).value })).filter(x => x.label.trim() || x.pct) : undefined, avv: f.avv?.checked, vereinbarung: f.v_titel ? { titel: f.v_titel.value, text: f.v_text.value, prozent: f.v_prozent.value } : undefined,
       items: $$(".fitem", rowsBox).map(r => Object.fromEntries($$("[data-k]", r).map(i => [i.dataset.k, i.dataset.k === "unit_net" ? (parseEuro(i.value) / 100).toFixed(2) : i.value]))).filter(x => x.title.trim()) });
+    let monatlich = inv.vereinbarung?.titel && /^Betreuung/.test(inv.vereinbarung.titel) ? inv.vereinbarung.titel : "";
+    const wachsen = () => $$("textarea.fitem__desc", rowsBox).forEach(x => { x.style.height = "auto"; x.style.height = x.scrollHeight + 2 + "px"; });
     const recalc = () => {
+      wachsen();
       const by = {}; let net = 0;
       $$(".fitem", rowsBox).forEach(r => { const q = Number(String($("[data-k=qty]", r).value).replace(",", ".")) || 0, p = parseEuro($("[data-k=unit_net]", r).value), v = +$("[data-k=vat_rate]", r).value, n = Math.round(q * p);
         $("[data-sum]", r).textContent = money(n); net += n; by[v] = (by[v] || 0) + n; });
       let vat = 0; const lines = Object.entries(by).filter(([r]) => +r > 0).map(([r, n]) => { const v = Math.round(n * r / 100); vat += v; return `<div><span>zzgl. ${r} % USt.</span><b>${money(v)}</b></div>`; });
-      $("#fTotals", m).innerHTML = `<div><span>Summe netto</span><b>${money(net)}</b></div>${lines.join("")}<div class="ftotals__sum"><span>${isQuote ? "Angebotssumme" : "Rechnungsbetrag"}</span><b>${money(net + vat)}</b></div>`;
+      $("#fTotals", m).innerHTML = `<div><span>Summe netto</span><b>${money(net)}</b></div>${lines.join("")}<div class="ftotals__sum"><span>${isQuote ? "Angebotssumme" : "Rechnungsbetrag"}</span><b>${money(net + vat)}</b></div>${monatlich ? `<div class="ftotals__monat">Laufend dazu: ${esc(monatlich)}${f.v_titel ? " – steht unten als besondere Vereinbarung" : ""}</div>` : ""}`;
       if (planBox) { const rows = $$(".fplanrow", planBox); let sum = 0, rest = net + vat;
         rows.forEach((r, i) => { const pc = pctOf(r); sum += pc; const g = i === rows.length - 1 && Math.abs(sum - 100) < .01 ? rest : Math.round((net + vat) * pc / 100); rest -= g; $("[data-pamt]", r).textContent = money(g) + " brutto"; });
         const ok = !rows.length || Math.abs(sum - 100) < .01; $("#planSum", m).innerHTML = rows.length ? `<b class="${ok ? "ok" : "warn"}">${String(Math.round(sum * 100) / 100).replace(".", ",")} %</b>${ok ? "" : " – muss 100 % ergeben"}` : "ohne Zahlungsplan"; }
@@ -200,68 +203,91 @@
       finally { b.disabled = false; b.textContent = "KI-Vorschlag"; }
     });
     /* Pakete aus dem Preis-Baukasten der Website (assets/data/baukasten.json): Auswahl → Positionen mit Richtwert-Preisen.
-       Der Wunsch des Kunden aus der Anfrage (Terminbuchung über den Baukasten) ist vorausgewählt. Danach frei änderbar. */
+       Der Wunsch des Kunden aus der Anfrage ist vorausgewählt. Das Fenster wird einmal aufgebaut; eine Auswahl schaltet nur um (kein Springen).
+       Die Auswahl bleibt für dieses Angebot erhalten; erneutes Übernehmen ersetzt nur die Paket-Positionen, eigene Positionen bleiben. */
+    let PK = null;
     $("[data-pakete]", m)?.addEventListener("click", async () => {
       let BK;
       try { BK = await (await fetch("/assets/data/baukasten.json", { cache: "no-cache" })).json(); } catch { return toast("Die Preisliste der Website ließ sich nicht laden."); }
       const S = ["M", "L", "XXL"], eur = n => n.toLocaleString("de-DE") + " €";
-      // Wunsch aus der Anfrage, z. B. „Website: Design XXL, Umfang M, …, Online-Terminbuchung · Richtwert ab 4.500 €“
       const cid = +f.client_id.value, w = cid ? await api(`/finance/clients/${cid}/wunsch`).catch(() => null) : null;
-      const st = { typ: "website", wahl: { design: 0, umfang: 0, qualitaet: 0, inhalte: 0, betreuung: 0 }, extras: new Set() };
-      if (w?.text) {
-        const [kopf, rest = ""] = w.text.split(":"), teile = rest.split("·")[0].split(",").map(x => x.trim());
-        const ty = BK.typen.find(y => kopf.trim() === y.name); if (ty) st.typ = ty.k;
-        for (const tl of teile) {
-          const b = [...BK.bausteine, { k: "betreuung", name: "Betreuung" }].find(x => tl.startsWith(x.name + " ")); const s = b && S.indexOf(tl.slice(b.name.length + 1));
-          if (b && s >= 0) st.wahl[b.k] = s; const e = BK.extras.find(x => x.name === tl); if (e) st.extras.add(e.k);
+      if (!PK) {
+        PK = { typ: "website", wahl: { design: 0, umfang: 0, qualitaet: 0, inhalte: 0, betreuung: 0 }, extras: new Set(), aufTitel: "", aufBetrag: "", rabatt: "", rabattArt: "%" };
+        if (w?.text) {   // z. B. „Website: Design XXL, Umfang M, …, Online-Terminbuchung · Richtwert ab 4.500 €“
+          const [kopf, rest = ""] = w.text.split(":"), teile = rest.split("·")[0].split(",").map(x => x.trim());
+          const ty = BK.typen.find(y => kopf.trim() === y.name); if (ty) PK.typ = ty.k;
+          for (const tl of teile) {
+            const b = [...BK.bausteine, { k: "betreuung", name: "Betreuung" }].find(x => tl.startsWith(x.name + " ")); const s = b && S.indexOf(tl.slice(b.name.length + 1));
+            if (b && s >= 0) PK.wahl[b.k] = s; const e = BK.extras.find(x => x.name === tl); if (e) PK.extras.add(e.k);
+          }
         }
       }
+      const st = PK, typ = () => BK.typen.find(y => y.k === st.typ);
       const d = document.createElement("div"); d.className = "modal";
-      const typ = () => BK.typen.find(y => y.k === st.typ);
-      const zeichnen = () => {
-        const t = typ(); let summe = t.grund;
-        for (const b of BK.bausteine) summe += t.preise[b.k][st.wahl[b.k]];
-        for (const e of BK.extras) if (st.extras.has(e.k) && !(e.nichtBei || []).includes(t.k) && e.preis) summe += e.preis;
-        d.innerHTML = `<form class="card pkw"><header class="fedit__head"><div><p class="kicker">Angebot</p><h2>Pakete wählen</h2></div><button type="button" class="x" data-zu>✕</button></header>
-          <p class="hint" style="margin:0 0 12px">Richtwerte aus dem Preis-Baukasten der Website. Daraus entstehen Positionen, die Sie danach frei ändern und ergänzen können.${w?.text ? ` <b>Wunsch aus der Anfrage ist vorausgewählt:</b> ${esc(w.text)}` : ""}</p>
-          <div class="pkw__typen">${BK.typen.map(y => `<label class="pkw__t ${y.k === st.typ ? "is-on" : ""}"><input type="radio" name="typ" value="${y.k}" ${y.k === st.typ ? "checked" : ""}><b>${esc(y.name)}</b><small>ab ${eur(y.grund)}</small></label>`).join("")}</div>
-          ${BK.bausteine.map(b => `<div class="pkw__z"><b>${esc(b.name)}</b><div class="pkw__st">${b.stufen.map((s, i) => `<label class="pkw__s ${st.wahl[b.k] === i ? "is-on" : ""}"><input type="radio" name="${b.k}" value="${i}" ${st.wahl[b.k] === i ? "checked" : ""}><em>${S[i]}</em> ${esc(s[0])}<small>${t.preise[b.k][i] ? "+ " + eur(t.preise[b.k][i]) : "inklusive"}</small></label>`).join("")}</div></div>`).join("")}
-          <div class="pkw__z"><b>Extras</b><div class="pkw__st pkw__st--x">${BK.extras.filter(e => !(e.nichtBei || []).includes(t.k)).map(e => `<label class="pkw__s ${st.extras.has(e.k) ? "is-on" : ""}"><input type="checkbox" name="x" value="${e.k}" ${st.extras.has(e.k) ? "checked" : ""}>${esc(e.name)}<small>${e.preis == null ? "Preis offen" : "+ " + eur(e.preis)}</small></label>`).join("")}</div></div>
-          <div class="pkw__z"><b>Betreuung</b><div class="pkw__st">${BK.betreuung.map((s, i) => `<label class="pkw__s ${st.wahl.betreuung === i ? "is-on" : ""}"><input type="radio" name="betreuung" value="${i}" ${st.wahl.betreuung === i ? "checked" : ""}><em>${S[i]}</em> ${esc(s[0])}<small>${i ? eur(t.betreuung[i]) + " / Monat" : "keine"}</small></label>`).join("")}</div></div>
-          <div class="pkw__z"><b>Aufschlag</b><div class="pkw__auf"><input name="aufTitel" placeholder="z. B. Individuelle Mehrarbeit" value="${esc(st.aufTitel || "")}"><input name="aufBetrag" inputmode="decimal" placeholder="Betrag netto, z. B. 500" value="${esc(st.aufBetrag || "")}"></div></div>
-          <footer class="pkw__fuss"><span>Richtwert <b>${eur(summe)}</b> netto${st.wahl.betreuung ? ` + ${eur(t.betreuung[st.wahl.betreuung])} / Monat` : ""}</span>
-            <label class="check"><input type="checkbox" name="ersetzen" ${st.ersetzen !== false ? "checked" : ""}> vorhandene Positionen ersetzen</label>
-            <button type="submit" class="btn btn--grad">Übernehmen</button></footer></form>`;
+      d.innerHTML = `<form class="card pkw"><header class="fedit__head"><div><p class="kicker">Angebot</p><h2>Pakete wählen</h2></div><button type="button" class="x" data-zu>✕</button></header>
+        <p class="hint" style="margin:0 0 12px">Richtwerte aus dem Preis-Baukasten der Website. Daraus entstehen Positionen, die Sie danach frei ändern können. Eigene Positionen bleiben beim erneuten Übernehmen erhalten.${w?.text ? ` <b>Wunsch aus der Anfrage:</b> ${esc(w.text)}` : ""}</p>
+        <div class="pkw__typen">${BK.typen.map(y => `<label class="pkw__t" data-typ="${y.k}"><input type="radio" name="typ" value="${y.k}"><b>${esc(y.name)}</b><small>ab ${eur(y.grund)}</small></label>`).join("")}</div>
+        ${BK.bausteine.map(b => `<div class="pkw__z"><b>${esc(b.name)}</b><div class="pkw__st">${b.stufen.map((s, i) => `<label class="pkw__s" data-b="${b.k}" data-i="${i}"><input type="radio" name="${b.k}" value="${i}"><em>${S[i]}</em> ${esc(s[0])}<small data-preis></small></label>`).join("")}</div></div>`).join("")}
+        <div class="pkw__z"><b>Extras</b><div class="pkw__st pkw__st--x">${BK.extras.map(e => `<label class="pkw__s" data-x="${e.k}" data-nicht="${(e.nichtBei || []).join(" ")}"><input type="checkbox" name="x" value="${e.k}">${esc(e.name)}<small>${e.preis == null ? "Preis offen" : "+ " + eur(e.preis)}</small></label>`).join("")}</div></div>
+        <div class="pkw__z"><b>Betreuung<small>monatlich</small></b><div class="pkw__st">${BK.betreuung.map((s, i) => `<label class="pkw__s" data-b="betreuung" data-i="${i}"><input type="radio" name="betreuung" value="${i}"><em>${S[i]}</em> ${esc(s[0])}<small data-preis></small></label>`).join("")}</div></div>
+        <div class="pkw__z"><b>Aufschlag</b><div class="pkw__auf"><input name="aufTitel" placeholder="z. B. Individuelle Mehrarbeit" value="${esc(st.aufTitel)}"><input name="aufBetrag" inputmode="decimal" placeholder="Betrag netto, z. B. 500" value="${esc(st.aufBetrag)}"></div></div>
+        <div class="pkw__z"><b>Rabatt</b><div class="pkw__auf pkw__auf--rabatt"><input name="rabatt" inputmode="decimal" placeholder="z. B. 10" value="${esc(st.rabatt)}"><select name="rabattArt"><option value="%" ${st.rabattArt === "%" ? "selected" : ""}>Prozent</option><option value="€" ${st.rabattArt === "€" ? "selected" : ""}>Euro netto</option></select></div></div>
+        <footer class="pkw__fuss"><span data-summe></span><button type="submit" class="btn btn--grad">Übernehmen</button></footer></form>`;
+      const summe = () => {
+        const t = typ(); let s = t.grund;
+        for (const b of BK.bausteine) s += t.preise[b.k][st.wahl[b.k]];
+        for (const e of BK.extras) if (st.extras.has(e.k) && !(e.nichtBei || []).includes(t.k) && e.preis) s += e.preis;
+        s += parseEuro(st.aufBetrag || "") / 100;
+        const r = Number(String(st.rabatt || "").replace(",", ".")) || 0, rab = r > 0 ? (st.rabattArt === "%" ? Math.round(s * Math.min(r, 100) / 100) : r) : 0;
+        return { s, rab };
       };
-      zeichnen(); document.body.appendChild(d);
+      // Nur umschalten, nichts neu aufbauen: Auswahl, Preise der Stufen, sichtbare Extras, Summe
+      const aktualisieren = () => {
+        const t = typ();
+        $$("[data-typ]", d).forEach(el => { const on = el.dataset.typ === st.typ; el.classList.toggle("is-on", on); el.querySelector("input").checked = on; });
+        $$("[data-b]", d).forEach(el => { const k = el.dataset.b, i = +el.dataset.i, on = st.wahl[k] === i; el.classList.toggle("is-on", on); el.querySelector("input").checked = on;
+          const pr = el.querySelector("[data-preis]"); if (pr) pr.textContent = k === "betreuung" ? (i ? `${eur(t.betreuung[i])} / Monat` : "keine") : (t.preise[k][i] ? "+ " + eur(t.preise[k][i]) : "inklusive"); });
+        $$("[data-x]", d).forEach(el => { const weg = el.dataset.nicht.split(" ").includes(t.k), on = st.extras.has(el.dataset.x); el.hidden = weg; el.classList.toggle("is-on", on && !weg); el.querySelector("input").checked = on; });
+        const { s, rab } = summe();
+        $("[data-summe]", d).innerHTML = `Richtwert <b>${eur(s - rab)}</b> netto${rab ? ` <small>(nach ${eur(rab)} Rabatt)</small>` : ""}${st.wahl.betreuung ? ` <span class="pkw__monat">+ ${eur(t.betreuung[st.wahl.betreuung])} / Monat Betreuung</span>` : ""}`;
+      };
+      aktualisieren(); document.body.appendChild(d);
       const zu = () => d.remove();
       d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-zu]")) zu(); });
-      d.addEventListener("input", e => { const i = e.target; if (i.name === "aufTitel") st.aufTitel = i.value; if (i.name === "aufBetrag") st.aufBetrag = i.value; });
+      d.addEventListener("input", e => { const i = e.target; if (["aufTitel", "aufBetrag", "rabatt"].includes(i.name)) { st[i.name] = i.value; aktualisieren(); } });
       d.addEventListener("change", e => {
         const i = e.target;
         if (i.name === "typ") st.typ = i.value; else if (i.name === "x") i.checked ? st.extras.add(i.value) : st.extras.delete(i.value);
-        else if (i.name === "ersetzen") { st.ersetzen = i.checked; return; } else if (st.wahl[i.name] !== undefined) st.wahl[i.name] = +i.value; else return;
-        zeichnen();
+        else if (i.name === "rabattArt") st.rabattArt = i.value; else if (st.wahl[i.name] !== undefined) st.wahl[i.name] = +i.value; else return;
+        aktualisieren();
       });
       d.addEventListener("submit", e => {
         e.preventDefault(); const t = typ(), pos = [];
-        const p = (title, description, euro) => pos.push({ title, description, qty: 1, unit: "pauschal", unit_net: euro == null ? 0 : Math.round(euro * 100), vat_rate: rate, offen: euro == null });
+        const p = (title, description, euro, unit = "pauschal") => pos.push({ title, description, qty: 1, unit, unit_net: euro == null ? 0 : Math.round(euro * 100), vat_rate: rate, offen: euro == null });
         const b0 = BK.bausteine.find(b => b.k === "design");
         p(`${t.name} – Grundpaket`, `Kleinste Version: ${t.umfang[0]}, Design „${b0.stufen[0][0]}“, Prüfbericht nach jedem Stand, technische Optimierung für Google.`, t.grund);
         for (const b of BK.bausteine) { const i = st.wahl[b.k]; if (i) p(`${b.name} ${S[i]} – ${b.stufen[i][0]}`, b.k === "umfang" ? t.umfang[i] : b.stufen[i][1], t.preise[b.k][i]); }
         for (const x of BK.extras) if (st.extras.has(x.k) && !(x.nichtBei || []).includes(t.k)) p(x.name, x.hinweis ? `Hinweis: ${x.hinweis}.` : "", x.preis);
         const aufB = parseEuro(st.aufBetrag || ""); if ((st.aufTitel || "").trim() && aufB) p(st.aufTitel.trim(), "", aufB / 100);
-        const neu = pos.map(x => row({ ...x, unit_net: x.unit_net })).join("");
-        if (st.ersetzen !== false) rowsBox.innerHTML = neu; else rowsBox.insertAdjacentHTML("beforeend", neu);
-        $$(".fitem", rowsBox).forEach(el => { const t2 = $("[data-k=title]", el).value; if (pos.find(x => x.offen && x.title === t2)) $("[data-k=unit_net]", el).classList.add("fehlt"); });
+        const { rab } = summe(), r = Number(String(st.rabatt || "").replace(",", ".")) || 0;
+        if (rab) p(st.rabattArt === "%" ? `Rabatt ${String(r).replace(".", ",")} %` : "Rabatt", "", -rab);
+        const betreuung = st.wahl.betreuung ? { s: BK.betreuung[st.wahl.betreuung], preis: t.betreuung[st.wahl.betreuung], stufe: S[st.wahl.betreuung] } : null;
+        // Ohne Feld für Vereinbarungen (Rechnung): Betreuung als Position je Monat
+        if (betreuung && !f.v_titel) p(`Betreuung ${betreuung.stufe} – ${betreuung.s[0]}`, betreuung.s[1], betreuung.preis, "Monat");
+        // Nur die früheren Paket-Positionen und leere Zeilen ersetzen; eigene Positionen bleiben
+        $$(".fitem", rowsBox).forEach(el => { if (el.dataset.paket || !$("[data-k=title]", el).value.trim()) el.remove(); });
+        const tmp = document.createElement("div"); tmp.innerHTML = pos.map(x => row(x)).join("");
+        $$(".fitem", tmp).forEach((el, k) => { el.dataset.paket = "1"; if (pos[k].offen) $("[data-k=unit_net]", el).classList.add("fehlt"); });
+        rowsBox.prepend(...tmp.children);
         if (!f.title.value.trim()) f.title.value = t.name;
-        // Betreuung ist monatlich: nicht als einmalige Position, sondern als besondere Vereinbarung (wird mit dem Angebot unterschrieben)
-        if (st.wahl.betreuung && f.v_titel) {
-          const s = BK.betreuung[st.wahl.betreuung]; $(".fverein", m).open = true;
-          f.v_titel.value = `Betreuung ${S[st.wahl.betreuung]} – ${s[0]}`;
-          f.v_text.value = `Nach der Übergabe übernehmen wir die Betreuung: ${s[1]}. Vergütung: ${eur(t.betreuung[st.wahl.betreuung])} netto im Monat zzgl. MwSt., ab dem Monat nach der Übergabe, monatlich kündbar.`;
+        // Angebot: Betreuung ist monatlich – als besondere Vereinbarung (wird mit dem Angebot unterschrieben), dazu ein Hinweis unter den Summen
+        if (betreuung && f.v_titel) {
+          $(".fverein", m).open = true;
+          f.v_titel.value = `Betreuung ${betreuung.stufe} – ${betreuung.s[0]}`;
+          f.v_text.value = `Nach der Übergabe übernehmen wir die Betreuung: ${betreuung.s[1]}. Vergütung: ${eur(betreuung.preis)} netto im Monat zzgl. MwSt., ab dem Monat nach der Übergabe, monatlich kündbar.`;
         }
-        recalc(); zu(); toast("Pakete übernommen – Positionen und Preise bitte prüfen.");
+        monatlich = betreuung ? `${eur(betreuung.preis)} netto im Monat für die Betreuung ${betreuung.stufe}` : "";
+        recalc(); zu(); toast(betreuung && f.v_titel ? "Pakete übernommen – die Betreuung steht unten als besondere Vereinbarung." : "Pakete übernommen – Positionen und Preise bitte prüfen.");
       });
     });
     $("[data-vki]", m)?.addEventListener("click", async e => {
@@ -348,6 +374,17 @@
       if (e.target === m || e.target.closest("[data-close]")) return close();
       if (e.target.closest("[data-addrow]")) { rowsBox.insertAdjacentHTML("beforeend", row({ qty: 1, unit: "Std.", unit_net: 0, vat_rate: rate })); recalc(); return; }
       if (e.target.closest("[data-delrow]")) { e.target.closest(".fitem").remove(); recalc(); return; }
+      if (e.target.closest("[data-addrabatt]")) {
+        const v = await UI.prompt("Rabatt", { label: "In Prozent (z. B. 10 %) oder als Betrag in Euro netto (z. B. 250). Prozent beziehen sich auf die Summe der Positionen darüber.", value: "10 %", ok: "Rabatt hinzufügen" });
+        if (!v) return;
+        const prozent = /%/.test(v), zahl = Number(String(v).replace(/[^\d,.]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".")) || 0;
+        if (!zahl) return toast("Bitte einen Wert eintragen.");
+        const basis = $$(".fitem", rowsBox).reduce((s, r) => { const q = Number(String($("[data-k=qty]", r).value).replace(",", ".")) || 0, p = parseEuro($("[data-k=unit_net]", r).value); return p > 0 ? s + Math.round(q * p) : s; }, 0);
+        const betrag = prozent ? Math.round(basis * Math.min(zahl, 100) / 100) : Math.round(zahl * 100);
+        if (!betrag) return toast("Es gibt noch keine Positionen, auf die sich der Rabatt beziehen kann.");
+        rowsBox.insertAdjacentHTML("beforeend", row({ title: prozent ? `Rabatt ${String(zahl).replace(".", ",")} %` : "Rabatt", qty: 1, unit: "pauschal", unit_net: -betrag, vat_rate: rate }));
+        recalc(); return;
+      }
       if (e.target.closest("[data-addplan]")) { planBox.insertAdjacentHTML("beforeend", planRow({ on: "Launch" })); recalc(); return; }
       if (e.target.closest("[data-delplan]")) { e.target.closest(".fplanrow").remove(); recalc(); return; }
       const ad = e.target.closest("[data-addr]"); if (ad) return addrDialog(+ad.dataset.addr, loadAddr);

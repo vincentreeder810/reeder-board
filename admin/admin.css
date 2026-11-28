@@ -388,7 +388,7 @@ button.ftable__r:hover{background:#fafaff}
 .faddr small{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .faddr b{display:block;font-size:14.5px}.faddr b.warn{color:#b42340}.faddr span{font-size:13px;color:var(--ink2)}
 .fitems{display:grid;gap:8px}
-.fitems__h,.fitem{display:grid;grid-template-columns:minmax(0,1fr) 70px 80px 120px 74px 110px 30px;gap:8px;align-items:start}
+.fitems__h,.fitem{display:grid;grid-template-columns:minmax(0,1fr) 64px 96px 116px 74px 110px 30px;gap:8px;align-items:start}
 .fitems__h{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 2px}
 .fitem input,.fitem select{padding:9px 10px;font-size:14px}
 .fitem>div{display:grid;gap:4px}.fitem .fitem__desc{font-size:13px;padding:7px 10px;color:var(--ink2)}
@@ -1965,3 +1965,25 @@ label.auf__item{cursor:pointer}
 
 /* Besondere Vereinbarung: mit KI ausformulieren */
 .fverein__ki{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.fverein__ki small{flex:1 1 280px;font-size:12px;color:var(--muted);line-height:1.4}
+
+/* Positionen im Angebots- und Rechnungs-Editor: Titel kräftig, Beschreibung kleiner und grau darunter, Zeile als ruhige Karte */
+.fitem{padding:10px;border-radius:14px;background:var(--paper,#f5f5f7);transition:background .2s}
+.fitem:focus-within{background:#fff;box-shadow:0 0 0 1.5px #c4b5fd}
+.fitem>div{gap:2px}
+.fitem [data-k=title]{font-weight:600;font-size:14.5px;background:transparent;border-color:transparent;padding:6px 8px}
+.fitem textarea.fitem__desc{resize:none;overflow:hidden;min-height:30px;font:inherit;font-size:13px;line-height:1.45;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:10px;padding:4px 8px}
+.fitem [data-k=title]:hover,.fitem textarea.fitem__desc:hover{background:rgba(255,255,255,.7)}
+.fitem [data-k=title]:focus,.fitem textarea.fitem__desc:focus{background:#fff;border-color:var(--line);color:var(--ink)}
+.fitem input:not([data-k=title]),.fitem select{background:#fff}
+.fitem [data-sum]{padding-top:8px}
+.fitems__neu{display:flex;gap:16px;margin-top:2px}
+.ftotals__monat{grid-column:1/-1;margin-top:6px;padding:8px 12px;border-radius:10px;background:#f5f3ff;color:#5b3fd6;font-size:13px;font-weight:500}
+/* Pakete-Fenster: sanftes Umschalten statt Neuaufbau */
+.pkw__t,.pkw__s{transition:background .2s,box-shadow .2s,transform .15s}
+.pkw__s:active,.pkw__t:active{transform:scale(.98)}
+.pkw__s small[data-preis]{transition:color .2s}
+.pkw__z>b small{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
+.pkw__auf--rabatt{grid-template-columns:1fr 160px}
+.pkw__monat{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#f5f3ff;color:#5b3fd6;font-size:12.5px;font-weight:600}
+.pkw__fuss small{color:var(--muted)}
+.fitem__card{}
