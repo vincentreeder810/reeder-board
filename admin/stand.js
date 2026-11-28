@@ -341,6 +341,49 @@
         window.KUNDEN?.openProjectPage(+pid, true); }
       catch (err) { d.fail(err.message); k.disabled = false; } });
   }
+  /* Übergabe festlegen: Auswahl, Zeitpunkt und Kanäle speichern – das Board sendet von selbst, sobald alles erfüllt ist */
+  const nachText = n => n === "rechnung" ? "sobald die Endrechnung verschickt ist" : "nach Zahlungseingang der Endrechnung";
+  function ueText() {
+    if (AB.uebergeben_at) return `Gesendet am ${tagZeit(AB.uebergeben_at)} Uhr.`;
+    const w = UE?.wartet, pl = UE?.plan;
+    if (pl && w) {
+      const punkt = (ok, t) => `<span class="pab__w ${ok ? "pab__w--ok" : ""}">${ok ? "✓" : "○"} ${t}</span>`;
+      return `<b class="pab__fest">Festgelegt</b> am ${tagZeit(pl.am)} Uhr – geht automatisch raus, sobald alles erfüllt ist:
+        <span class="pab__ws">${punkt(w.abgenommen, "Abgenommen")}${w.ohnePlan ? punkt(true, "Kein Zahlungsplan") : punkt(w.rechnung, w.nach === "rechnung" ? "Endrechnung verschickt" : "Endrechnung bezahlt")}${punkt(w.dateien, "Dateien da")}</span>
+        <span class="pab__wie">Per ${[pl.chat ? "Chat" : "", pl.mail ? "Mail" : ""].filter(Boolean).join(" und ") || "– (nur freischalten)"}${pl.abschliessen ? " · Projekt wird danach abgeschlossen" : ""}</span>`;
+    }
+    return AB.uebergabeBereit ? "Bereit – Dateien, Prüfbericht und Rechnung können raus." : `Leg fest, was der Kunde bekommt und wann. Die Übergabe geht dann von selbst raus (${nachText(AB.uebergabe_nach)}).`;
+  }
+  function ueAkt() {
+    if (AB.uebergeben_at) return `<button class="btn btn--ghost btn--sm" data-ue="senden">Erneut senden</button>`;
+    const jetzt = `<button class="btn btn--ghost btn--sm" data-ue="senden" ${UE?.dateien.length ? "" : "disabled title=\"Erst die Übergabe-Dateien vorbereiten\""}>Jetzt senden</button>`;
+    if (UE?.plan) return `<button class="btn btn--ghost btn--sm" data-ue="festlegen">Ändern</button>${jetzt}<button class="link link--leise" data-ue="aufheben">aufheben</button>`;
+    return `<button class="btn btn--grad btn--sm" data-ue="festlegen">Übergabe festlegen</button>${jetzt}`;
+  }
+  function uebergabeFestlegen(pid, neu) {
+    const pl = UE?.plan, z = AB.endzahlung, e = AB.endrechnung;
+    const d = modal(`<h2 class="span2">Übergabe festlegen</h2>
+      <p class="hint span2" style="margin:0">Wird gespeichert und geht automatisch an den Kunden, sobald das Projekt abgenommen ist, die Endrechnung passt und die Dateien da sind. Bis dahin sieht der Kunde nichts.</p>
+      <div class="span2 pue__liste pue__liste--modal"><b>Was der Kunde bekommt</b>${UE.katalog.map(x => `<label class="pue__o"><input type="checkbox" name="fmt" value="${esc(x.k)}" ${UE.gewaehlt.includes(x.k) ? "checked" : ""}><span><b>${esc(x.l)}</b>${x.h ? `<small>${esc(x.h)}</small>` : ""}</span></label>`).join("")}</div>
+      <label class="span2">Wann senden?<select name="nach"><option value="zahlung" ${AB.uebergabe_nach === "zahlung" ? "selected" : ""}>Nach Zahlungseingang der Endrechnung</option><option value="rechnung" ${AB.uebergabe_nach === "rechnung" ? "selected" : ""}>Sobald die Endrechnung verschickt ist</option></select></label>
+      <label class="span2">Persönliche Nachricht (optional, steht in Mail und Chat)<textarea name="nachricht" rows="3" placeholder="z. B. Vielen Dank für das Vertrauen – bei Fragen sind wir gern weiter für Sie da.">${esc(pl?.nachricht || "")}</textarea></label>
+      ${KANAL.html({ modus: "haken", titel: "Dem Kunden schicken", mailText: "Abschluss-Mail, Endrechnung als PDF im Anhang", hinweis: "Die Dateien selbst liegen im Kundenportal unter Dokumente → Übergabe." })}
+      <label class="check span2"><input type="checkbox" name="abschliessen" ${pl?.abschliessen === false ? "" : "checked"}> Projekt danach auf „Abgeschlossen“ setzen</label>
+      ${z && !e ? `<label class="check span2"><input type="checkbox" name="rechnung" checked> Danach gleich die Endrechnung erstellen (${esc(z.label)})</label>` : ""}
+      <div class="span2" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn--ghost" data-close>Abbrechen</button><button class="btn btn--grad">Festlegen</button></div>`);
+    if (pl) { const f = d.f; const setze = (n, v) => { const x = f.querySelector(`[name="${n}"]`); if (x && x.type === "checkbox") x.checked = v; }; setze("k_chat", pl.chat); setze("k_mail", pl.mail); }
+    d.f.addEventListener("submit", async ev => { ev.preventDefault(); const k = d.f.querySelector("button:not([data-close])"), w = KANAL.werte(d.f); k.disabled = true;
+      const formate = [...d.f.querySelectorAll("[name=fmt]:checked")].map(x => x.value);
+      if (!formate.length) { d.fail("Bitte mindestens eine Datei auswählen."); k.disabled = false; return; }
+      try {
+        await api(`/projects/${pid}/uebergabe`, { method: "POST", body: { formate } });
+        await api(`/projects/${pid}/uebergabe/festlegen`, { method: "POST", body: { nach: d.f.nach.value, chat: w.chat, mail: w.mail, erinnern: w.erinnern, nachricht: d.f.nachricht.value, abschliessen: d.f.abschliessen.checked } });
+        const mitRechnung = d.f.rechnung?.checked;
+        d.close(); toast(`Übergabe festgelegt – geht automatisch raus, ${nachText(d.f.nach.value)}.`);
+        await neu();
+        if (mitRechnung) { const b = $("#pAbschluss [data-rechnung]"); if (b) b.click(); }
+      } catch (err) { d.fail(err.message); k.disabled = false; } });
+  }
   function ueBlock() {
     if (!UE) return "";
     const lab = k => UE.katalog.find(x => x.k === k)?.l || k;
@@ -388,11 +431,7 @@
         ${schritt(s2, "Abgenommen", AB.abgenommen_at ? `am ${tagZeit(AB.abgenommen_at)} Uhr · eingetragen von ${esc(AB.abgenommen_von || "")}` : "Trag ein, wenn der Kunde das Ergebnis abgenommen hat.",
           AB.abgenommen_at ? `<button class="link link--leise" data-ab="zurueck">zurücknehmen</button>` : `<button class="btn btn--${s2 === "dran" ? "grad" : "ghost"} btn--sm" data-ab="abgenommen">Als abgenommen eintragen</button>`)}
         ${schritt(s3, "Endrechnung", endText, endAkt)}
-        ${schritt(s4, "Übergabe an den Kunden",
-          `${AB.uebergabeBereit ? "Bereit – Code bzw. Dateien, Prüfbericht und Rechnung können raus." : `Wird freigegeben ${AB.uebergabe_nach === "zahlung" ? "nach Zahlungseingang der Endrechnung" : "sobald die Endrechnung verschickt ist"}.`}
-            <label class="pab__nach">Freigeben: <select data-ab="nach"><option value="zahlung" ${AB.uebergabe_nach === "zahlung" ? "selected" : ""}>nach Zahlungseingang</option><option value="rechnung" ${AB.uebergabe_nach === "rechnung" ? "selected" : ""}>sofort mit der Endrechnung</option></select></label>`,
-          AB.uebergeben_at ? `<span class="pab__ok">Gesendet am ${tagZeit(AB.uebergeben_at)}</span><button class="btn btn--ghost btn--sm" data-ue="senden">Erneut senden</button>`
-            : `<button class="btn btn--${AB.uebergabeBereit && UE?.dateien.length ? "grad" : "ghost"} btn--sm" data-ue="senden" ${UE?.dateien.length ? "" : "disabled title=\"Erst die Übergabe-Dateien vorbereiten\""}>Übergabe senden</button>`)}
+        ${schritt(AB.uebergeben_at ? "ok" : UE?.plan ? "warte" : s4, "Übergabe an den Kunden", ueText(), ueAkt())}
       </ol>${ueBlock()}</details>`;
   }
   document.addEventListener("click", async e => {
@@ -400,6 +439,9 @@
     if (u) { const box = $("#pAbschluss"), pid = box.dataset.pid, neu = () => abschluss({ id: +pid, client_id: +box.dataset.cid, status: AB?.status || "aktiv" });
       try {
         if (u.dataset.ue === "senden") return uebergabeSenden(pid, neu);
+        if (u.dataset.ue === "festlegen") return uebergabeFestlegen(pid, neu);
+        if (u.dataset.ue === "aufheben") { if (!(await UI.confirm("Die Übergabe geht dann nicht mehr automatisch raus. Deine Auswahl der Dateien bleibt.", { title: "Festlegung aufheben?", ok: "Aufheben" }))) return;
+          await api(`/projects/${pid}/uebergabe/festlegen`, { method: "POST", body: { aus: true } }); toast("Aufgehoben"); return neu(); }
         if (u.dataset.ueWeg) { if (!(await UI.confirm("Die Datei wird aus der Übergabe entfernt.", { title: "Datei entfernen?", ok: "Entfernen", danger: true }))) return;
           await api(`/projects/${pid}/uebergabe/datei/${u.dataset.ueWeg}`, { method: "DELETE", body: {} }); return neu(); }
         if (!(await UI.confirm("Claude öffnet sich auf deinem Rechner im Projektordner und erzeugt die ausgewählten Dateien. Die Brücke bringt sie danach hierher – der Kunde sieht sie erst, wenn du die Übergabe sendest.", { title: "Übergabe vorbereiten lassen?", ok: "Claude beauftragen" }))) return;

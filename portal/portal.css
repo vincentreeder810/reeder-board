@@ -587,3 +587,16 @@ body.im-chat .main{padding-bottom:34px}
 .ueport__k{display:flex;gap:12px;align-items:center;margin-bottom:10px}
 .ueport__ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#22c58b,#16a36a);color:#fff;font-weight:700}
 .ueport__k b{display:block;font-size:16px}.ueport__k small{display:block;font-size:12.5px;color:var(--muted)}
+
+/* Handy mit offener Tastatur (vor allem iPhone): Chat liegt genau über dem sichtbaren Ausschnitt, Eingabe direkt über der Tastatur */
+@media (max-width:860px){
+  body.im-chat.tastatur .chat.chat--full{top:var(--vvtop,0px);height:var(--vvh,100dvh);z-index:40}
+  body.im-chat.tastatur .chat--full .composer{padding-bottom:10px}
+  body.im-chat.tastatur .chat--full .chat__threads{display:none}
+  body.im-chat.tastatur .chat--full .chat__head{padding:8px 14px}
+  body.im-chat.tastatur .chat--full .chat__head p{display:none}
+  body.im-chat.tastatur .chat--full .chat__head h2{font-size:16px}
+}
+
+/* iPhone: Eingabefelder unter 16 px lassen Safari beim Antippen hineinzoomen und den Ausschnitt verschieben – auf dem Handy daher 16 px (kein Zoom beim Antippen) */
+@media (max-width:860px){input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}}

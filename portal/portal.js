@@ -106,11 +106,20 @@ addEventListener("hashchange", route);
 /* Chat-Höhe: sichtbare Fensterhöhe (auf dem Handy ohne Adressleiste und Tastatur) und Höhe der Menüleiste als CSS-Variablen,
    damit die Eingabeleiste immer unten am sichtbaren Rand klebt */
 function fensterMasse() {
-  const vv = window.visualViewport, h = vv ? vv.height : innerHeight, nav = document.querySelector(".nav");
-  document.documentElement.style.setProperty("--vvh", h + "px");
-  if (nav) document.documentElement.style.setProperty("--navh", (innerWidth <= 860 ? nav.offsetHeight : 0) + "px");
-  if (document.body.classList.contains("im-chat") && vv && vv.offsetTop) scrollTo(0, 0);
+  const vv = window.visualViewport, h = vv ? vv.height : innerHeight, nav = document.querySelector(".nav"), de = document.documentElement;
+  de.style.setProperty("--vvh", h + "px");
+  // iPhone: Beim Öffnen der Tastatur schrumpft nur der sichtbare Ausschnitt und wird zusätzlich nach oben verschoben (offsetTop).
+  // Feste Elemente bleiben am alten Platz – deshalb legt sich der Chat bei offener Tastatur genau über den sichtbaren Ausschnitt.
+  de.style.setProperty("--vvtop", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+  const tastatur = !!vv && innerWidth <= 860 && innerHeight - vv.height > 120;
+  document.body.classList.toggle("tastatur", tastatur);
+  if (nav) de.style.setProperty("--navh", (innerWidth <= 860 ? nav.offsetHeight : 0) + "px");
+  if (document.body.classList.contains("im-chat") && vv && vv.offsetTop && !tastatur) scrollTo(0, 0);
 }
+// Nach dem Antippen des Eingabefelds die neueste Nachricht sichtbar halten
+document.addEventListener("focusin", e => { if (!e.target.closest?.(".chat--full .composer")) return;
+  setTimeout(() => { fensterMasse(); const log = document.querySelector(".chat--full .chat__log"); if (log) log.scrollTop = log.scrollHeight; }, 350); });
+document.addEventListener("focusout", () => setTimeout(fensterMasse, 150));
 window.visualViewport?.addEventListener("resize", fensterMasse);
 window.visualViewport?.addEventListener("scroll", fensterMasse);
 addEventListener("resize", fensterMasse);
